@@ -75,6 +75,10 @@ void sgLogDebug(char *format, ...)
 {
 	char msg[MAX_BUF];
 	va_list ap;
+
+	if (!globalDebug)
+		return;
+
 	va_start(ap, format);
 	if (vsnprintf(msg, MAX_BUF, format, ap) > (MAX_BUF - 1))
 		sgLog(globalErrorLog, "FATAL: overflow in vsnprintf (sgLogError): %s", strerror(errno));

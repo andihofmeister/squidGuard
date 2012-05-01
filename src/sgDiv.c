@@ -122,7 +122,7 @@ int parseLine(char *line, struct SquidInfo *s)
 				strncpy(p + ndx, p + ndx + 1, sz);
 				p[ndx + sz] = '\0';
 				if (1 == report_once) {
-					@NOLOG1@ sgLogWarn("WARN: Possible bypass attempt. Found multiple slashes where only one is expected: %s", s->orig); @NOLOG2@
+					sgLogWarn("WARN: Possible bypass attempt. Found multiple slashes where only one is expected: %s", s->orig);
 						report_once--;
 				}
 			} else if ('.' == p[ndx] && '/' == p[ndx + 1] && trailingdot == 0) {
@@ -133,7 +133,7 @@ int parseLine(char *line, struct SquidInfo *s)
 				size_t sz = strlen(p + ndx + 1);
 				strncpy(p + ndx, p + ndx + 1, sz);
 				p[ndx + sz] = '\0';
-				@NOLOG1@ sgLogWarn("WARN: Possible bypass attempt. Found a trailing dot in the domain name: %s", s->orig); @NOLOG2@
+				sgLogWarn("WARN: Possible bypass attempt. Found a trailing dot in the domain name: %s", s->orig);
 			} else {
 				/* increment the string indexer */
 				assert(ndx < strlen(p));

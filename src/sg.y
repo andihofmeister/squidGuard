@@ -19,9 +19,9 @@
 
 %{
 #include "sg.h"
-	extern int globalDebug;
+extern int globalDebug;
 #ifdef USE_SYSLOG
-	extern int globalSyslog;
+extern int globalSyslog;
 #endif
 
 #ifdef HAVE_LIBLDAP
@@ -89,17 +89,73 @@ rfc1738_unescape(char *s)
 	int *	integer;
 }
 
-%token WORD END START_BRACKET STOP_BRACKET WEEKDAY
-%token DESTINATION REWRITE ACL TIME TVAL DVAL DVALCRON
-%token SOURCE CIDR IPCLASS CONTINUE
-%token IPADDR DBHOME DOMAINLIST URLLIST EXPRESSIONLIST IPLIST GROUPTTL
-%token DOMAIN USER USERLIST GROUP NETGROUP USERQUERY LDAPUSERSEARCH USERQUOTA LDAPIPSEARCH IPQUOTA IP NL NUMBER
-%token PASS NEXT REDIRECT LOGDIR SUBST CHAR MINUTELY HOURLY DAILY WEEKLY DATE
-%token WITHIN OUTSIDE ELSE LOGFILE SYSLOG ANONYMOUS VERBOSE CONTINIOUS SPORADIC
+%token ACL
 %token ALLOW
-%token LDAPCACHETIME EXECUSERLIST EXECCMD LDAPPROTOVER
-%token LDAPBINDDN LDAPBINDPASS MYSQLUSERNAME MYSQLPASSWORD DATABASE
+%token ANONYMOUS
+%token CHAR
+%token CIDR
+%token CONTINIOUS
+%token CONTINUE
+%token DAILY
+%token DATABASE
+%token DATE
+%token DBHOME
+%token DESTINATION
+%token DOMAIN
+%token DOMAINLIST
+%token DVAL
+%token DVALCRON
+%token ELSE
+%token END
+%token EXECCMD
+%token EXECUSERLIST
+%token EXPRESSIONLIST
+%token GROUP
+%token GROUPTTL
+%token HOURLY
+%token IP
+%token IPADDR
+%token IPCLASS
+%token IPLIST
+%token IPQUOTA
+%token LDAPBINDDN
+%token LDAPBINDPASS
+%token LDAPCACHETIME
+%token LDAPIPSEARCH
+%token LDAPPROTOVER
+%token LDAPUSERSEARCH
+%token LOGDIR
+%token LOGFILE
+%token MINUTELY
+%token MYSQLPASSWORD
+%token MYSQLUSERNAME
+%token NETGROUP
+%token NEXT
+%token NL
+%token NUMBER
+%token OUTSIDE
+%token PASS
 %token QUOTED_STRING
+%token REDIRECT
+%token REWRITE
+%token SOURCE
+%token SPORADIC
+%token START_BRACKET
+%token STOP_BRACKET
+%token SUBST
+%token SYSLOG
+%token TIME
+%token TVAL
+%token URLLIST
+%token USER
+%token USERLIST
+%token USERQUERY
+%token USERQUOTA
+%token VERBOSE
+%token WEEKDAY
+%token WEEKLY
+%token WITHIN
+%token WORD
 
 %type <string> WORD
 %type <string> QUOTED_STRING
@@ -220,9 +276,9 @@ source_content:	DOMAIN domain
 		| GROUP group
 		| NETGROUP netgroup
 		| USERLIST STRING { sgSourceUserList($2); }
-		@MYSQLLINE@
-		@YACCLINE@
-		@YACCLINE2@
+		| USERQUERY WORD WORD WORD WORD { sgSourceUserQuery($2,$3,$4,$5); }
+		| LDAPUSERSEARCH STRING { sgSourceLdapUserSearch($2); }
+		| LDAPIPSEARCH STRING { sgSourceLdapIpSearch($2); }
 		| EXECUSERLIST EXECCMD { sgSourceExecUserList($2); }
 		| USERQUOTA NUMBER NUMBER HOURLY { sgSourceUserQuota($2, $3, "3600"); }
 		| USERQUOTA NUMBER NUMBER DAILY { sgSourceUserQuota($2, $3, "86400"); }
@@ -407,12 +463,7 @@ statement:	destination
 
 %%
 
-#if __STDC__
 void sgReadConfig(char *file)
-#else
-void sgReadConfig(file)
-char *file;
-#endif
 {
 	char *defaultFile = DEFAULT_CONFIGFILE;
 	lineno = 1;
@@ -436,15 +487,7 @@ char *file;
  *
  */
 
-#if __STDC__
 void sgLogFile(int block, int anonymous, int verbose, char *file)
-#else
-void sgLogFile(block, anonymous, verbose, file)
-int block;
-int anonymous;
-int verbose;
-char *file;
-#endif
 {
 	void **v;
 	char *name;
@@ -486,12 +529,7 @@ char *file;
 	}
 }
 
-#if __STDC__
 struct LogFileStat *sgLogFileStat(char *file)
-#else
-struct LogFileStat *sgLogFileStat(file)
-char *file;
-#endif
 {
 	struct LogFileStat *sg;
 	struct stat s;
@@ -549,12 +587,7 @@ char *file;
  *
  */
 
-#if __STDC__
 void sgSource(char *source)
-#else
-void sgSource(source)
-char *source;
-#endif
 {
 	struct Source *sp;
 	if (Source != NULL) {
@@ -624,12 +657,7 @@ void sgSourceEnd()
 }
 #endif
 
-#if __STDC__
 void sgSourceUser(char *user)
-#else
-void sgSourceUser(user)
-char *user;
-#endif
 {
 	struct Source *sp;
 	char *lc;
@@ -643,16 +671,10 @@ char *user;
 		*lc = tolower(*lc);
 	sgDbUpdate(sp->userDb, user, (char *)setuserinfo(),
 		   sizeof(struct UserInfo));
-// DEBUG
-	sgLogError("Added User: %s", user);
+	sgLogDebug("Added User: %s", user);
 }
 
-#if __STDC__
 void sgSourceUserList(char *file)
-#else
-void sgSourceUserList(file)
-char *file;
-#endif
 {
 	char *dbhome = NULL, *f;
 	FILE *fd;
@@ -708,7 +730,7 @@ char *file;
 				sgDbUpdate(sp->userDb, p, (char *)setuserinfo(),
 					   sizeof(struct UserInfo));
 // DEBUG
-				sgLogError("Added UserList source: %s", p);
+				sgLogDebug("Added UserList source: %s", p);
 			} while ((p = strtok(NULL, " \t,")) != NULL);
 		}
 	}
@@ -717,14 +739,9 @@ char *file;
 
 
 /* MySQLsupport */
-#ifdef HAVE_MYSQL
-#if __STDC__
 void sgSourceUserQuery(char *query)
-#else
-void sgSourceUserQuery(query)
-char *query;
-#endif
 {
+#ifdef HAVE_MYSQL
 	char *dbhome = NULL, *f;
 	MYSQL *conn;
 	MYSQL_RES *res;
@@ -747,12 +764,12 @@ char *query;
 	if (dbhome == NULL)
 		dbhome = DEFAULT_DBHOME;
 	if (!(conn = mysql_init(0))) {
-		@NOLOG1@ sgLogError("%s: can't open userquery: mysql init", progname); @NOLOG2@
+		sgLogError("%s: can't open userquery: mysql init", progname);
 		return;
 	}
 	if (!mysql_real_connect(conn, "localhost", my_user, my_pass, my_db,
 				0, NULL, 0)) {
-		@NOLOG1@ sgLogError("%s: can't open userquery: mysql connect", progname); @NOLOG2@
+		sgLogError("%s: can't open userquery: mysql connect", progname);
 		return;
 	}
 	my_query = (char *)calloc(strlen(query) + strlen(str) + 1, sizeof(char));
@@ -760,7 +777,7 @@ char *query;
 	strcat(my_query, str);
 	/* DEBUG:   sgLogError("%s: TEST: MySQL Query %s",progname,my_query);  */
 	if (mysql_query(conn, my_query)) {
-		@NOLOG1@ sgLogError("%s: can't open userquery: mysql query", progname); @NOLOG2@
+		sgLogError("%s: can't open userquery: mysql query", progname);
 		return;
 	}
 	res = mysql_use_result(conn);
@@ -768,32 +785,29 @@ char *query;
 		strncpy(line, row[0], sizeof(line) - 1);
 		l++;
 		sgDbUpdate(sp->userDb, line, (char *)setuserinfo(), sizeof(struct UserInfo));
-		@NOLOG1@ sgLogError("Added MySQL source: %s", line); @NOLOG2@
+		sgLogDebug("Added MySQL source: %s", line);
 	}
 	mysql_free_result(res);
 	mysql_close(conn);
-}
+#else
+	sgLogFatal("This SquidGuard has not been compiled with database support");
 #endif
+}
 
 
 /* LDAP Support */
-#ifdef HAVE_LIBLDAP
-#if __STDC__
 void sgSourceLdapUserSearch(char *url)
-#else
-void sgSourceLdapUserSearch(url)
-char *url;
-#endif
 {
+#ifdef HAVE_LIBLDAP
 	struct Source *sp;
 	sp = lastSource;
 
 /*  DEBUG
- * sgLogError("sgSourceLdapUserSearch called with: %s", url);
+ * sgLogDebug("sgSourceLdapUserSearch called with: %s", url);
  */
 
 	if (!ldap_is_ldap_url(url)) {
-		@NOLOG1@ sgLogError("%s: can't parse LDAP url %s", progname, url);  @NOLOG2@
+		sgLogError("%s: can't parse LDAP url %s", progname, url);
 		return;
 	}
 
@@ -811,18 +825,17 @@ char *url;
 		sp->userDb->type = SGDBTYPE_USERLIST;
 		sgDbInit(sp->userDb, NULL);
 	}
-}
-#if __STDC__
-void sgSourceLdapIpSearch(char *url)
 #else
-void sgSourceLdapIpSearch(url)
-char *url;
+	sgLogFatal("This SquidGuard has not been compiled with LDAP support");
 #endif
+}
+void sgSourceLdapIpSearch(char *url)
 {
+#ifdef HAVE_LIBLDAP
 	struct Source *sp;
 	sp = lastSource;
 
-	@NOLOG1@ sgLogError("DEBUG: sgSourceLdapIpSearch called with: %s", url); @NOLOG2@
+	sgLogDebug("DEBUG: sgSourceLdapIpSearch called with: %s", url);
 
 	if (!ldap_is_ldap_url(url)) {
 		sgLogError("%s: can't parse LDAP url %s", progname, url);
@@ -843,15 +856,12 @@ char *url;
 		sp->ipDb->type = SGDBTYPE_USERLIST;
 		sgDbInit(sp->ipDb, NULL);
 	}
-}
-#endif
-
-#if __STDC__
-void sgSourceExecUserList(char *cmd)
 #else
-void sgSourceExecUserList(cmd)
-char *cmd;
+	sgLogFatal("This SquidGuard has not been compiled with LDAP support");
 #endif
+}
+
+void sgSourceExecUserList(char *cmd)
 {
 	FILE *pInput;
 	char buffer[100];
@@ -865,7 +875,7 @@ char *cmd;
 	}
 
 /*  DEBUG
- * sgLogError("sgSourceExecUserList called with: %s", cmd);
+ * sgLogDebug("sgSourceExecUserList called with: %s", cmd);
  */
 
 	pInput = popen(cmd, "r");
@@ -888,7 +898,7 @@ char *cmd;
 		if (lc >= sc) {
 			sgDbUpdate(sp->userDb, sc, (char *)setuserinfo(),
 				   sizeof(struct UserInfo));
-			@NOLOG1@ sgLogError("Added exec source: %s", sc); @NOLOG2@
+			sgLogDebug("Added exec source: %s", sc);
 		}
 	}
 
@@ -897,14 +907,7 @@ char *cmd;
 
 
 
-#if __STDC__
 void sgSourceUserQuota(char *seconds, char *sporadic, char *renew)
-#else
-void sgSourceUserQuota(seconds, sporadic, renew)
-char *seconds;
-char *sporadic;
-char *renew;
-#endif
 {
 	int s;
 	struct UserQuota *uq;
@@ -926,12 +929,7 @@ char *renew;
 }
 
 
-#if __STDC__
 void sgSourceDomain(char *domain)
-#else
-void sgSourceDomain(domain)
-char *domain;
-#endif
 {
 	struct Source *sp;
 	sp = lastSource;
@@ -943,13 +941,7 @@ char *domain;
 	sgDbUpdate(sp->domainDb, domain, NULL, 0);
 }
 
-#if __STDC__
 void sgSourceTime(char *name, int within)
-#else
-void sgSourceTime(name, within)
-char *name;
-int within;
-#endif
 {
 	struct Time *time = NULL;
 	struct Source *sp;
@@ -961,12 +953,7 @@ int within;
 	sp->time = time;
 }
 
-#if __STDC__
 struct Source *sgSourceFindName(char *name)
-#else
-struct Source *sgSourceFindName(name)
-char *name;
-#endif
 {
 	struct Source *p;
 	for (p = Source; p != NULL; p = p->next)
@@ -975,12 +962,7 @@ char *name;
 	return NULL;
 }
 
-#if __STDC__
 void sgSourceIpList(char *file)
-#else
-void sgSourceIpList(file)
-char *file;
-#endif
 {
 	char *dbhome = NULL, *f;
 	FILE *fd;
@@ -1002,7 +984,7 @@ char *file;
 		sgLogError("%s: can't open iplist %s: %s", progname, f, strerror(errno));
 		return;
 	}
-	sgLogError("init iplist %s", f);
+	sgLogDebug("init iplist %s", f);
 	while (fgets(line, sizeof(line), fd) != NULL) {
 		l++;
 		if (*line == '#')
@@ -1052,18 +1034,10 @@ char *file;
  *
  */
 
-#if __STDC__
 struct Source *sgFindSource(struct Source *bsrc, char *net, char *ident, char *domain)
-#else
-struct Source *sgFindSource(bsrc, net, ident, domain)
-struct Source *bsrc;
-char *net;
-char *ident;
-char *domain;
-#endif
 {
 /* DEBUG
- * sgLogError("DEBUG: sgfindsource  called with: %s", net);
+ * sgLogDebug("DEBUG: sgfindsource  called with: %s", net);
  */
 	struct Source *s;
 	struct Ip *ip;
@@ -1122,15 +1096,15 @@ char *domain;
 					if (s->ipquota.seconds != 0) {
 						struct IpInfo uq;
 						time_t t = time(NULL) + globalDebugTimeDelta;
-						sgLogError("status %d time %d lasttime %d consumed %d", ipquota->status, ipquota->time, ipquota->last, ipquota->consumed);
-						sgLogError("renew %d seconds %d", s->ipquota.renew, s->ipquota.seconds);
+						sgLogDebug("status %d time %d lasttime %d consumed %d", ipquota->status, ipquota->time, ipquota->last, ipquota->consumed);
+						sgLogDebug("renew %d seconds %d", s->ipquota.renew, s->ipquota.seconds);
 						if (ipquota->status == 0) { //first time
 							ipquota->status = 1;
 							ipquota->time = t;
 							ipquota->last = t;
-							sgLogError("ip %s first time %d", dotnet, ipquota->time);
+							sgLogDebug("ip %s first time %d", dotnet, ipquota->time);
 						} else if (ipquota->status == 1) {
-							sgLogError("ip %s other time %d %d", dotnet, ipquota->time, t);
+							sgLogDebug("ip %s other time %d %d", dotnet, ipquota->time, t);
 							if (s->ipquota.sporadic > 0) {
 								if (t - ipquota->last < s->ipquota.sporadic) {
 									ipquota->consumed += t - ipquota->last;
@@ -1141,16 +1115,16 @@ char *domain;
 									unblockedip = 0;
 								}
 								ipquota->last = t;
-								sgLogError("ip %s consumed %d %d", dotnet, ipquota->consumed, ipquota->last);
+								sgLogDebug("ip %s consumed %d %d", dotnet, ipquota->consumed, ipquota->last);
 							} else if (ipquota->time + s->ipquota.seconds < t) {
-								sgLogError("time is up ip %s blocket", net);
+								sgLogDebug("time is up ip %s blocket", net);
 								ipquota->status = 2; // block this ip, time is up
 								unblockedip = 0;
 							}
 						} else {
-							sgLogError("ip %s blocket %d %d %d %d", dotnet, ipquota->status, ipquota->time, t, (ipquota->time + s->ipquota.renew) - t);
+							sgLogDebug("ip %s blocked %d %d %d %d", dotnet, ipquota->status, ipquota->time, t, (ipquota->time + s->ipquota.renew) - t);
 							if (ipquota->time + s->ipquota.renew < t) { // new chance
-								sgLogError("ip %s new chance", net);
+								sgLogDebug("ip %s new chance", net);
 								unblockedip = 1;
 								ipquota->status = 1;
 								ipquota->time = t;
@@ -1205,12 +1179,12 @@ char *domain;
 								userquota->last = t;
 								//sgLogError("user %s consumed %d %d",ident,userquota->consumed, userquota->last);
 							} else if (userquota->time + s->userquota.seconds < t) {
-								sgLogError("time is up user %s blocket", ident);
+								sgLogDebug("time is up user %s blocked", ident);
 								userquota->status = 2; // block this user, time is up
 								unblockeduser = 0;
 							}
 						} else {
-							//sgLogError("user %s blocket %d %d %d %d", ident, userquota->status, userquota->time, t, (userquota->time + s->userquota.renew) - t);
+							//sgLogError("user %s blocked %d %d %d %d", ident, userquota->status, userquota->time, t, (userquota->time + s->userquota.renew) - t);
 							if (userquota->time + s->userquota.renew < t) { // new chance
 								//sgLogError("user %s new chance", ident);
 								unblockeduser = 1;
@@ -1258,12 +1232,7 @@ char *domain;
 
 /*destination block funtions */
 
-#if __STDC__
 void sgDest(char *dest)
-#else
-void sgDest(dest)
-char *dest;
-#endif
 {
 	struct Destination *sp;
 	if (Dest != NULL) {
@@ -1307,12 +1276,7 @@ void sgDestEnd()
 	}
 }
 
-#if __STDC__
 void sgDestDomainList(char *domainlist)
-#else
-void sgDestDomainList(domainlist)
-char *domainlist;
-#endif
 {
 	struct Destination *sp;
 	char *dbhome = NULL, *dl = domainlist, *name;
@@ -1343,21 +1307,16 @@ char *domainlist;
 	}
 	sp->domainlistDb = (struct sgDb *)sgCalloc(1, sizeof(struct sgDb));
 	sp->domainlistDb->type = SGDBTYPE_DOMAINLIST;
-	sgLogError("init domainlist %s", sp->domainlist);
+	sgLogDebug("init domainlist %s", sp->domainlist);
 	sgDbInit(sp->domainlistDb, sp->domainlist);
 	if (sp->domainlistDb->entries == 0) { /* empty database */
-		sgLogError("domainlist empty, removed from memory");
+		sgLogDebug("domainlist empty, removed from memory");
 		sgFree(sp->domainlistDb);
 		sp->domainlistDb = NULL;
 	}
 }
 
-#if __STDC__
 void sgDestUrlList(char *urllist)
-#else
-void sgDestUrlList(urllist)
-char *urllist;
-#endif
 {
 	struct Destination *sp;
 	char *dbhome = NULL, *dl = urllist, *name;
@@ -1388,22 +1347,16 @@ char *urllist;
 	}
 	sp->urllistDb = (struct sgDb *)sgCalloc(1, sizeof(struct sgDb));
 	sp->urllistDb->type = SGDBTYPE_URLLIST;
-	sgLogError("init urllist %s", sp->urllist);
+	sgLogDebug("init urllist %s", sp->urllist);
 	sgDbInit(sp->urllistDb, sp->urllist);
 	if (sp->urllistDb->entries == 0) { /* empty database */
-		sgLogError("urllist empty, removed from memory");
+		sgLogDebug("urllist empty, removed from memory");
 		sgFree(sp->urllistDb);
 		sp->urllistDb = NULL;
 	}
 }
 
-#if __STDC__
 void sgDestExpressionList(char *exprlist, char *chcase)
-#else
-void sgDestExpressionList(exprlist, chcase)
-char *exprlist;
-char *chcase;
-#endif
 {
 	FILE *fp;
 	char buf[MAX_BUF], errbuf[256];
@@ -1439,7 +1392,7 @@ char *chcase;
 		if (strncmp(chcase, "c", 1))
 			flags |= REG_ICASE;  /* set case insensitive */
 	}
-	sgLogError("init expressionlist %s", sp->expressionlist);
+	sgLogDebug("init expressionlist %s", sp->expressionlist);
 	if ((fp = fopen(sp->expressionlist, "r")) == NULL)
 		sgLogFatal("%s: %s", sp->expressionlist, strerror(errno));
 	while (fgets(buf, sizeof(buf), fp) != NULL) {
@@ -1465,12 +1418,7 @@ char *chcase;
 	fclose(fp);
 }
 
-#if __STDC__
 void sgDestRedirect(char *value)
-#else
-void sgDestRedirect(value)
-char *value;
-#endif
 {
 	struct Destination *sp;
 	sp = lastDest;
@@ -1490,13 +1438,7 @@ void sgDestRewrite(char *value)
 	sp->rewrite = rewrite;
 }
 
-#if __STDC__
 int sgRegExpMatch(struct sgRegExp *regexp, char *str)
-#else
-int sgRegExpMatch(regexp, str)
-struct sgRegExp *regexp;
-char *str;
-#endif
 {
 	struct sgRegExp *rp;
 	static char errbuf[256];
@@ -1513,13 +1455,7 @@ char *str;
 	return 0;
 }
 
-#if __STDC__
 void sgDestTime(char *name, int within)
-#else
-void sgDestTime(name, within)
-char *name;
-int within;
-#endif
 {
 	struct Time *time = NULL;
 	struct Destination *sp;
@@ -1531,12 +1467,7 @@ int within;
 	sp->time = time;
 }
 
-#if __STDC__
 struct Destination *sgDestFindName(char *name)
-#else
-struct Destination *sgDestFindName(name)
-char *name;
-#endif
 {
 	struct Destination *p;
 	for (p = Dest; p != NULL; p = p->next)
@@ -1550,13 +1481,7 @@ char *name;
  */
 
 
-#if __STDC__
 void sgSetting(char *name, char *value)
-#else
-void sgSetting(name, value)
-char *name;
-char *value;
-#endif
 {
 	struct Setting *sp;
 	if (Setting != NULL)
@@ -1569,9 +1494,9 @@ char *value;
 
 // DEBUG
 	if (strcmp(name, "ldapbindpass") == 0 || strcmp(name, "mysqlpassword") == 0)
-		sgLogNotice("INFO: New setting: %s: ***************", name);
+		sgLogDebug("INFO: New setting: %s: ***************", name);
 	else
-		sgLogNotice("INFO: New setting: %s: %s", name, value);
+		sgLogDebug("INFO: New setting: %s: %s", name, value);
 
 	if (Setting == NULL) {
 		Setting = sp;
@@ -1591,12 +1516,7 @@ char *value;
 }
 
 #ifdef USE_SYSLOG
-#if __STDC__
 void sgSyslogSetting(char *value)
-#else
-void sgSyslogSetting(value)
-char *value;
-#endif
 {
 	if (strcmp(value, "enable") == 0) {
 		//printf(">> enable syslog option\n");
@@ -1613,12 +1533,7 @@ char *value;
 #endif
 
 
-#if __STDC__
 struct Setting *sgSettingFindName(char *name)
-#else
-struct Setting *sgSettingFindName(name)
-char *name;
-#endif
 {
 	struct Setting *p;
 	for (p = Setting; p != NULL; p = p->next)
@@ -1628,12 +1543,7 @@ char *name;
 }
 
 
-#if __STDC__
 char *sgSettingGetValue(char *name)
-#else
-char *sgSettingGetValue(name)
-char *name;
-#endif
 {
 	struct Setting *p;
 	p = sgSettingFindName(name);
@@ -1649,12 +1559,7 @@ char *name;
  *
  */
 
-#if __STDC__
 void sgRewrite(char *rewrite)
-#else
-void sgRewrite(rewrite)
-char *rewrite;
-#endif
 {
 	struct sgRewrite *rew;
 	if (Rewrite != NULL) {
@@ -1680,13 +1585,7 @@ char *rewrite;
 	}
 }
 
-#if __STDC__
 void sgRewriteTime(char *name, int within)
-#else
-void sgRewriteTime(name, within)
-char *name;
-int within;
-#endif
 {
 	struct Time *time = NULL;
 	struct sgRewrite *sp;
@@ -1698,12 +1597,7 @@ int within;
 	sp->time = time;
 }
 
-#if __STDC__
 void sgRewriteSubstitute(char *string)
-#else
-void sgRewriteSubstitute(string)
-char *string;
-#endif
 {
 	char *pattern, *subst = NULL, *p;
 	int flags = REG_EXTENDED;
@@ -1750,25 +1644,14 @@ char *string;
 	lastRewriteRegExec = regexp;
 }
 
-#if __STDC__
 char *sgRewriteExpression(struct sgRewrite *rewrite, char *subst)
-#else
-char *sgRewriteExpression(rewrite, subst)
-struct sgRewrite *rewrite;
-char *subst;
-#endif
 {
 	char *result = NULL;
 	result = sgRegExpSubst(rewrite->rewrite, subst);
 	return result;
 }
 
-#if __STDC__
 struct sgRewrite *sgRewriteFindName(char *name)
-#else
-struct sgRewrite *sgRewriteFindName(name)
-char *name;
-#endif
 {
 	struct sgRewrite *p;
 	for (p = Rewrite; p != NULL; p = p->next)
@@ -1783,12 +1666,7 @@ char *name;
  * Time functions
  */
 
-#if __STDC__
 void sgTime(char *name)
-#else
-void sgTime(name)
-char *name;
-#endif
 {
 	struct Time *t;
 	if (Time != NULL) {
@@ -1813,11 +1691,7 @@ char *name;
 	}
 }
 
-#if __STDC__
 void sgTimeElementInit()
-#else
-void sgTimeElementInit()
-#endif
 {
 	struct TimeElement *te;
 
@@ -1830,11 +1704,7 @@ void sgTimeElementInit()
 	lastTimeElement = te;
 }
 
-#if __STDC__
 void sgTimeElementEnd()
-#else
-void sgTimeElementEnd()
-#endif
 {
 	time_switch = 0;
 	date_switch = 0;
@@ -1848,13 +1718,7 @@ void sgTimeElementEnd()
 		lastTimeElement->to = 1439;  /* set time to 23:59 */
 }
 
-#if __STDC__
 void sgTimeElementAdd(char *element, char type)
-#else
-void sgTimeElementAdd(element, type)
-char *element;
-char type;
-#endif
 {
 	struct TimeElement *te;
 	char *p;
@@ -1979,12 +1843,7 @@ char type;
 }
 
 
-#if __STDC__
 struct Time *sgTimeFindName(char *name)
-#else
-struct Time *sgTimeFindName(name)
-char *name;
-#endif
 {
 	struct Time *p;
 	for (p = Time; p != NULL; p = p->next)
@@ -1993,22 +1852,12 @@ char *name;
 	return NULL;
 }
 
-#if __STDC__
 int sgTimeCmp(const int *a, const int *b)
-#else
-int sgTimeCmp(a, b)
-const int *a;
-const int *b;
-#endif
 {
 	return *a - *b;
 }
 
-#if __STDC__
 void sgTimeElementSortEvents()
-#else
-void sgTimeElementSortEvents()
-#endif
 {
 	struct Time *p;
 	struct TimeElement *te;
@@ -2040,11 +1889,7 @@ void sgTimeElementSortEvents()
 	}
 }
 
-#if __STDC__
 int sgTimeNextEvent()
-#else
-int sgTimeNextEvent()
-#endif
 {
 	time_t t;
 	struct tm *lt;
@@ -2086,20 +1931,14 @@ int sgTimeNextEvent()
 		m = ((lastval - m) * 60) - lt->tm_sec;
 	if (m <= 0)
 		m = 30;
-	@NOLOG1@  sgLogDebug("INFO: recalculating alarm in %d seconds", (unsigned int)m); @NOLOG2@
+	sgLogDebug("INFO: recalculating alarm in %d seconds", (unsigned int)m);
 	alarm((unsigned int)m);
 	sgTimeCheck(lt, t);
 	sgTimeSetAcl();
 	return 0;
 }
 
-#if __STDC__
 int sgTimeCheck(struct tm *lt, time_t t)
-#else
-int sgTimeCheck(lt, t)
-struct tm *lt;
-time_t t;
-#endif
 {
 	struct Time *sg;
 	struct TimeElement *te;
@@ -2254,14 +2093,7 @@ void sgTimePrint()
  */
 
 
-#if __STDC__
 void sgSetIpType(int type, char *file, int line)
-#else
-void sgSetIpType(type, file, line)
-int type;
-char *file;
-int line;
-#endif
 {
 	struct Ip *ip = sgIpLast(lastSource), *nip;
 	char *p;
@@ -2305,12 +2137,7 @@ int line;
 	ip->next = nip;
 }
 
-#if __STDC__
 void sgIp(char *name)
-#else
-void sgIp(name)
-char *name;
-#endif
 {
 	struct Ip *ip;
 	unsigned long *op;
@@ -2334,12 +2161,7 @@ char *name;
 	}
 }
 
-#if __STDC__
 struct Ip *sgIpLast(struct Source *s)
-#else
-struct Ip *sgIpLast(s)
-struct Source *s;
-#endif
 {
 	struct Ip *ip, *ret = NULL;
 	for (ip = s->ip; ip != NULL; ip = ip->next)
@@ -2352,14 +2174,7 @@ struct Source *s;
  */
 
 
-#if __STDC__
 void sgAcl(char *name, char *value, int within)
-#else
-void sgAcl(name, value, within)
-char *name;
-char *value;
-int within;
-#endif
 {
 	struct Acl *acl;
 	struct Source *source = NULL;
@@ -2417,14 +2232,7 @@ int within;
 	}
 }
 
-#if __STDC__
 void sgAclSetValue(char *what, char *value, int allowed)
-#else
-void sgAclSetValue(what, value, allowed)
-char *what;
-char *value;
-int allowed;
-#endif
 {
 	char *subval = NULL;
 	struct Destination *dest = NULL;
@@ -2501,12 +2309,7 @@ int allowed;
 		lastAcl->allow = 1;
 }
 
-#if __STDC__
 struct Acl *sgAclFindName(char *name)
-#else
-struct Acl *sgAclFindName(name)
-char *name;
-#endif
 {
 	struct Acl *p;
 	for (p = Acl; p != NULL; p = p->next)
@@ -2516,12 +2319,7 @@ char *name;
 }
 
 
-#if __STDC__
 struct Acl *sgAclCheckSource(struct Source *source)
-#else
-struct Acl *sgAclCheckSource(source)
-struct Source *source;
-#endif
 {
 	struct Acl *acl = defaultAcl;
 	int found = 0;
@@ -2540,16 +2338,12 @@ struct Source *source;
 				}
 			}
 		}
+	} else {
+		sgLogDebug("source not found");
 	}
-	@NOLOG1@
-	else {
-		if (globalDebug == 1) sgLogError("source not found");
-	}
-	@NOLOG2@
 	if (!found) {
 		acl = defaultAcl;
-		@NOLOG1@
-		if (globalDebug == 1) sgLogError("no ACL matching source, using default"); @NOLOG2@
+		sgLogDebug("no ACL matching source, using default");
 	}
 	return acl;
 }
@@ -2573,8 +2367,7 @@ int is_blacklisted(char *domain, char *suffix)
 	//Copying domain to target
 	if (strlen(domain) + strlen(suffix) + 1 > MAX_BUF) {
 		//Buffer overflow risk - just return and accept
-		@NOLOG1@
-		if (globalDebug == 1) sgLogError("dnsbl : too long domain name - accepting without actual check"); @NOLOG2@
+		sgLogDebug("dnsbl : too long domain name - accepting without actual check");
 		return 0;
 	}
 	strncpy(target, domain, strlen(domain) + 1);
@@ -2603,14 +2396,7 @@ int blocked_by_dnsbl(char *domain, char *suffix)
 }
 
 
-#if __STDC__
 char *sgAclAccess(struct Source *src, struct Acl *acl, struct SquidInfo *req)
-#else
-char *sgAclAccess(src, acl, req)
-struct Source *src;
-struct Acl *acl;
-struct SquidInfo *req;
-#endif
 {
 	int access = 1, result;
 	char *redirect = NULL, *dbdata = NULL, *p;
@@ -2743,22 +2529,13 @@ struct SquidInfo *req;
 	return redirect;
 }
 
-#if __STDC__
 void yyerror(char *s)
-#else
-void yyerror(s)
-char *s;
-#endif
 {
 	sgLogFatal("FATAL: %s in configfile %s line %d", s, configFile, lineno);
 }
 
 
-#if __STDC__
 int yywrap()
-#else
-int yywrap()
-#endif
 {
 	return 1;
 }
@@ -2767,15 +2544,7 @@ int yywrap()
  * returns a pointer to a UserInfo structure when found
  * handles all LDAP sub-lookups and caching
  */
-#if __STDC__
 int sgFindUser(struct Source *src, char *ident, struct UserInfo **rval)
-#else
-int sgFindUser(src, ident, rval)
-struct Source *src;
-char *ident;
-struct UserInfo **rval;
-#endif
-
 {
 	int i, found;
 	int CacheTimeOut;
@@ -2783,7 +2552,7 @@ struct UserInfo **rval;
 	struct UserInfo *userinfo;
 	static struct UserInfo info;
 
-	@NOLOG1@  sgLogError("DEBUG: sgFindUser called with: %s", ident);  @NOLOG2@
+	 sgLogDebug("DEBUG: sgFindUser called with: %s", ident);
 
 	/* defined in the userDB? */
 	if (src->userDb != NULL && defined(src->userDb, ident, (char **)&userinfo) == 1) {
@@ -2839,7 +2608,7 @@ struct UserInfo **rval;
 
 		sgDbUpdate(src->userDb, ident, (char *)userinfo,
 			   sizeof(struct UserInfo));
-		@NOLOG1@ sgLogError("Added LDAP source: %s", ident); @NOLOG2@
+		sgLogDebug("Added LDAP source: %s", ident);
 
 		if (found) {
 			*rval = userinfo;
@@ -2855,15 +2624,7 @@ struct UserInfo **rval;
  * returns a pointer to a IpInfo structure when found
  * handles all LDAP sub-lookups and caching
  */
-#if __STDC__
 int sgFindIp(struct Source *src, char *net, struct IpInfo **rval)
-#else
-int sgFindIp(src, net, rval)
-struct Source *src;
-char *net;
-struct IpInfo **rval;
-#endif
-
 {
 	int i, found;
 	int CacheTimeOut;
@@ -2923,7 +2684,7 @@ struct IpInfo **rval;
 		sgDbUpdate(src->ipDb, net, (char *)ipinfo,
 			   sizeof(struct IpInfo));
 		// DEBUG
-		sgLogError("Added LDAP source: %s", net);
+		sgLogDebug("Added LDAP source: %s", net);
 
 		if (found) {
 			*rval = ipinfo;
@@ -2933,13 +2694,7 @@ struct IpInfo **rval;
 	return found;
 }
 
-#if __STDC__
 static int get_ldap_errno(LDAP *ld)
-#else
-static int get_ldap_errno(ld)
-LDAP * ld;
-#endif
-
 {
 	int err = 0;
 	if (ld)
@@ -2990,13 +2745,7 @@ int expand_url(char *expand, size_t expand_size, const char *url,
 
 
 /* does a raw LDAP search and returns 1 if found, 0 if not */
-#if __STDC__
 int sgDoLdapSearch(const char *url, const char *username)
-#else
-int sgDoLdapSearch(url, username)
-const char *url;
-const char *username;
-#endif
 {
 	LDAPURLDesc *lud;
 	LDAP *ld;
@@ -3090,10 +2839,10 @@ const char *username;
 		/* do we recognize the key? */
 		if (strncmp(key, "bindname=", 9) == 0) {
 			binddn = data;
-			@NOLOG1@ sgLogError("Extracted binddn: %s", binddn); @NOLOG2@
+			sgLogDebug("Extracted binddn: %s", binddn);
 		} else if (strncmp(key, "x-bindpass=", 11) == 0) {
 			bindpass = data;
-			@NOLOG1@ sgLogError("Extracted x-bindpass: %s", bindpass); @NOLOG2@
+			sgLogDebug("Extracted x-bindpass: %s", bindpass);
 		}
 	}
 
@@ -3110,11 +2859,9 @@ const char *username;
 	if (ldap_search_ext_s(ld, lud->lud_dn, lud->lud_scope, lud->lud_filter,
 			      lud->lud_attrs, 0, NULL, NULL, NULL, -1,
 			      &ldapresult) != LDAP_SUCCESS) {
-		@NOLOG1@
 		sgLogError("%s: ldap_search_ext_s failed: %s "
 
 			   "(params: %s, %d, %s, %s)", progname, ldap_err2string(get_ldap_errno(ld)), lud->lud_dn, lud->lud_scope, lud->lud_filter, lud->lud_attrs[0]);
-		@NOLOG2@
 
 		ldap_unbind(ld);
 		ldap_free_urldesc(lud);

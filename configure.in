@@ -24,8 +24,6 @@ if test $PERL = no; then
 fi
 
 squiduser=squid
-NOLOG1=
-NOLOG2=
 ldap_yacc=""
 sg_config=/usr/local/squidGuard/squidGuard.conf
 sg_dbhome=/usr/local/squidGuard/db
@@ -87,10 +85,6 @@ AC_ARG_WITH(sg_logdir,
 AC_ARG_WITH(sg_dbhome,
 	[  --with-sg-dbhome=DIR    location of squidGuard db dirs],
                 sg_dbhome=$withval)
-
-AC_ARG_WITH(nolog,
- 	[  --with-nolog=ARG        supress logging except for start and stop messages (default: ARG=no)],
-	        nolog=$withval )
 
 AC_ARG_WITH(syslog,
 	[  --with-syslog=ARG       send log messages to syslog for logging (default: ARG=no)],
@@ -162,17 +156,6 @@ if test $HAVE_REGEX.H = no; then
 	exit 1
 fi
 
-dnl
-dnl Checks if runtime logmessages shall be suppressed. 
-dnl
-AC_ARG_WITH(nolog)
-if test "$nolog" = "yes" -o "$nolog" = "true"; then
-echo "checking suppress runtime logging... yes"
-NOLOG1="/* nolog option set:"
-NOLOG2="*/"
-else
-echo "checking suppress runtime logging... no"
-fi
 
 dnl
 dnl Checks if logmessages shall be send to syslog.
@@ -214,8 +197,6 @@ if test "$with_ldap" = "yes" -o "$with_ldap" = "true"; then
 	echo "checking for ldap support... yes"
 	with_ldap=yes
 	LIBS="$LIBS -lldap $ldap_lib"
-	YACCLINE="                     | LDAPUSERSEARCH STRING { sgSourceLdapUserSearch(\$2); }"
-	YACCLINE2="                     | LDAPIPSEARCH STRING { sgSourceLdapIpSearch(\$2); }"
        ],[
        AC_MSG_WARN([Cannot find LDAP libraries. LDAP support disabled])
        with_ldap=no
@@ -223,8 +204,6 @@ if test "$with_ldap" = "yes" -o "$with_ldap" = "true"; then
 else
 	echo "checking for ldap support... no"
 	with_ldap=no
-	YACCLINE=""
-	YACCLINE2=""
 fi
 if test "$with_ldap" = "yes"; then
        AC_DEFINE(HAVE_LIBLDAP, 1, [Define if LDAP support should be compiled])
@@ -270,7 +249,6 @@ if test "$with_mysql" != "no"; then
   fi
 
   AC_MSG_CHECKING(for mysql)
-  MYSQLLINE="                    | USERQUERY WORD WORD WORD WORD { sgSourceUserQuery(\$2,\$3,\$4,\$5); }"
 
   for i in $mysql_directory; do
     if test -r $i/include/mysql/mysql.h; then
@@ -291,7 +269,6 @@ if test "$with_mysql" != "no"; then
       done
       FAIL_MESSAGE("mysql headers (mysql.h)", $tmp)
     else
-      MYSQLLINE=""
       AC_MSG_RESULT(no)
     fi
   else
@@ -311,7 +288,6 @@ if test "$with_mysql" != "no"; then
         FAIL_MESSAGE("mysqlclient library",
                      "$MYSQL_DIR/lib $MYSQL_DIR/lib/mysql")
       else
-        MYSQLLINE=""
         AC_MSG_RESULT(no)
       fi
     else
@@ -324,7 +300,6 @@ if test "$with_mysql" != "no"; then
     fi
   fi
 else
-  MYSQLLINE=""
   echo "checking for mysql support... no"
 fi
 
@@ -479,11 +454,6 @@ AC_SUBST(sg_config)
 AC_SUBST(sg_cfgdir)
 AC_SUBST(sg_logdir)
 AC_SUBST(sg_dbhome)
-AC_SUBST(NOLOG1)
-AC_SUBST(NOLOG2)
-AC_SUBST(YACCLINE)
-AC_SUBST(YACCLINE2)
-AC_SUBST(MYSQLLINE)
 AC_SUBST(squiduser)
 AC_SUBST(VERSION)
 AC_SUBST(PERL)
@@ -496,4 +466,4 @@ AC_SUBST(SQUIDGUARDROBOTUA)
 AC_SUBST(ROBOTEXCEPTIONS)
 AC_SUBST(BLACKLISTS)
 
-AC_OUTPUT(Makefile src/Makefile src/sgDiv.c src/sg.h src/sg.y test/Makefile test/test1.conf test/test2.conf samples/Makefile samples/sample.conf samples/squidGuard.cgi samples/squidGuard-simple.cgi samples/squidGuard-simple-de.cgi contrib/Makefile contrib/squidGuardRobot/squidGuardRobot contrib/sgclean/sgclean contrib/hostbyname/hostbyname)
+AC_OUTPUT(Makefile src/Makefile src/sg.h test/Makefile test/test1.conf test/test2.conf samples/Makefile samples/sample.conf samples/squidGuard.cgi samples/squidGuard-simple.cgi samples/squidGuard-simple-de.cgi contrib/Makefile contrib/squidGuardRobot/squidGuardRobot contrib/sgclean/sgclean contrib/hostbyname/hostbyname)
