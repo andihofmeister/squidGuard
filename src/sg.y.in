@@ -3000,6 +3000,7 @@ int sgDoLdapSearch(url, username)
 {
        LDAPURLDesc *lud;
        LDAP *ld;
+       int lderr = 0;
        LDAPMessage *ldapresult, *ldapentry;
        char *binddn = NULL, *bindpass = NULL;
        int ext_i;
@@ -3034,9 +3035,20 @@ int sgDoLdapSearch(url, username)
        }
 
        /* get a handle to an LDAP connection */
-       if((ld = ldap_init(lud->lud_host, lud->lud_port)) == NULL) {
-               sgLogError("%s: ldap_init(%s, %d) failed: %s", progname,
-                       lud->lud_host, lud->lud_port, strerror(errno));
+       if ( ldap_is_ldapi_url( url ) ) {
+      		char * c = NULL;
+		strncpy( buffer, url, sizeof(buffer) );
+		if ((c = strchr( buffer + strlen("ldapi://"), '/' )) != NULL ) {
+			*c = 0;
+		}
+       } else {
+		snprintf( buffer, sizeof(buffer), "%s://%s:%d", lud->lud_scheme, lud->lud_host, lud->lud_port );
+       }
+
+       if( (lderr = ldap_initialize(&ld,buffer)) != LDAP_SUCCESS) {
+
+               sgLogError("%s: ldap_initialize(%s) failed: %s", progname,
+                       buffer, ldap_err2string(lderr));
                ldap_free_urldesc(lud);
                return found;
        }
