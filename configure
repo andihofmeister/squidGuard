@@ -650,8 +650,6 @@ MYSQLLINE
 YACCLINE2
 YACCLINE
 LOGFAC
-NOSYSLOG2
-NOSYSLOG1
 NOLOG2
 NOLOG1
 sg_dbhome
@@ -4516,8 +4514,6 @@ cat >>confdefs.h <<\_ACEOF
 _ACEOF
 
 else
-NOSYSLOG1="/* syslog not configured"
-NOSYSLOG2="*/"
 echo "checking syslog for logging... no"
 fi
 
@@ -6383,7 +6379,7 @@ TESTDIR="`pwd`/test"
 
 
 
-ac_config_files="$ac_config_files Makefile src/Makefile src/main.c src/sgLog.c src/sgDiv.c src/sg.h src/sg.y test/Makefile test/test1.conf test/test2.conf samples/Makefile samples/sample.conf samples/squidGuard.cgi samples/squidGuard-simple.cgi samples/squidGuard-simple-de.cgi contrib/Makefile contrib/squidGuardRobot/squidGuardRobot contrib/sgclean/sgclean contrib/hostbyname/hostbyname"
+ac_config_files="$ac_config_files Makefile src/Makefile src/main.c src/sgDiv.c src/sg.h src/sg.y test/Makefile test/test1.conf test/test2.conf samples/Makefile samples/sample.conf samples/squidGuard.cgi samples/squidGuard-simple.cgi samples/squidGuard-simple-de.cgi contrib/Makefile contrib/squidGuardRobot/squidGuardRobot contrib/sgclean/sgclean contrib/hostbyname/hostbyname"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -6983,7 +6979,6 @@ do
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
     "src/Makefile") CONFIG_FILES="$CONFIG_FILES src/Makefile" ;;
     "src/main.c") CONFIG_FILES="$CONFIG_FILES src/main.c" ;;
-    "src/sgLog.c") CONFIG_FILES="$CONFIG_FILES src/sgLog.c" ;;
     "src/sgDiv.c") CONFIG_FILES="$CONFIG_FILES src/sgDiv.c" ;;
     "src/sg.h") CONFIG_FILES="$CONFIG_FILES src/sg.h" ;;
     "src/sg.y") CONFIG_FILES="$CONFIG_FILES src/sg.y" ;;

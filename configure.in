@@ -190,8 +190,6 @@ echo "checking syslog for logging... yes"
 LOGFAC="$syslog_facility"
 AC_DEFINE(USE_SYSLOG, 1, [Defined if SYSLOG support should be compiled])
 else
-NOSYSLOG1="/* syslog not configured"
-NOSYSLOG2="*/"
 echo "checking syslog for logging... no"
 fi
 
@@ -483,8 +481,6 @@ AC_SUBST(sg_logdir)
 AC_SUBST(sg_dbhome)
 AC_SUBST(NOLOG1)
 AC_SUBST(NOLOG2)
-AC_SUBST(NOSYSLOG1)
-AC_SUBST(NOSYSLOG2)
 AC_SUBST(LOGFAC)
 AC_SUBST(YACCLINE)
 AC_SUBST(YACCLINE2)
@@ -501,4 +497,4 @@ AC_SUBST(SQUIDGUARDROBOTUA)
 AC_SUBST(ROBOTEXCEPTIONS)
 AC_SUBST(BLACKLISTS)
 
-AC_OUTPUT(Makefile src/Makefile src/main.c src/sgLog.c src/sgDiv.c src/sg.h src/sg.y test/Makefile test/test1.conf test/test2.conf samples/Makefile samples/sample.conf samples/squidGuard.cgi samples/squidGuard-simple.cgi samples/squidGuard-simple-de.cgi contrib/Makefile contrib/squidGuardRobot/squidGuardRobot contrib/sgclean/sgclean contrib/hostbyname/hostbyname)
+AC_OUTPUT(Makefile src/Makefile src/main.c src/sgDiv.c src/sg.h src/sg.y test/Makefile test/test1.conf test/test2.conf samples/Makefile samples/sample.conf samples/squidGuard.cgi samples/squidGuard-simple.cgi samples/squidGuard-simple-de.cgi contrib/Makefile contrib/squidGuardRobot/squidGuardRobot contrib/sgclean/sgclean contrib/hostbyname/hostbyname)

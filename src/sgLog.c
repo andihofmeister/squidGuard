@@ -22,6 +22,7 @@ extern int globalDebug;         /* from main.c */
 extern int globalPid;           /* from main.c */
 extern char *globalLogDir;      /* from main.c */
 extern struct LogFileStat *globalErrorLog;
+
 #ifdef USE_SYSLOG
 #include <syslog.h>
 #endif
@@ -78,11 +79,15 @@ void sgLogDebug(char *format, ...)
 	if (vsnprintf(msg, MAX_BUF, format, ap) > (MAX_BUF - 1))
 		sgLog(globalErrorLog, "FATAL: overflow in vsnprintf (sgLogError): %s", strerror(errno));
 	va_end(ap);
-	@NOSYSLOG1@  if (globalSyslog == 1) {
+#ifdef USE_SYSLOG
+	if (globalSyslog == 1) {
 		syslog(LOG_DEBUG, "%s\n", msg);
-	} else { @NOSYSLOG2@
-		 sgLog(globalErrorLog, "%s", msg);
-		 @NOSYSLOG1@ } @NOSYSLOG2@
+	} else {
+		sgLog(globalErrorLog, "%s", msg);
+	}
+#else
+	sgLog(globalErrorLog, "%s", msg);
+#endif
 }
 
 
@@ -94,11 +99,15 @@ void sgLogNotice(char *format, ...)
 	if (vsnprintf(msg, MAX_BUF, format, ap) > (MAX_BUF - 1))
 		sgLog(globalErrorLog, "FATAL: overflow in vsnprintf (sgLogError): %s", strerror(errno));
 	va_end(ap);
-	@NOSYSLOG1@  if (globalSyslog == 1) {
+#ifdef USE_SYSLOG
+	if (globalSyslog == 1) {
 		syslog(LOG_NOTICE, "%s\n", msg);
-	} else { @NOSYSLOG2@
-		 sgLog(globalErrorLog, "%s", msg);
-		 @NOSYSLOG1@ } @NOSYSLOG2@
+	} else {
+		sgLog(globalErrorLog, "%s", msg);
+	}
+#else
+	sgLog(globalErrorLog, "%s", msg);
+#endif
 }
 
 void sgLogWarn(char *format, ...)
@@ -109,11 +118,15 @@ void sgLogWarn(char *format, ...)
 	if (vsnprintf(msg, MAX_BUF, format, ap) > (MAX_BUF - 1))
 		sgLog(globalErrorLog, "FATAL: overflow in vsnprintf (sgLogError): %s", strerror(errno));
 	va_end(ap);
-	@NOSYSLOG1@  if (globalSyslog == 1) {
+#ifdef USE_SYSLOG
+	if (globalSyslog == 1) {
 		syslog(LOG_WARNING, "%s\n", msg);
-	} else { @NOSYSLOG2@
-		 sgLog(globalErrorLog, "%s", msg);
-		 @NOSYSLOG1@ } @NOSYSLOG2@
+	} else {
+		sgLog(globalErrorLog, "%s", msg);
+	}
+#else
+	sgLog(globalErrorLog, "%s", msg);
+#endif
 }
 
 void sgLogError(char *format, ...)
@@ -124,11 +137,15 @@ void sgLogError(char *format, ...)
 	if (vsnprintf(msg, MAX_BUF, format, ap) > (MAX_BUF - 1))
 		sgLog(globalErrorLog, "FATAL: overflow in vsnprintf (sgLogError): %s", strerror(errno));
 	va_end(ap);
-	@NOSYSLOG1@  if (globalSyslog == 1) {
+#ifdef USE_SYSLOG
+	if (globalSyslog == 1) {
 		syslog(LOG_ERR, "%s\n", msg);
-	} else { @NOSYSLOG2@
-		 sgLog(globalErrorLog, "%s", msg);
-		 @NOSYSLOG1@ } @NOSYSLOG2@
+	} else {
+		sgLog(globalErrorLog, "%s", msg);
+	}
+#else
+	sgLog(globalErrorLog, "%s", msg);
+#endif
 }
 
 void sgLogFatal(char *format, ...)
@@ -139,11 +156,15 @@ void sgLogFatal(char *format, ...)
 	if (vsnprintf(msg, MAX_BUF, format, ap) > (MAX_BUF - 1))
 		return;
 	va_end(ap);
-	@NOSYSLOG1@  if (globalSyslog == 1) {
+#ifdef USE_SYSLOG
+	if (globalSyslog == 1) {
 		syslog(LOG_EMERG, "%s\n", msg);
-	} else { @NOSYSLOG2@
-		 sgLog(globalErrorLog, "%s", msg);
-		 @NOSYSLOG1@ } @NOSYSLOG2@
+	} else {
+		sgLog(globalErrorLog, "%s", msg);
+	}
+#else
+	sgLog(globalErrorLog, "%s", msg);
+#endif
 	sgEmergency();
 }
 
