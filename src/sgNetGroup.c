@@ -3,21 +3,21 @@
 
 extern int groupDebug;
 
-#define	dprintf(...)	if (groupDebug) sgLogError(__VA_ARGS__)
-#define	dputs(s)	if (groupDebug) sgLogError("%s", s)
+#define dprintf(...)    if (groupDebug) sgLogError(__VA_ARGS__)
+#define dputs(s)        if (groupDebug) sgLogError("%s", s)
 
 extern char *krbRealm;
-extern void unescape( char *s);
+extern void unescape(char *s);
 extern void stripRealm(char *name, char *realm);
 
 static struct node {
-	struct node *next;
-	char *name;
+	struct node *	next;
+	char *		name;
 } **groups;
 
-static char * sstrdup(const char *cp)
+static char *sstrdup(const char *cp)
 {
-	char    *np;
+	char *np;
 
 	np = sgMalloc(strlen(cp) + 1);
 	strcpy(np, cp);
@@ -25,14 +25,15 @@ static char * sstrdup(const char *cp)
 	return np;
 }
 
-static struct node * addgroup(struct node *list, char *name) {
+static struct node *addgroup(struct node *list, char *name)
+{
 	struct node *new, *tmp = NULL;
 
 	new = sgCalloc(1, sizeof(*new));
 	new->name = sstrdup(name);
 
 	if (list != NULL) {
-		for (tmp = list; tmp->next != NULL; tmp = tmp->next);
+		for (tmp = list; tmp->next != NULL; tmp = tmp->next) ;
 		tmp->next = new;
 	} else {
 		list = new;
@@ -41,15 +42,17 @@ static struct node * addgroup(struct node *list, char *name) {
 	return list;
 }
 
-void sgSourceNetGroup(char *group) {
-	extern struct Source	*lastSource;
+void sgSourceNetGroup(char *group)
+{
+	extern struct Source *lastSource;
 
 	dprintf("NETGROUP: Adding netgroup %s to source %s", group, lastSource->name);
 
 	lastSource->netgrouplist = addgroup(lastSource->netgrouplist, group);
 }
 
-int sgCheckNetGroup(void *grouplist, char *ident, char *source) {
+int sgCheckNetGroup(void *grouplist, char *ident, char *source)
+{
 	struct node *tmp;
 
 	unescape(ident);

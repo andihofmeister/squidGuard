@@ -1,20 +1,20 @@
 /*
-  By accepting this notice, you agree to be bound by the following
-  agreements:
-  
-  This software product, squidGuard, is copyrighted (C) 1998-2009
-  by Christine Kronberg, Shalla Secure Services. All rights reserved.
- 
-  This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License (version 2) as
-  published by the Free Software Foundation.  It is distributed in the
-  hope that it will be useful, but WITHOUT ANY WARRANTY; without even the
-  implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
-  PURPOSE.  See the GNU General Public License (GPL) for more details.
-  
-  You should have received a copy of the GNU General Public License
-  (GPL) along with this program.
-*/
+ * By accepting this notice, you agree to be bound by the following
+ * agreements:
+ *
+ * This software product, squidGuard, is copyrighted (C) 1998-2009
+ * by Christine Kronberg, Shalla Secure Services. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License (version 2) as
+ * published by the Free Software Foundation.  It is distributed in the
+ * hope that it will be useful, but WITHOUT ANY WARRANTY; without even the
+ * implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+ * PURPOSE.  See the GNU General Public License (GPL) for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * (GPL) along with this program.
+ */
 
 #include <stdio.h>
 #include <unistd.h>
@@ -115,87 +115,87 @@ int tolower();
 #define REDIRECT_PERMANENT   "301:"
 #define REDIRECT_TEMPORARILY "302:"
 
-#define	NEXT_SOURCE	((char *)-1)
+#define NEXT_SOURCE     ((char *)-1)
 
 char *progname;
 
 struct LogFileStat {
-  char *name;
-  FILE *fd;
-  ino_t st_ino;
-  dev_t st_dev;
-  struct LogFileStat *next;
+	char *			name;
+	FILE *			fd;
+	ino_t			st_ino;
+	dev_t			st_dev;
+	struct LogFileStat *	next;
 };
 
 struct LogFile {
-  char *parent_name;
-  int parent_type;
-  int anonymous;
-  int verbose;
-  struct LogFileStat *stat;
+	char *			parent_name;
+	int			parent_type;
+	int			anonymous;
+	int			verbose;
+	struct LogFileStat *	stat;
 };
 
 struct SquidQueue {
-  struct SquidInfo *squidInfo;
-  struct SquidQueue *next;
+	struct SquidInfo *	squidInfo;
+	struct SquidQueue *	next;
 };
 
 struct UserInfo {
-  /* quota tracking */
-  time_t time;
-  time_t last;
-  int consumed;
-  char status;
+	/* quota tracking */
+	time_t	time;
+	time_t	last;
+	int	consumed;
+	char	status;
 #ifdef HAVE_LIBLDAP
-  /* LDAP tracking */
-  int ldapuser;                        /* bool: 1 if user loaded from LDAP */
-  int found;                   /* bool: we also cache if not found in LDAP */
-  time_t cachetime;            /* time this item was added to cache */
+	/* LDAP tracking */
+	int	ldapuser;       /* bool: 1 if user loaded from LDAP */
+	int	found;          /* bool: we also cache if not found in LDAP */
+	time_t	cachetime;      /* time this item was added to cache */
 #endif
 };
 
 struct UserQuota {
-  time_t seconds;
-  int renew;
-  time_t sporadic;
+	time_t	seconds;
+	int	renew;
+	time_t	sporadic;
 };
 
 struct SquidInfo {
-  char protocol[MAX_BUF];
-  char domain[MAX_BUF];
-  int  dot;  /* true if domain is in dot notation */
-  char url[MAX_BUF];
-  char orig[MAX_BUF];
-  char surl[MAX_BUF];	
-  char furl[MAX_BUF];
-  char *strippedurl;
-  int  port;
-  char src[MAX_BUF];
-  char srcDomain[MAX_BUF];
-  char ident[MAX_BUF];
-  char method[MAX_BUF];
+	char	protocol[MAX_BUF];
+	char	domain[MAX_BUF];
+	int	dot; /* true if domain is in dot notation */
+	char	url[MAX_BUF];
+	char	orig[MAX_BUF];
+	char	surl[MAX_BUF];
+	char	furl[MAX_BUF];
+	char *	strippedurl;
+	int	port;
+	char	src[MAX_BUF];
+	char	srcDomain[MAX_BUF];
+	char	ident[MAX_BUF];
+	char	method[MAX_BUF];
 };
 
 
 struct sgRegExp {
-  char *pattern;
-  char *substitute;
-  regex_t *compiled;
-  int error;
-  int flags;
-  int global;
-  char *httpcode;
-  struct sgRegExp *next;
+	char *			pattern;
+	char *			substitute;
+	regex_t *		compiled;
+	int			error;
+	int			flags;
+	int			global;
+	char *			httpcode;
+	struct sgRegExp *	next;
 };
 
 struct sgRewrite {
-  char *name;
-  int active;
-  struct sgRegExp *rewrite;
-  struct LogFile *logfile;
-  struct Time *time;
-  int within;
-  struct sgRewrite *next;
+	char *			name;
+	int			active;
+	struct sgRegExp *	rewrite;
+	struct LogFile *	logfile;
+	struct Time *		time;
+	int			within;
+	struct sgRewrite *	next;
 };
 
 #define SGDBTYPE_DOMAINLIST 1
@@ -203,295 +203,294 @@ struct sgRewrite {
 #define SGDBTYPE_USERLIST 3
 
 struct sgDb {
-  char *dbhome;
-  DB *dbp;
-  DBC *dbcp;
-  DB_ENV *dbenv;
+	char *	dbhome;
+	DB *	dbp;
+	DBC *	dbcp;
+	DB_ENV *dbenv;
 #ifndef DB_VERSION_GT2
-  DB_INFO dbinfo;
+	DB_INFO dbinfo;
 #endif
-  DBT key;
-  DBT data;
-  int entries;	
-  int type;
+	DBT	key;
+	DBT	data;
+	int	entries;
+	int	type;
 };
 
 struct Ip {
-  int type;
-  int net_is_set;
-  unsigned long net;
-  int mask;
-  char *str;
-  struct Ip *next;
+	int		type;
+	int		net_is_set;
+	unsigned long	net;
+	int		mask;
+	char *		str;
+	struct Ip *	next;
 };
 
 /* ldapip */
 #ifdef HAVE_LIBLDAP
-  /* LDAP tracking */
+/* LDAP tracking */
 struct IpInfo {
-  /* quota tracking */
-  time_t time;
-  time_t last;
-  int consumed;
-  char status;
-  int ldapip;                        /* bool: 1 if ip loaded from LDAP */
-  int found;                   /* bool: we also cache if not found in LDAP */
-  time_t cachetime;            /* time this item was added to cache */
+	/* quota tracking */
+	time_t	time;
+	time_t	last;
+	int	consumed;
+	char	status;
+	int	ldapip;         /* bool: 1 if ip loaded from LDAP */
+	int	found;          /* bool: we also cache if not found in LDAP */
+	time_t	cachetime;      /* time this item was added to cache */
 };
 #endif
 
 struct IpQuota {
-  time_t seconds;
-  int renew;
-  time_t sporadic;
+	time_t	seconds;
+	int	renew;
+	time_t	sporadic;
 };
 /* ldapip */
 
 
 struct Setting {
-  char *name;
-  char *value;
-  struct Setting *next;
+	char *		name;
+	char *		value;
+	struct Setting *next;
 };
 
 struct TimeElement {
-  char wday;
-  int  from;
-  int  to;
-  int  y;
-  int  m;
-  int  d;
-  time_t fromdate;
-  time_t todate;
-  struct TimeElement *next;
+	char			wday;
+	int			from;
+	int			to;
+	int			y;
+	int			m;
+	int			d;
+	time_t			fromdate;
+	time_t			todate;
+	struct TimeElement *	next;
 };
 
 struct Time {
-  char *name;
-  int active;
-  struct TimeElement *element;
-  struct Time *next;
+	char *			name;
+	int			active;
+	struct TimeElement *	element;
+	struct Time *		next;
 };
 
 struct Destination {
-  //int syslogStatus;
-  char *name;
-  int active;
-  char *domainlist;
-  struct sgDb *domainlistDb;
-  char *urllist;
-  struct sgDb *urllistDb;
-  char *expressionlist;
-  struct sgRegExp *regExp;
-  struct sgRewrite *rewrite;
-  char *redirect;
-  struct Time *time;
-  int within;
-  struct LogFile *logfile;
-  struct Destination *next;
+	//int syslogStatus;
+	char *			name;
+	int			active;
+	char *			domainlist;
+	struct sgDb *		domainlistDb;
+	char *			urllist;
+	struct sgDb *		urllistDb;
+	char *			expressionlist;
+	struct sgRegExp *	regExp;
+	struct sgRewrite *	rewrite;
+	char *			redirect;
+	struct Time *		time;
+	int			within;
+	struct LogFile *	logfile;
+	struct Destination *	next;
 };
 
 struct Source {
-  char *name;
-  int active;
-  struct Ip *ip;
-  struct Ip *lastip;
-  struct sgDb *domainDb;
-  struct sgDb *userDb;
-  void *grouplist;
-  void *netgrouplist;
-  struct Time *time;
-  int within;
-  int cont_search;
-  struct UserQuota userquota;
-  struct LogFile *logfile;
+	char *			name;
+	int			active;
+	struct Ip *		ip;
+	struct Ip *		lastip;
+	struct sgDb *		domainDb;
+	struct sgDb *		userDb;
+	void *			grouplist;
+	void *			netgrouplist;
+	struct Time *		time;
+	int			within;
+	int			cont_search;
+	struct UserQuota	userquota;
+	struct LogFile *	logfile;
 #ifdef HAVE_LIBLDAP
-  struct sgDb *ipDb;
-  struct IpQuota ipquota;  
-  char **ldapuserurls;                     /* dynamic array of url strings */
-  int ldapuserurlcount;                    /* current size of pointer array */
-  char **ldapipurls;                     /* dynamic array of url strings */
-  int ldapipurlcount;                    /* current size of pointer array */
+	struct sgDb *		ipDb;
+	struct IpQuota		ipquota;
+	char **			ldapuserurls;           /* dynamic array of url strings */
+	int			ldapuserurlcount;       /* current size of pointer array */
+	char **			ldapipurls;             /* dynamic array of url strings */
+	int			ldapipurlcount;         /* current size of pointer array */
 #endif
-  struct Source *next;
+	struct Source *		next;
 };
 
 
 
 struct Acl {
-  char *name;
-  int active;
-  struct Source *source;
-  struct AclDest *pass;
-  int rewriteDefault;
-  struct sgRewrite *rewrite;
-  char *redirect;
-  struct Time *time;
-  int within;
-  int allow;
-  struct LogFile *logfile;
-  struct Acl *next;
+	char *			name;
+	int			active;
+	struct Source *		source;
+	struct AclDest *	pass;
+	int			rewriteDefault;
+	struct sgRewrite *	rewrite;
+	char *			redirect;
+	struct Time *		time;
+	int			within;
+	int			allow;
+	struct LogFile *	logfile;
+	struct Acl *		next;
 };
 
 struct AclDest {
-  char *name;
-  char *dns_suffix;
-  struct Destination *dest;
-  int    access;
-  int    next_source;
-  int    type;
-  struct AclDest *next;
+	char *			name;
+	char *			dns_suffix;
+	struct Destination *	dest;
+	int			access;
+	int			next_source;
+	int			type;
+	struct AclDest *	next;
 };
 
 int lineno;
 
-extern time_t	groupttl;
+extern time_t groupttl;
 
-char   *sgParseRedirect	__P((char *, struct SquidInfo *, struct Acl *, struct AclDest *));
-char   *sgAclAccess __P((struct Source *, struct Acl *, struct SquidInfo *));
+char *sgParseRedirect __P((char *, struct SquidInfo *, struct Acl *, struct AclDest *));
+char *sgAclAccess __P((struct Source *, struct Acl *, struct SquidInfo *));
 
-void   sgLogFile __P((int, int, int, char *));
+void sgLogFile __P((int, int, int, char *));
 struct LogFileStat *sgLogFileStat __P((char *));
 
-void   sgReadConfig __P((char *));
-void   sgLog __P((struct LogFileStat *, char *, ...));
-void   sgLogDebug __P((char *, ...));
-void   sgLogNotice __P((char *, ...));
-void   sgLogWarn __P((char *, ...));
-void   sgLogError __P((char *, ...));
-void   sgLogFatal __P((char *, ...));
-void   sgSetGlobalErrorLogFile __P(());
-void   sgLogRequest __P((struct LogFile *, struct SquidInfo *, struct Acl *, struct AclDest *, struct sgRewrite *, int));
-int    parseLine __P((char *, struct SquidInfo *));
-char   *sgStripUrl __P((char *));
+void sgReadConfig __P((char *));
+void sgLog __P((struct LogFileStat *, char *, ...));
+void sgLogDebug __P((char *, ...));
+void sgLogNotice __P((char *, ...));
+void sgLogWarn __P((char *, ...));
+void sgLogError __P((char *, ...));
+void sgLogFatal __P((char *, ...));
+void sgSetGlobalErrorLogFile __P(());
+void sgLogRequest __P((struct LogFile *, struct SquidInfo *, struct Acl *, struct AclDest *, struct sgRewrite *, int));
+int parseLine __P((char *, struct SquidInfo *));
+char *sgStripUrl __P((char *));
 
-void   sgEmergency __P(());
-void   sgReloadConfig __P(());
-void   sgHandlerSigHUP __P((int));
-void   sgAlarm __P(());
-int    sgStrRcmp __P((char *, char *));
-int    sgStrRncmp __P((char *, char *, int));
-int    sgDomStrRncmp __P((char *, char *, int));
-char   *sgSkipHostPart __P((char *));
-ulong  *sgConvDot __P((char *));
+void sgEmergency __P(());
+void sgReloadConfig __P(());
+void sgHandlerSigHUP __P((int));
+void sgAlarm __P(());
+int sgStrRcmp __P((char *, char *));
+int sgStrRncmp __P((char *, char *, int));
+int sgDomStrRncmp __P((char *, char *, int));
+char *sgSkipHostPart __P((char *));
+ulong *sgConvDot __P((char *));
 
-void   sgSource __P((char *));
-void   sgSourceEnd __P(());
-void   sgSourceUser __P((char *));
-void   sgSourceGroup __P((char *));
-void   sgSourceNetGroup __P((char *));
-void   sgSourceUserList __P((char *));
+void sgSource __P((char *));
+void sgSourceEnd __P(());
+void sgSourceUser __P((char *));
+void sgSourceGroup __P((char *));
+void sgSourceNetGroup __P((char *));
+void sgSourceUserList __P((char *));
 #ifdef HAVE_LIBLDAP
-void   sgSourceLdapUserSearch __P((char *));
-void   sgSourceLdapIpSearch __P((char *)); /* ldapip */
+void sgSourceLdapUserSearch __P((char *));
+void sgSourceLdapIpSearch __P((char *));   /* ldapip */
 #endif
-void   sgSourceExecUserList __P((char *));
-void   sgSourceDomain __P((char *));
-void   sgSourceIpList __P((char *));
+void sgSourceExecUserList __P((char *));
+void sgSourceDomain __P((char *));
+void sgSourceIpList __P((char *));
 struct Source *sgSourceFindName __P((char *));
 struct Source *sgFindSource __P((struct Source *, char *, char *, char *));
-void   sgSourceTime __P((char *, int));
+void sgSourceTime __P((char *, int));
 
-void   sgDest __P((char *));
-void   sgDestEnd __P(());
-void   sgDestDomainList __P((char *));
-void   sgDestUrlList __P((char *));
-void   sgDestExpressionList __P((char *, char *));
-void   sgDestRedirect __P((char *));
-void   sgDestRewrite __P((char *));
+void sgDest __P((char *));
+void sgDestEnd __P(());
+void sgDestDomainList __P((char *));
+void sgDestUrlList __P((char *));
+void sgDestExpressionList __P((char *, char *));
+void sgDestRedirect __P((char *));
+void sgDestRewrite __P((char *));
 struct Destination *sgDestFindName __P((char *));
-void   sgDestTime __P((char *, int));
+void sgDestTime __P((char *, int));
 
-void   sgSetting __P((char *, char *));
+void sgSetting __P((char *, char *));
 #ifdef USE_SYSLOG
-void   sgSyslogSetting __P((char *));
+void sgSyslogSetting __P((char *));
 #endif
 struct Setting *sgSettingFindName __P((char *));
-char   *sgSettingGetValue __P((char *));
+char *sgSettingGetValue __P((char *));
 
-void   sgRewrite __P((char *));
-void   sgRewriteSubstitute __P((char *));
+void sgRewrite __P((char *));
+void sgRewriteSubstitute __P((char *));
 struct sgRewrite *sgRewriteFindName __P((char *));
-char   *sgRewriteExpression __P((struct sgRewrite *, char *));
-void   sgRewriteTime __P((char *, int));
+char *sgRewriteExpression __P((struct sgRewrite *, char *));
+void sgRewriteTime __P((char *, int));
 
-void   sgTime __P((char *));
+void sgTime __P((char *));
 struct Time *sgTimeFindName __P((char *));
-int    sgTimeCheck __P((struct tm *, time_t));
-void   sgTimeElementInit __P(());
-void   sgTimeElementSortEvents __P(());
-void   sgTimeElementAdd __P((char *, char));
-void   sgTimeElementEnd __P(());
-int    sgTimeNextEvent __P(());
-void   sgTimeSetAcl __P(());
-void   sgTimeElementClone __P(());
-void   sgTimePrint __P(());
+int sgTimeCheck __P((struct tm *, time_t));
+void sgTimeElementInit __P(());
+void sgTimeElementSortEvents __P(());
+void sgTimeElementAdd __P((char *, char));
+void sgTimeElementEnd __P(());
+int sgTimeNextEvent __P(());
+void sgTimeSetAcl __P(());
+void sgTimeElementClone __P(());
+void sgTimePrint __P(());
 
-void   sgSetIpType __P((int, char *, int));
-void   sgIp __P((char *));
+void sgSetIpType __P((int, char *, int));
+void sgIp __P((char *));
 struct Ip *sgIpLast __P((struct Source *));
 
-void   sgAcl __P((char *, char *, int));
+void sgAcl __P((char *, char *, int));
 struct Acl *sgAclFindName __P((char *));
-void   sgAclSetValue __P((char *,char *,int));
+void sgAclSetValue __P((char *, char *, int));
 struct Acl *sgAclCheckSource __P((struct Source *));
 
 struct sgRegExp *sgNewPatternBuffer __P((char *, int));
-void   sgFreePatternBuffer __P((struct sgRegExp *));
-int    sgRegExpMatch __P((struct sgRegExp *, char *));
-char   *sgRegExpSubst __P((struct sgRegExp *, char *));
+void sgFreePatternBuffer __P((struct sgRegExp *));
+int sgRegExpMatch __P((struct sgRegExp *, char *));
+char *sgRegExpSubst __P((struct sgRegExp *, char *));
 
-void   sgDbInit __P(());
-void   sgDbLoadTextFile __P((struct sgDb *, char *, int));
-void   sgDbUpdate __P((struct sgDb *, char *, char *, size_t));
+void sgDbInit __P(());
+void sgDbLoadTextFile __P((struct sgDb *, char *, int));
+void sgDbUpdate __P((struct sgDb *, char *, char *, size_t));
 
 #if DB_VERSION_GT2
-int db_init __P((char *, DB_ENV **));
-int    domainCompare __P((const DB *, const DBT *, const DBT *));
+int db_init __P((char *, DB_ENV * *));
+int domainCompare __P((const DB *, const DBT *, const DBT *));
 #else
-DB_ENV *db_init __P((char *));
-int    domainCompare __P((const DBT *, const DBT *));
+DB_ENV * db_init __P((char *));
+int domainCompare __P((const DBT *, const DBT *));
 #endif
 
 time_t date2sec __P((char *));
 time_t iso2sec __P((char *));
-char   *niso __P((time_t));
+char *niso __P((time_t));
 struct UserQuotaInfo *setuserquota __P(());
 void sgSourceUserQuota __P((char *, char *, char *));
 
-struct IpQuotaInfo *setipquota __P(()); /* ldapip */
-void sgSourceIpQuota __P((char *, char *, char *)); /*ldapip */
+struct IpQuotaInfo *setipquota __P(());                 /* ldapip */
+void sgSourceIpQuota __P((char *, char *, char *));     /*ldapip */
 
-void   *sgMalloc __P((size_t));
-void   *sgCalloc __P((size_t, size_t));
-void   *sgRealloc __P((void *, size_t));
-void   sgFree __P((void *));
+void *sgMalloc __P((size_t));
+void *sgCalloc __P((size_t, size_t));
+void *sgRealloc __P((void *, size_t));
+void sgFree __P((void *));
 
-int    defined __P((struct sgDb *, char *, char **));
+int defined __P((struct sgDb *, char *, char **));
 
-void   usage __P((void));
+void usage __P((void));
 
-void   yyerror __P((char *));
-int    yyparse __P((void));
-int    yylex __P((void));
-void   sgFreeAllLists __P((void));
-void   sgFreeDestination __P((struct Destination *));
-void   sgFreeSource __P((struct Source *));
-void   sgFreeIp __P((struct Ip *));
-void   sgFreeSetting __P((struct Setting *));
-void   sgFreeTime __P((struct Time *));
-void   sgFreeRewrite __P((struct sgRewrite *));
-void   sgFreeAcl __P((struct Acl *));
-void   sgFreeAclDest __P((struct AclDest *));
-void   sgFreeLogFileStat __P((struct LogFileStat *));
+void yyerror __P((char *));
+int yyparse __P((void));
+int yylex __P((void));
+void sgFreeAllLists __P((void));
+void sgFreeDestination __P((struct Destination *));
+void sgFreeSource __P((struct Source *));
+void sgFreeIp __P((struct Ip *));
+void sgFreeSetting __P((struct Setting *));
+void sgFreeTime __P((struct Time *));
+void sgFreeRewrite __P((struct sgRewrite *));
+void sgFreeAcl __P((struct Acl *));
+void sgFreeAclDest __P((struct AclDest *));
+void sgFreeLogFileStat __P((struct LogFileStat *));
 
-int    sgFindUser __P((struct Source *, char *, struct UserInfo **));
+int sgFindUser __P((struct Source *, char *, struct UserInfo **));
 #ifdef HAVE_LIBLDAP
-int    sgDoLdapSearch __P((const char *, const char *));
-int    sgFindIp __P((struct Source *, char *, struct IpInfo **));
+int sgDoLdapSearch __P((const char *, const char *));
+int sgFindIp __P((struct Source *, char *, struct IpInfo **));
 #endif
 
-int    expand_url __P((char *, size_t, const char *, const char *));
+int expand_url __P((char *, size_t, const char *, const char *));
 
-int    groupmember __P((void *, char *, const char *));
-
+int groupmember __P((void *, char *, const char *));

@@ -27,27 +27,27 @@
 
 char *krbRealm = NULL;
 
-int	groupDebug;
+int groupDebug;
 
-#define	dprintf(...)	if (groupDebug) sgLogError(__VA_ARGS__)
-#define	dputs(s)	if (groupDebug) sgLogError("%s", s)
+#define dprintf(...)    if (groupDebug) sgLogError(__VA_ARGS__)
+#define dputs(s)        if (groupDebug) sgLogError("%s", s)
 
 static struct node {
-	struct node	*n_next;
-	char	*n_name;
-	struct node	**n_table;
-	time_t	n_time;
-	gid_t	n_gid;
+	struct node *	n_next;
+	char *		n_name;
+	struct node **	n_table;
+	time_t		n_time;
+	gid_t		n_gid;
 } **groups;
-#define	PGROUP	997
-#define	PUSERS	4999
+#define PGROUP  997
+#define PUSERS  4999
 
-time_t	groupttl = 600;
+time_t groupttl = 600;
 
 static char *
 sstrdup(const char *cp)
 {
-	char	*np;
+	char *np;
 
 	np = sgMalloc(strlen(cp) + 1);
 	strcpy(np, cp);
@@ -57,15 +57,16 @@ sstrdup(const char *cp)
 static struct node *
 listadd(struct node *lh, const char *name)
 {
-	struct node	*lp, *lq = NULL;
+	struct node *lp, *lq = NULL;
 
 	lp = sgCalloc(1, sizeof *lp);
 	lp->n_name = sstrdup(name);
 	if (lh != NULL) {
-		for (lq = lh; lq->n_next != NULL; lq = lq->n_next);
+		for (lq = lh; lq->n_next != NULL; lq = lq->n_next) ;
 		lq->n_next = lp;
-	} else
+	} else {
 		lh = lp;
+	}
 	return lh;
 }
 
@@ -81,7 +82,7 @@ listget(struct node *lp, const char *name)
 static void
 listfree(struct node *lp)
 {
-	struct node	*lq;
+	struct node *lq;
 
 	while (lp != NULL) {
 		lq = lp->n_next;
@@ -94,11 +95,11 @@ listfree(struct node *lp)
 static unsigned
 pjw(const char *cp)
 {
-	unsigned	h = 0, g;
+	unsigned h = 0, g;
 
 	cp--;
 	while (*++cp) {
-		h = (h << 4 & 0xffffffff) + (*cp&0377);
+		h = (h << 4 & 0xffffffff) + (*cp & 0377);
 		if ((g = h & 0xf0000000) != 0) {
 			h = h ^ g >> 24;
 			h = h ^ g;
@@ -110,7 +111,7 @@ pjw(const char *cp)
 static void
 hfree(struct node **table, unsigned hprime)
 {
-	unsigned	i;
+	unsigned i;
 
 	if (table) {
 		for (i = 0; i < hprime; i++)
@@ -122,8 +123,8 @@ hfree(struct node **table, unsigned hprime)
 static struct node *
 hlook(struct node **table, unsigned hprime, const char *name, struct node *new)
 {
-	struct node	*np, *nq = NULL;
-	unsigned	h;
+	struct node *np, *nq = NULL;
+	unsigned h;
 
 	if (table == NULL)
 		return NULL;
@@ -155,7 +156,7 @@ hlook(struct node **table, unsigned hprime, const char *name, struct node *new)
 static void
 adduser(struct node **table, const char *name)
 {
-	struct node	*new;
+	struct node *new;
 
 	new = sgCalloc(1, sizeof *new);
 	new->n_name = sstrdup(name);
@@ -165,9 +166,9 @@ adduser(struct node **table, const char *name)
 static void
 retrievegroup(const char *name)
 {
-	struct node	*new;
-	struct group	*grp;
-	int	i;
+	struct node *new;
+	struct group *grp;
+	int i;
 
 	new = sgCalloc(1, sizeof *new);
 	new->n_name = sstrdup(name);
@@ -179,8 +180,9 @@ retrievegroup(const char *name)
 		for (i = 0; grp->gr_mem[i] != NULL; i++)
 			adduser(new->n_table, grp->gr_mem[i]);
 		dprintf("group debug: %d members", i);
-	} else
+	} else {
 		new->n_gid = (gid_t)-1;
+	}
 	if (groups == NULL)
 		groups = sgCalloc(PGROUP, sizeof *groups);
 	hlook(groups, PGROUP, name, new);
@@ -189,77 +191,78 @@ retrievegroup(const char *name)
 void
 sgSourceGroup(char *user)
 {
-	extern struct Source	*lastSource;
-	struct Source	*sp;
+	extern struct Source *lastSource;
+	struct Source *sp;
 
 	sp = lastSource;
 	sp->grouplist = listadd(sp->grouplist, user);
 }
 
 int
-unhexlify( char c )
+unhexlify(char c)
 {
-        char ret = c;
+	char ret = c;
 
-        if (c >= '0' && c <= '9') {
-                ret -= '0';
-        } else if (c >= 'A' && c <= 'F') {
-                ret -= 'A' + 10;
-        } else if (c >= 'a' && c <= 'f'){
-                ret -= 'a' + 10;
-        } else {
-                ret = -1;
-        }
+	if (c >= '0' && c <= '9')
+		ret -= '0';
+	else if (c >= 'A' && c <= 'F')
+		ret -= 'A' + 10;
+	else if (c >= 'a' && c <= 'f')
+		ret -= 'a' + 10;
+	else
+		ret = -1;
 
-        return ret;
+	return ret;
 }
 
 void
-unescape( char *s)
+unescape(char *s)
 {
-        char *tmp = s;
-        int offset = 0;
-        int len = strlen(s);
+	char *tmp = s;
+	int offset = 0;
+	int len = strlen(s);
 
-        int i;
-        for (i = 0; i < len;) {
-                if ( s[i] == '%' ) {
-                        tmp[offset] = unhexlify(s[i+1]) << 4 | unhexlify(s[i+2]);
-                        offset++;
-                        i += 3;
-                } else {
-                        tmp[offset] = s[i];
-                        offset++;
-                        i++;
-                }
-        }
+	int i;
 
-        s[offset] = '\0';
+	for (i = 0; i < len; ) {
+		if (s[i] == '%') {
+			tmp[offset] = unhexlify(s[i + 1]) << 4 | unhexlify(s[i + 2]);
+			offset++;
+			i += 3;
+		} else {
+			tmp[offset] = s[i];
+			offset++;
+			i++;
+		}
+	}
+
+	s[offset] = '\0';
 }
 
 void
-stripRealm(char *name, char *realm) {
-        char *first;
+stripRealm(char *name, char *realm)
+{
+	char *first;
 
-	if (! realm)
+	if (!realm)
 		return;
 
-        first = strchr(name, '@');
-        while (first) {
-                if (!strcasecmp((char*)(first + 1), realm)) {
-                        first[0] = 0;
-                        return;
-                }
-                first = strchr(first + 1, '@');
-        }
+	first = strchr(name, '@');
+	while (first) {
+		if (!strcasecmp((char *)(first + 1), realm)) {
+			first[0] = 0;
+			return;
+		}
+		first = strchr(first + 1, '@');
+	}
 }
 
 int
 groupmember(void *grouplist, char *user, const char *source)
 {
-	struct passwd	*pwd;
-	struct node	*gp, *np;
-	time_t	now;
+	struct passwd *pwd;
+	struct node *gp, *np;
+	time_t now;
 
 	if (grouplist == NULL)
 		return 0;
@@ -269,14 +272,14 @@ groupmember(void *grouplist, char *user, const char *source)
 	stripRealm(user, krbRealm);
 
 	dprintf("group debug: CHECK: if \"%s\" is in groups "
-			"for source \"%s\"",
-			user, source);
+		"for source \"%s\"",
+		user, source);
 	time(&now);
 	for (gp = grouplist; gp != NULL; gp = gp->n_next) {
 		dprintf("group debug: check if user \"%s\" is in group \"%s\"",
-				user, gp->n_name);
+			user, gp->n_name);
 		if ((np = hlook(groups, PGROUP, gp->n_name, NULL)) == NULL ||
-				np->n_time + groupttl <= now) {
+		    np->n_time + groupttl <= now) {
 			if (np) {
 				hfree(np->n_table, PUSERS);
 				np->n_table = NULL;
@@ -285,9 +288,9 @@ groupmember(void *grouplist, char *user, const char *source)
 			np = hlook(groups, PGROUP, gp->n_name, NULL);
 		}
 		if (np != NULL &&
-				hlook(np->n_table, PUSERS, user, NULL) != NULL){
+		    hlook(np->n_table, PUSERS, user, NULL) != NULL) {
 			dputs("group debug: YES: found as supplementary or "
-					"cached primary group");
+			      "cached primary group");
 			return 1;
 		}
 		dputs("group debug: no supplementary or cache group match");
@@ -296,23 +299,24 @@ groupmember(void *grouplist, char *user, const char *source)
 	if ((pwd = getpwnam(user)) != NULL) {
 		for (gp = grouplist; gp != NULL; gp = gp->n_next) {
 			dprintf("group debug: whether \"%s\" has "
-					"primary group \"%s\": ",
-					user, gp->n_name);
+				"primary group \"%s\": ",
+				user, gp->n_name);
 			if ((np = hlook(groups, PGROUP, gp->n_name, NULL))
-						!= NULL &&
-					np->n_gid != (gid_t)-1 &&
-					np->n_gid == pwd->pw_gid) {
+			    != NULL &&
+			    np->n_gid != (gid_t)-1 &&
+			    np->n_gid == pwd->pw_gid) {
 				adduser(np->n_table, user);
 				dputs("group debug: YES: found as "
-						"primary group");
+				      "primary group");
 				return 1;
 			}
 		}
 		dputs("group debug: no primary group match");
-	} else
+	} else {
 		dprintf("group debug: getpwnam(%s) failed", user);
+	}
 	dprintf("group debug: NO: user \"%s\" not a member of groups "
-			"for source \"%s\"",
-			user, source);
+		"for source \"%s\"",
+		user, source);
 	return 0;
 }
