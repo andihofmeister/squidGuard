@@ -1,0 +1,6 @@
+#!/bin/sh
+
+autoconf
+autoheader
+
+
