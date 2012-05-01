@@ -92,7 +92,7 @@ int main(int argc, char **argv, char **envp)
 	progname = argv[0];
 	globalPid = getpid();
 #ifdef USE_SYSLOG
-	openlog("squidGuard", LOG_PID | LOG_NDELAY | LOG_CONS, LOG_@LOGFAC@);
+	openlog("squidGuard", LOG_PID | LOG_NDELAY | LOG_CONS, SYSLOG_FAC);
 #endif
 	while ((ch = getopt(argc, argv, "hbduPC:t:c:vGr:")) != EOF)
 		switch (ch) {
