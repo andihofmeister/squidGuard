@@ -15,10 +15,11 @@ MKDIR = @top_srcdir@/mkinstalldirs
 
 RM = rm -f
 
-CFLAGS	= @CFLAGS@ \
+CFLAGS	= -Wall -Werror @CFLAGS@ \
 	-DDEFAULT_CONFIGFILE="\"@sg_config@\"" \
 	-DEFAULT_LOGDIR="\"@sg_logdir@\"" \
-	-DDEFAULT_DBHOME="\"@sg_dbhome@\""
+	-DDEFAULT_DBHOME="\"@sg_dbhome@\"" \
+	-Wall 
 
 CPPFLAGS= @CPPFLAGS@
 LDFLAGS	= @LDFLAGS@
@@ -27,8 +28,8 @@ DEFS	= @DEFS@
 
 INCLUDES= -I.. -I. -I$(srcdir)
 
-COMPILE = $(CC) $(INCLUDES) $(CPPFLAGS) $(DEFS) $(CFLAGS)
-LINK    = $(CC) $(LDFLAGS) -o $@
+COMPILE = echo "CC $< ..." ; $(CC) $(INCLUDES) $(CPPFLAGS) $(DEFS) $(CFLAGS)
+LINK    = echo "LD $@ ..." ; $(CC) $(LDFLAGS) -o $@
 
 top_srcdir = @top_srcdir@
 srcdir     = @srcdir@
@@ -50,71 +51,46 @@ all::	squidGuard
 	@echo making $? in `basename \`pwd\``
 
 squidGuard:	$(OBJS)
-	$(LINK) $(OBJS) $(LIBS)
+	@$(LINK) $(OBJS) $(LIBS)
 
 conf: y.tab.o lex.yy.o
-	$(COMPILE) -o conf y.tab.o lex.yy.o
+	@$(COMPILE) -o conf y.tab.o lex.yy.o
 
-main.o:	main.c sg.h
-	$(COMPILE) -c main.c
+main.o:	main.c sg.h config.h
+	@$(COMPILE) -c main.c
 
-sgLog.o:	sgLog.c sg.h
-	$(COMPILE) -c sgLog.c
+sgLog.o:	sgLog.c sg.h config.h
+	@$(COMPILE) -c sgLog.c
 
 HTParse.o:	HTParse.c wwwsys.h HTEscape.h
-	$(COMPILE) -c HTParse.c
+	@$(COMPILE) -c HTParse.c
 
-sgDiv.o: sgDiv.c sg.h sgEx.h
-	$(COMPILE) -c sgDiv.c
+sgDiv.o: sgDiv.c sg.h sgEx.h config.h
+	@$(COMPILE) -c sgDiv.c
 
-sgFree.o: sgFree.c sg.h sgEx.h
-	$(COMPILE) -c sgFree.c
+sgFree.o: sgFree.c sg.h sgEx.h config.h
+	@$(COMPILE) -c sgFree.c
 
-sgDb.o:	sgDb.c sg.h
-	$(COMPILE) -c sgDb.c
+sgDb.o:	sgDb.c sg.h config.h
+	@$(COMPILE) -c sgDb.c
 
-sgGroup.o:	sgGroup.c sg.h
-	$(COMPILE) -c sgGroup.c
+sgGroup.o:	sgGroup.c sg.h config.h
+	@$(COMPILE) -c sgGroup.c
 
-lex.yy.o: lex.yy.c y.tab.h sg.h
-	$(COMPILE) -c lex.yy.c
+sgNetGroup.o:	sgNetGroup.c sg.h config.h
+	@$(COMPILE) -c sgNetGroup.c
 
-y.tab.o: y.tab.c y.tab.h sg.h sgEx.h
-	$(COMPILE) -c y.tab.c
+lex.yy.o: lex.yy.c y.tab.h sg.h config.h
+	@$(COMPILE) -c lex.yy.c
 
-lex.yy.c: sg.l sg.h
-	@if [ $(LEX) != ":" ]; then \
-	$(LEX) sg.l  ; \
-	else \
-	echo " " ; \
-	echo "No flex/lex found. Copy lex.yy.c.flex to lex.yy.c. " ; \
-	echo " " ; \
-	cp lex.yy.c.flex lex.yy.c ; \
-	fi ;
+y.tab.o: y.tab.c y.tab.h sg.h sgEx.h config.h
+	@$(COMPILE) -c y.tab.c
 
-lex.yy.c.flex: sg.l sg.h
+lex.yy.c: sg.l sg.h config.h
 	$(LEX) sg.l
-	mv -f lex.yy.c lex.yy.c.flex
 
-y.tab.c y.tab.h: sg.y sg.h
-	@if [ "$(YACC)" = "yacc" ]; then \
-	   if [ ! -x $(YACC) ]; then \
-	      echo " " ; \
-	      echo "No yacc/bison found. Copy prepared files for y.tab.h and y.tab.c over. " ; \
-	      echo " " ; \
-	      cp y.tab.h.bison y.tab.h ; \
-	      cp y.tab.c.bison y.tab.c ; \
-	   else \
-	      $(YACC) -d sg.y  ; \
-	   fi ; \
-	else \
-	   $(YACC) -d sg.y  ; \
-	fi ;
-
-y.tab.c.bison y.tab.h.bison: sg.y sg.h
+y.tab.c y.tab.h: sg.y sg.h config.h
 	$(YACC) -d sg.y
-	mv -f y.tab.c y.tab.c.bison
-	mv -f y.tab.h y.tab.h.bison
 
 #
 # Dependencies for installing
