@@ -282,6 +282,7 @@ void *sgMalloc(size_t elsize)
 		sgLogFatal("FATAL: %s: %s", progname, strerror(ENOMEM));
 		exit(1);
 	}
+	memset(p,0,elsize);
 	return (void *)p;
 }
 
