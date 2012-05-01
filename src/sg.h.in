@@ -328,6 +328,7 @@ struct Acl {
   char *redirect;
   struct Time *time;
   int within;
+  int allow;
   struct LogFile *logfile;
   struct Acl *next;
 };

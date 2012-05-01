@@ -138,6 +138,7 @@ pass        return PASS;
 next        return NEXT;
 rewrite     return REWRITE;
 redirect    { BEGIN REDIRECT_STATE; return REDIRECT; }
+allow       return ALLOW;
 minutely    return MINUTELY;
 hourly      return HOURLY;
 daily       return DAILY;

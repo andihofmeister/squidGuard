@@ -95,6 +95,7 @@ rfc1738_unescape(char *s)
 %token DOMAIN USER USERLIST GROUP NETGROUP USERQUERY LDAPUSERSEARCH USERQUOTA LDAPIPSEARCH IPQUOTA IP NL NUMBER
 %token PASS NEXT REDIRECT LOGDIR SUBST CHAR MINUTELY HOURLY DAILY WEEKLY DATE
 %token WITHIN OUTSIDE ELSE LOGFILE SYSLOG ANONYMOUS VERBOSE CONTINIOUS SPORADIC
+%token ALLOW
 %token LDAPCACHETIME EXECUSERLIST EXECCMD LDAPPROTOVER
 %token LDAPBINDDN LDAPBINDPASS MYSQLUSERNAME MYSQLPASSWORD DATABASE
 %token QUOTED_STRING
@@ -281,6 +282,7 @@ access_contents:
                    ;
 
 access_content:    PASS access_pass { }
+                  | ALLOW {  sgAclSetValue("allow",0,0); }
                   | NEXT access_next { }
                   | REWRITE WORD { sgAclSetValue("rewrite",$2,0); }
                   | REDIRECT STRING { sgAclSetValue("redirect",$2,0); }
@@ -2519,6 +2521,9 @@ void sgAclSetValue (what, value, allowed)
       lastAcl->redirect= NULL;
     }
   }
+  if(!strcmp(what,"allow")){
+    lastAcl->allow = 1;
+  }
 }
 
 #if __STDC__
@@ -2716,6 +2721,8 @@ char *sgAclAccess(src, acl, req)
     if(!access){
       if(dbdata != NULL)
 	redirect = dbdata;
+      else if(acl->allow)
+        access = 1;
       else if(aclpass->dest != NULL && aclpass->dest->redirect != NULL)
 	redirect = aclpass->dest->redirect;
       else if(aclpass->dest != NULL && aclpass->dest->rewrite != NULL &&
