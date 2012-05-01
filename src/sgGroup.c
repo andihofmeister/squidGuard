@@ -25,6 +25,8 @@
 #include <pwd.h>
 #include <grp.h>
 
+char *krbRealm = NULL;
+
 int	groupDebug;
 
 #define	dprintf(...)	if (groupDebug) sgLogError(__VA_ARGS__)
@@ -194,6 +196,23 @@ sgSourceGroup(char *user)
 	sp->grouplist = listadd(sp->grouplist, user);
 }
 
+void
+stripRealm(char *name, char *realm) {
+        char *first;
+
+	if (! realm)
+		return;
+
+        first = strchr(name, '@');
+        while (first) {
+                if (!strcasecmp((char*)(first + 1), realm)) {
+                        first[0] = 0;
+                        return;
+                }
+                first = strchr(first + 1, '@');
+        }
+}
+
 int
 groupmember(void *grouplist, char *user, const char *source)
 {
@@ -203,6 +222,9 @@ groupmember(void *grouplist, char *user, const char *source)
 
 	if (grouplist == NULL)
 		return 0;
+
+	stripRealm(user, krbRealm);
+
 	dprintf("group debug: CHECK: if \"%s\" is in groups "
 			"for source \"%s\"",
 			user, source);
