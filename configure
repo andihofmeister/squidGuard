@@ -4606,7 +4606,7 @@ if test "x$ac_cv_lib_ldap_ldap_init" = x""yes; then
 	with_ldap=yes
 	LIBS="$LIBS -lldap $ldap_lib"
 	YACCLINE="                     | LDAPUSERSEARCH STRING { sgSourceLdapUserSearch(\$2); }"
-	YACCLINE2="                     | LDAPIPSEARCH WORD { sgSourceLdapIpSearch(\$2); }"
+	YACCLINE2="                     | LDAPIPSEARCH STRING { sgSourceLdapIpSearch(\$2); }"
 
 else
 

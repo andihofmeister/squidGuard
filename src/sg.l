@@ -159,7 +159,7 @@ ip          return IP;
 {dvalcron}  {yylval.string = yytext; return DVALCRON;}
 {d}+        {yylval.string = yytext; return NUMBER;}
 
-<REDIRECT_STATE>[a-zA-Z3\/][a-zA-Z0-9/_\-\.\,\(\)\/\:\%\+\?=&~!]*  { yylval.string = yytext ; BEGIN 0; return WORD;}
+<REDIRECT_STATE>[a-zA-Z3\/][a-zA-Z0-9/_\-\.\,\(\)\/\:\%\+\?=&~!\|]*  { yylval.string = yytext ; BEGIN 0; return WORD;}
 <REDIRECT_STATE>[ \t]+     ;
 <REDIRECT_STATE>\n        {lineno++;}
 <REDIRECT_STATE>.         {return yytext[0];}
