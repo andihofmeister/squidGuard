@@ -37,7 +37,7 @@ void sgDbInit(struct sgDb *Db, char *file)
 		if (globalCreateDb != NULL && (!strcmp(globalCreateDb, "all") ||
 					       !sgStrRncmp(file, globalCreateDb, strlen(globalCreateDb))))
 			createdb = 1;
-		dbfile = (char *)sgMalloc(strlen(file) + 5);
+		dbfile = sgMalloc(strlen(file) + 5);
 		strcpy(dbfile, file);
 		strcat(dbfile, ".db");
 		if (stat(dbfile, &st) == 0) {
@@ -155,7 +155,7 @@ void sgDbInit(struct sgDb *Db, char *file)
 			if (dbfile == NULL) {
 				sgLogError("ERROR: update dbfile %s.db. file does not exists, use -C to create", file);
 			} else {
-				update = (char *)sgMalloc(strlen(file) + 6);
+				update = sgMalloc(strlen(file) + 6);
 				strcpy(update, file);
 				strcat(update, ".diff");
 				if (stat(update, &st) == 0) {
@@ -216,7 +216,7 @@ int defined(struct sgDb *Db, char *request, char **retval)
 	case EAGAIN:                    /* Deadlock. */
 		break;
 	case 0:                         /* Success. */
-		data1 = (char *)sgCalloc(1, Db->key.size + 1);
+		data1 = sgMalloc(Db->key.size + 1);
 		strncpy(data1, Db->key.data, Db->key.size);
 		if (!strncmp(req, data1, Db->key.size)) {
 			result = 1;
@@ -227,7 +227,7 @@ int defined(struct sgDb *Db, char *request, char **retval)
 				/* ONTOP */
 				break;
 			case 0:
-				data2 = (char *)sgCalloc(1, Db->key.size + 1);
+				data2 = sgMalloc(Db->key.size + 1);
 				strncpy(data2, Db->key.data, Db->key.size);
 				/* PPREV */
 				if (Db->type == SGDBTYPE_DOMAINLIST) {
@@ -237,10 +237,10 @@ int defined(struct sgDb *Db, char *request, char **retval)
 					if ((strncmp(data1, data2, Db->key.size) != 0) && (!strncmp(data2, req, Db->key.size)))
 						result = 1;
 				}
-				free(data2);
+				sgFree(data2);
 			}
 		}
-		free(data1);
+		sgFree(data1);
 		break;
 	case DB_NOTFOUND:           /* Not found. */
 		if (Db->type == SGDBTYPE_USERLIST) {
@@ -252,7 +252,7 @@ int defined(struct sgDb *Db, char *request, char **retval)
 			result = DB_NOTFOUND;
 			break;
 		case 0:
-			data1 = (char *)sgCalloc(1, Db->key.size + 1);
+			data1 = sgMalloc(Db->key.size + 1);
 			strncpy(data1, Db->key.data, Db->key.size);
 			if (Db->type == SGDBTYPE_DOMAINLIST) {
 				if (!sgStrRncmp(data1, req, Db->key.size))
@@ -261,7 +261,7 @@ int defined(struct sgDb *Db, char *request, char **retval)
 				if (!strncmp(data1, req, Db->key.size))
 					result = 1;
 			}
-			free(data1);
+			sgFree(data1);
 			break;
 		}
 		break;
@@ -480,7 +480,7 @@ DB_ENV *db_init(char *dbhome)
 {
 	DB_ENV *dbenv;
 
-	dbenv = (DB_ENV *)sgCalloc(1, sizeof(DB_ENV));
+	dbenv = sgMalloc(sizeof(DB_ENV));
 	dbenv->db_errfile = stderr;
 	dbenv->db_errpfx = "sg";
 

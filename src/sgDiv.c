@@ -305,7 +305,7 @@ void *sgRealloc(void *ptr, size_t elsize)
 	return (void *)p;
 }
 
-void sgFree(void *ptr)
+void _sgFree(void *ptr)
 {
 	free(ptr);
 }
@@ -418,10 +418,10 @@ int sgDomStrRcmp(char *p1, char *p2)
 
 struct sgRegExp *sgNewPatternBuffer(char *pattern, int flags)
 {
-	regex_t *compiled = (regex_t *)sgCalloc(1, sizeof(regex_t));
+	regex_t *compiled = sgMalloc(sizeof(regex_t));
 	struct sgRegExp *regexp;
-	regexp = (struct sgRegExp *)sgCalloc(1, sizeof(struct sgRegExp));
-	regexp->pattern = (char *)sgCalloc(1, strlen(pattern) + 1);
+	regexp = sgMalloc(sizeof(struct sgRegExp));
+	regexp->pattern = sgMalloc(strlen(pattern) + 1);
 	strcpy(regexp->pattern, pattern);
 	regexp->error = 0;
 	regexp->next = NULL;
@@ -663,7 +663,7 @@ time_t iso2sec(char *date)
 {
 	struct tm *t;
 	int y, m, d, H, M, S;
-	t = (struct tm *)sgCalloc(1, sizeof(struct tm));
+	t = sgMalloc(sizeof(struct tm));
 	sscanf(date, "%4d%*[.-]%2d%*[.-]%2d%*[T]%2d%*[:-]%2d%*[:-]%2d",
 	       &y, &m, &d, &H, &M, &S);
 	m--;
@@ -688,7 +688,7 @@ time_t date2sec(char *date)
 {
 	struct tm *t;
 	int y, m, d;
-	t = (struct tm *)sgCalloc(1, sizeof(struct tm));
+	t = sgMalloc(sizeof(struct tm));
 	sscanf(date, "%4d%*[.-]%2d%*[.-]%2d", &y, &m, &d);
 	m--;
 	y = y - 1900;

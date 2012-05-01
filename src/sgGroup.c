@@ -59,7 +59,7 @@ listadd(struct node *lh, const char *name)
 {
 	struct node *lp, *lq = NULL;
 
-	lp = sgCalloc(1, sizeof *lp);
+	lp = sgMalloc(sizeof *lp);
 	lp->n_name = sstrdup(name);
 	if (lh != NULL) {
 		for (lq = lh; lq->n_next != NULL; lq = lq->n_next) ;
@@ -158,7 +158,7 @@ adduser(struct node **table, const char *name)
 {
 	struct node *new;
 
-	new = sgCalloc(1, sizeof *new);
+	new = sgMalloc(sizeof *new);
 	new->n_name = sstrdup(name);
 	hlook(table, PUSERS, name, new);
 }
@@ -170,7 +170,7 @@ retrievegroup(const char *name)
 	struct group *grp;
 	int i;
 
-	new = sgCalloc(1, sizeof *new);
+	new = sgMalloc(sizeof *new);
 	new->n_name = sstrdup(name);
 	time(&new->n_time);
 	dprintf("group debug: retrieving group \"%s\": ", name);

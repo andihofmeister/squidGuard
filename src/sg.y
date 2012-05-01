@@ -515,7 +515,7 @@ void sgLogFile(int block, int anonymous, int verbose, char *file)
 		return;
 	}
 	if (*v == NULL) {
-		p = (struct LogFile *)sgCalloc(1, sizeof(struct LogFile));
+		p = sgMalloc(sizeof(struct LogFile));
 		p->stat = sgLogFileStat(file);
 		p->parent_name = name;
 		p->parent_type = block;
@@ -553,7 +553,7 @@ struct LogFileStat *sgLogFileStat(char *file)
 		return NULL;
 	}
 	if (LogFileStat == NULL) {
-		sg = (struct LogFileStat *)sgCalloc(1, sizeof(struct LogFileStat));
+		sg = sgMalloc(sizeof(struct LogFileStat));
 		sg->name = sgMalloc(strlen(buf) + 1);
 		strcpy(sg->name, buf);
 		sg->st_ino = s.st_ino;
@@ -569,7 +569,7 @@ struct LogFileStat *sgLogFileStat(char *file)
 				return sg;
 			}
 		}
-		sg = (struct LogFileStat *)sgCalloc(1, sizeof(struct LogFileStat));
+		sg = sgMalloc(sizeof(struct LogFileStat));
 		sg->name = sgMalloc(strlen(buf) + 1);
 		strcpy(sg->name, buf);
 		sg->st_ino = s.st_ino;
@@ -595,7 +595,7 @@ void sgSource(char *source)
 			sgLogFatal("%s: source %s is defined in configfile %s",
 				   progname, source, configFile);
 	}
-	sp = (struct Source *)sgCalloc(1, sizeof(struct Source));
+	sp = sgMalloc(sizeof(struct Source));
 	sp->ip = NULL;
 	sp->userDb = NULL;
 	sp->domainDb = NULL;
@@ -614,7 +614,7 @@ void sgSource(char *source)
 #endif
 	sp->next = NULL;
 	sp->logfile = NULL;
-	sp->name = (char *)sgCalloc(1, strlen(source) + 1);
+	sp->name = sgMalloc(strlen(source) + 1);
 	strcpy(sp->name, source);
 
 	if (Source == NULL) {
@@ -663,7 +663,7 @@ void sgSourceUser(char *user)
 	char *lc;
 	sp = lastSource;
 	if (sp->userDb == NULL) {
-		sp->userDb = (struct sgDb *)sgCalloc(1, sizeof(struct sgDb));
+		sp->userDb = sgMalloc(sizeof(struct sgDb));
 		sp->userDb->type = SGDBTYPE_USERLIST;
 		sgDbInit(sp->userDb, NULL);
 	}
@@ -684,7 +684,7 @@ void sgSourceUserList(char *file)
 	struct Source *sp;
 	sp = lastSource;
 	if (sp->userDb == NULL) {
-		sp->userDb = (struct sgDb *)sgCalloc(1, sizeof(struct sgDb));
+		sp->userDb = sgMalloc(sizeof(struct sgDb));
 		sp->userDb->type = SGDBTYPE_USERLIST;
 		sgDbInit(sp->userDb, NULL);
 	}
@@ -694,7 +694,7 @@ void sgSourceUserList(char *file)
 	if (file[0] == '/') {
 		f = strdup(file);
 	} else {
-		f = (char *)sgCalloc(1, strlen(dbhome) + strlen(file) + 5);
+		f = sgMalloc(strlen(dbhome) + strlen(file) + 5);
 		strcpy(f, dbhome);
 		strcat(f, "/");
 		strcat(f, file);
@@ -753,7 +753,7 @@ void sgSourceUserQuery(char *query)
 	struct Source *sp;
 	sp = lastSource;
 	if (sp->userDb == NULL) {
-		sp->userDb = (struct sgDb *)sgCalloc(1, sizeof(struct sgDb));
+		sp->userDb = sgMalloc(sizeof(struct sgDb));
 		sp->userDb->type = SGDBTYPE_USERLIST;
 		sgDbInit(sp->userDb, NULL);
 	}
@@ -772,7 +772,7 @@ void sgSourceUserQuery(char *query)
 		sgLogError("%s: can't open userquery: mysql connect", progname);
 		return;
 	}
-	my_query = (char *)calloc(strlen(query) + strlen(str) + 1, sizeof(char));
+	my_query = sgMalloc(strlen(query) + strlen(str) + 1);
 	strcat(my_query, query);
 	strcat(my_query, str);
 	/* DEBUG:   sgLogError("%s: TEST: MySQL Query %s",progname,my_query);  */
@@ -814,14 +814,14 @@ void sgSourceLdapUserSearch(char *url)
 	/* looks ok, add the url to the source object url array */
 	sp->ldapuserurls = (char **)sgRealloc(sp->ldapuserurls,
 					      sizeof(char *) * (sp->ldapuserurlcount + 1));
-	sp->ldapuserurls[sp->ldapuserurlcount] = (char *)sgMalloc(strlen(url) + 1);
+	sp->ldapuserurls[sp->ldapuserurlcount] = sgMalloc(strlen(url) + 1);
 	strcpy(sp->ldapuserurls[sp->ldapuserurlcount], url);
 	sp->ldapuserurlcount++;
 
 	/* create a userDb if it doesn't exist, since we'll need it later
 	 * for caching */
 	if (sp->userDb == NULL) {
-		sp->userDb = (struct sgDb *)sgCalloc(1, sizeof(struct sgDb));
+		sp->userDb = sgMalloc(sizeof(struct sgDb));
 		sp->userDb->type = SGDBTYPE_USERLIST;
 		sgDbInit(sp->userDb, NULL);
 	}
@@ -845,14 +845,14 @@ void sgSourceLdapIpSearch(char *url)
 	/* looks ok, add the url to the source object url array */
 	sp->ldapipurls = (char **)sgRealloc(sp->ldapipurls,
 					    sizeof(char *) * (sp->ldapipurlcount + 1));
-	sp->ldapipurls[sp->ldapipurlcount] = (char *)sgMalloc(strlen(url) + 1);
+	sp->ldapipurls[sp->ldapipurlcount] = sgMalloc(strlen(url) + 1);
 	strcpy(sp->ldapipurls[sp->ldapipurlcount], url);
 	sp->ldapipurlcount++;
 
 	/* create a ipDb if it doesn't exist, since we'll need it later
 	 * for caching */
 	if (sp->ipDb == NULL) {
-		sp->ipDb = (struct sgDb *)sgCalloc(1, sizeof(struct sgDb));
+		sp->ipDb = sgMalloc(sizeof(struct sgDb));
 		sp->ipDb->type = SGDBTYPE_USERLIST;
 		sgDbInit(sp->ipDb, NULL);
 	}
@@ -869,7 +869,7 @@ void sgSourceExecUserList(char *cmd)
 	char *lc;
 	sp = lastSource;
 	if (sp->userDb == NULL) {
-		sp->userDb = (struct sgDb *)sgCalloc(1, sizeof(struct sgDb));
+		sp->userDb = sgMalloc(sizeof(struct sgDb));
 		sp->userDb->type = SGDBTYPE_USERLIST;
 		sgDbInit(sp->userDb, NULL);
 	}
@@ -934,7 +934,7 @@ void sgSourceDomain(char *domain)
 	struct Source *sp;
 	sp = lastSource;
 	if (sp->domainDb == NULL) {
-		sp->domainDb = (struct sgDb *)sgCalloc(1, sizeof(struct sgDb));
+		sp->domainDb = sgMalloc(sizeof(struct sgDb));
 		sp->domainDb->type = SGDBTYPE_DOMAINLIST;
 		sgDbInit(sp->domainDb, NULL);
 	}
@@ -975,7 +975,7 @@ void sgSourceIpList(char *file)
 	if (file[0] == '/') {
 		f = strdup(file);
 	} else {
-		f = (char *)sgCalloc(1, strlen(dbhome) + strlen(file) + 5);
+		f = sgMalloc(strlen(dbhome) + strlen(file) + 5);
 		strcpy(f, dbhome);
 		strcat(f, "/");
 		strcat(f, file);
@@ -1050,7 +1050,7 @@ struct Source *sgFindSource(struct Source *bsrc, char *net, char *ident, char *d
 	struct IpInfo *ipquota;
 #endif
 	if (net != NULL) {
-		dotnet = (char *)sgMalloc(strlen(net) + 1);
+		dotnet = sgMalloc(strlen(net) + 1);
 		strcpy(dotnet, net);
 		op = sgConvDot(net);
 		if (op != NULL)
@@ -1240,7 +1240,7 @@ void sgDest(char *dest)
 			sgLogFatal("%s: destination %s is defined in configfile %s",
 				   progname, dest, configFile);
 	}
-	sp = (struct Destination *)sgCalloc(1, sizeof(struct Destination));
+	sp = sgMalloc(sizeof(struct Destination));
 	sp->domainlist = NULL;
 	sp->urllist = NULL;
 	sp->expressionlist = NULL;
@@ -1251,7 +1251,7 @@ void sgDest(char *dest)
 	sp->within = 0;
 	sp->logfile = NULL;
 	sp->next = NULL;
-	sp->name = (char *)sgCalloc(1, strlen(dest) + 1);
+	sp->name = sgMalloc(strlen(dest) + 1);
 	strcpy(sp->name, dest);
 
 	if (Dest == NULL) {
@@ -1286,11 +1286,11 @@ void sgDestDomainList(char *domainlist)
 		dbhome = DEFAULT_DBHOME;
 	if (domainlist == NULL) {
 		name = sp->name;
-		dl = (char *)sgCalloc(1, strlen("/dest/") + strlen(name) + strlen("/domainlist"));
+		dl = sgMalloc(strlen("/dest/") + strlen(name) + strlen("/domainlist"));
 		strcpy(dl, "/dest/");
 		strcat(dl, name);
 		strcat(dl, "/domainlist");
-		sp->domainlist = (char *)sgCalloc(1, strlen(dbhome) + strlen("/") + strlen(dl) + 4);
+		sp->domainlist = sgMalloc(strlen(dbhome) + strlen("/") + strlen(dl) + 4);
 		strcpy(sp->domainlist, dbhome);
 		strcat(sp->domainlist, "/");
 		strcat(sp->domainlist, dl);
@@ -1299,13 +1299,13 @@ void sgDestDomainList(char *domainlist)
 		if (domainlist[0] == '/') {
 			sp->domainlist = strdup(domainlist);
 		} else {
-			sp->domainlist = (char *)sgCalloc(1, strlen(dbhome) + strlen("/") + strlen(domainlist) + 4);
+			sp->domainlist = sgMalloc(strlen(dbhome) + strlen("/") + strlen(domainlist) + 4);
 			strcpy(sp->domainlist, dbhome);
 			strcat(sp->domainlist, "/");
 			strcat(sp->domainlist, domainlist);
 		}
 	}
-	sp->domainlistDb = (struct sgDb *)sgCalloc(1, sizeof(struct sgDb));
+	sp->domainlistDb = sgMalloc(sizeof(struct sgDb));
 	sp->domainlistDb->type = SGDBTYPE_DOMAINLIST;
 	sgLogDebug("init domainlist %s", sp->domainlist);
 	sgDbInit(sp->domainlistDb, sp->domainlist);
@@ -1326,11 +1326,11 @@ void sgDestUrlList(char *urllist)
 		dbhome = DEFAULT_DBHOME;
 	if (urllist == NULL) {
 		name = sp->name;
-		dl = (char *)sgCalloc(1, strlen("/dest/") + strlen(name) + strlen("/urllist"));
+		dl = sgMalloc(strlen("/dest/") + strlen(name) + strlen("/urllist"));
 		strcpy(dl, "/dest/");
 		strcat(dl, name);
 		strcat(dl, "/urllist");
-		sp->urllist = (char *)sgCalloc(1, strlen(dbhome) + strlen("/") + strlen(dl) + 4);
+		sp->urllist = sgMalloc(strlen(dbhome) + strlen("/") + strlen(dl) + 4);
 		strcpy(sp->urllist, dbhome);
 		strcat(sp->urllist, "/");
 		strcat(sp->urllist, dl);
@@ -1339,13 +1339,13 @@ void sgDestUrlList(char *urllist)
 		if (urllist[0] == '/') {
 			sp->urllist = strdup(urllist);
 		} else {
-			sp->urllist = (char *)sgCalloc(1, strlen(dbhome) + strlen("/") + strlen(urllist) + 4);
+			sp->urllist = sgMalloc(strlen(dbhome) + strlen("/") + strlen(urllist) + 4);
 			strcpy(sp->urllist, dbhome);
 			strcat(sp->urllist, "/");
 			strcat(sp->urllist, urllist);
 		}
 	}
-	sp->urllistDb = (struct sgDb *)sgCalloc(1, sizeof(struct sgDb));
+	sp->urllistDb = sgMalloc(sizeof(struct sgDb));
 	sp->urllistDb->type = SGDBTYPE_URLLIST;
 	sgLogDebug("init urllist %s", sp->urllist);
 	sgDbInit(sp->urllistDb, sp->urllist);
@@ -1370,12 +1370,12 @@ void sgDestExpressionList(char *exprlist, char *chcase)
 		dbhome = DEFAULT_DBHOME;
 	if (exprlist == NULL) {
 		name = sp->name;
-		dl = (char *)sgCalloc(1, strlen("/dest/") + strlen(name) + strlen("/expressionlist"));
+		dl = sgMalloc(strlen("/dest/") + strlen(name) + strlen("/expressionlist"));
 		strcpy(dl, "/dest/");
 		strcat(dl, name);
 		strcat(dl, "/expressionlist");
 		flags |= REG_ICASE; /* default case insensitive */
-		sp->expressionlist = (char *)sgCalloc(1, strlen(dbhome) + strlen(dl) + 10);
+		sp->expressionlist = sgMalloc(strlen(dbhome) + strlen(dl) + 10);
 		strcpy(sp->expressionlist, dbhome);
 		strcat(sp->expressionlist, "/");
 		strcat(sp->expressionlist, dl);
@@ -1384,7 +1384,7 @@ void sgDestExpressionList(char *exprlist, char *chcase)
 		if (exprlist[0] == '/') {
 			sp->expressionlist = strdup(exprlist);
 		} else {
-			sp->expressionlist = (char *)sgCalloc(1, strlen(dbhome) + strlen("/") + strlen(exprlist) + 4);
+			sp->expressionlist = sgMalloc(strlen(dbhome) + strlen("/") + strlen(exprlist) + 4);
 			strcpy(sp->expressionlist, dbhome);
 			strcat(sp->expressionlist, "/");
 			strcat(sp->expressionlist, exprlist);
@@ -1422,7 +1422,7 @@ void sgDestRedirect(char *value)
 {
 	struct Destination *sp;
 	sp = lastDest;
-	sp->redirect = (char *)sgCalloc(1, strlen(value) + 1);
+	sp->redirect = sgMalloc(strlen(value) + 1);
 	strcpy(sp->redirect, value);
 }
 
@@ -1487,7 +1487,7 @@ void sgSetting(char *name, char *value)
 	if (Setting != NULL)
 		if ((struct Setting *)sgSettingFindName(name) != NULL)
 			sgLogFatal("FATAL: %s: setting %s is defined in configfile %s", progname, name, configFile);
-	sp = (struct Setting *)sgCalloc(1, sizeof(struct Setting));
+	sp = sgMalloc(sizeof(struct Setting));
 
 	sp->name = strdup(name);
 	sp->value = strdup(value);
@@ -1567,7 +1567,7 @@ void sgRewrite(char *rewrite)
 			sgLogFatal("%s: rewrite %s is defined in configfile %s",
 				   progname, rewrite, configFile);
 	}
-	rew = (struct sgRewrite *)sgCalloc(1, sizeof(struct sgRewrite));
+	rew = sgMalloc(sizeof(struct sgRewrite));
 	rew->name = strdup(rewrite);
 	rew->rewrite = NULL;
 	rew->logfile = NULL;
@@ -1676,7 +1676,7 @@ void sgTime(char *name)
 	} else {
 		numTimeElements = 0;
 	}
-	t = (struct Time *)sgCalloc(1, sizeof(struct Time));
+	t = sgMalloc(sizeof(struct Time));
 	t->name = strdup(name);
 	t->element = NULL;
 	t->active = 1;
@@ -1695,7 +1695,7 @@ void sgTimeElementInit()
 {
 	struct TimeElement *te;
 
-	te = (struct TimeElement *)sgCalloc(1, sizeof(struct TimeElement));
+	te = sgMalloc(sizeof(struct TimeElement));
 	numTimeElements++;
 	if (lastTime->element == NULL)
 		lastTime->element = te;
@@ -1865,8 +1865,8 @@ void sgTimeElementSortEvents()
 	int *t;
 
 	if (Time != NULL) {
-		TimeElementsEvents = (int *)sgCalloc(numTimeElements * 2, sizeof(int));
-		t = (int *)sgCalloc(numTimeElements * 2, sizeof(int));
+		TimeElementsEvents = sgCalloc(numTimeElements * 2, sizeof(int));
+		t = sgCalloc(numTimeElements * 2, sizeof(int));
 		for (p = Time; p != NULL; p = p->next) {
 			for (te = p->element; te != NULL; te = te->next) {
 				TimeElementsEvents[i++] = te->from == 0 ? 1440 : te->from;
@@ -2133,7 +2133,7 @@ void sgSetIpType(int type, char *file, int line)
 		ip->net = ip->net & ip->mask;
 	}
 	ip->type = type;
-	nip = (struct Ip *)sgCalloc(1, sizeof(struct Ip));
+	nip = sgMalloc(sizeof(struct Ip));
 	ip->next = nip;
 }
 
@@ -2142,7 +2142,7 @@ void sgIp(char *name)
 	struct Ip *ip;
 	unsigned long *op;
 	if (lastSource->ip == NULL) {
-		ip = (struct Ip *)sgCalloc(1, sizeof(struct Ip));
+		ip = sgMalloc(sizeof(struct Ip));
 		ip->next = NULL;
 		lastSource->ip = ip;
 		lastSource->lastip = ip;
@@ -2156,7 +2156,7 @@ void sgIp(char *name)
 		else
 			ip->net = *op;
 	} else {
-		ip->str = (char *)sgCalloc(1, strlen(name) + 1);
+		ip->str = sgMalloc(strlen(name) + 1);
 		strcpy(ip->str, name);
 	}
 }
@@ -2197,7 +2197,7 @@ void sgAcl(char *name, char *value, int within)
 	}
 	if (lastAcl != NULL && name == NULL && within == ELSE)
 		name = lastAcl->name;
-	acl = (struct Acl *)sgCalloc(1, sizeof(struct Acl));
+	acl = sgMalloc(sizeof(struct Acl));
 	if (!strcmp(name, "default")) {
 		defaultAcl = acl;
 		def++;
@@ -2206,7 +2206,7 @@ void sgAcl(char *name, char *value, int within)
 			sgLogFatal("%s: FATAL: ACL source %s is not defined in configfile %s",
 				   progname, name, configFile);
 	}
-	acl->name = sgCalloc(1, strlen(name) + 1);
+	acl->name = sgMalloc(strlen(name) + 1);
 	strcpy(acl->name, name);
 	acl->active = within == ELSE ? 0 : 1;
 	acl->source = source;
@@ -2256,8 +2256,8 @@ void sgAclSetValue(char *what, char *value, int allowed)
 			type = ACL_TYPE_DEFAULT;
 		}
 
-		acldest = sgCalloc(1, sizeof(struct AclDest));
-		acldest->name = (char *)sgCalloc(1, strlen(value) + 1);
+		acldest = sgMalloc(sizeof(struct AclDest));
+		acldest->name = sgMalloc(strlen(value) + 1);
 		strcpy(acldest->name, value);
 		acldest->dest = dest;
 		acldest->access = allowed;
@@ -2265,13 +2265,13 @@ void sgAclSetValue(char *what, char *value, int allowed)
 		acldest->type = type;
 		if (type == ACL_TYPE_DNSBL) {
 			if ((subval == NULL) || (subval[1]) == '\0') { //Config does not define which dns domain to use
-				acldest->dns_suffix = (char *)sgCalloc(1, strlen(".black.uribl.com") + 1);
+				acldest->dns_suffix = sgMalloc(strlen(".black.uribl.com") + 1);
 				strcpy(acldest->dns_suffix, ".black.uribl.com");
 			} else {
 				subval = subval + 1;
 				if (strspn(subval, ".-abcdefghijklmnopqrstuvwxyz0123456789") != strlen(subval))
 					sgLogFatal("%s: FATAL: provided dnsbl \"%s\" doesn't look like a valid domain suffix", progname, subval);
-				acldest->dns_suffix = (char *)sgCalloc(1, strlen(subval) + 1);
+				acldest->dns_suffix = sgMalloc(strlen(subval) + 1);
 				strcpy(acldest->dns_suffix, ".");
 				strcat(acldest->dns_suffix, subval);
 			}
@@ -2299,7 +2299,7 @@ void sgAclSetValue(char *what, char *value, int allowed)
 	}
 	if (!strcmp(what, "redirect")) {
 		if (strcmp(value, "default")) {
-			lastAcl->redirect = (char *)sgCalloc(1, strlen(value) + 1);
+			lastAcl->redirect = sgMalloc(strlen(value) + 1);
 			strcpy(lastAcl->redirect, value);
 		} else {
 			lastAcl->redirect = NULL;

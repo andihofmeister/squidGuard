@@ -81,18 +81,16 @@ void sgFreeAllLists()
 	TimeElementsEvents = NULL;
 }
 
-#if __STDC__
 void sgFreeDestination(struct Destination *dest)
-#endif
 {
-	if (dest->name != NULL) sgFree(dest->name);
-	if (dest->domainlist != NULL) sgFree(dest->domainlist);
-	if (dest->domainlistDb != NULL) sgFree(dest->domainlistDb);
-	if (dest->urllist != NULL) sgFree(dest->urllist);
-	if (dest->urllistDb != NULL) sgFree(dest->urllistDb);
-	if (dest->expressionlist != NULL) sgFree(dest->expressionlist);
-	if (dest->redirect != NULL) sgFree(dest->redirect);
-	if (dest->logfile != NULL) sgFree(dest->logfile);
+	sgFree(dest->name);
+	sgFree(dest->domainlist);
+	sgFree(dest->domainlistDb);
+	sgFree(dest->urllist);
+	sgFree(dest->urllistDb);
+	sgFree(dest->expressionlist);
+	sgFree(dest->redirect);
+	sgFree(dest->logfile);
 	/*struct Time *time;*/          /* not dynamically allocated */
 	/*struct sgRewrite *rewrite;*/
 
@@ -102,20 +100,18 @@ void sgFreeDestination(struct Destination *dest)
 	sgFree(dest);
 }
 
-#if __STDC__
 void sgFreeSource(struct Source *src)
-#endif
 {
 	int i;
 
-	if (src->name != NULL) sgFree(src->name);
-	if (src->domainDb != NULL) sgFree(src->domainDb);
-	if (src->userDb != NULL) sgFree(src->userDb);
-	if (src->logfile != NULL) sgFree(src->logfile);
+	sgFree(src->name);
+	sgFree(src->domainDb);
+	sgFree(src->userDb);
+	sgFree(src->logfile);
 	/*struct Time *time;*/          /* not dynamically allocated */
 
 #ifdef HAVE_LIBLDAP
-	if (src->ipDb != NULL) sgFree(src->ipDb);
+	sgFree(src->ipDb);
 	for (i = 0; i < src->ldapuserurlcount; i++)
 		sgFree(src->ldapuserurls[i]);
 	sgFree(src->ldapuserurls);
@@ -130,49 +126,39 @@ void sgFreeSource(struct Source *src)
 	sgFree(src);
 }
 
-#if __STDC__
 void sgFreeIp(struct Ip *ip)
-#endif
 {
-	if (ip->str != NULL) sgFree(ip->str);
+	sgFree(ip->str);
 	sgFree(ip);
 }
 
-#if __STDC__
 void sgFreeSetting(struct Setting *set)
-#endif
 {
-	if (set->name != NULL) free(set->name);
-	if (set->value != NULL) free(set->value);
+	free(set->name);
+	free(set->value);
 	sgFree(set);
 }
 
-#if __STDC__
 void sgFreeTime(struct Time *t)
-#endif
 {
-	if (t->name != NULL) free(t->name);
+	free(t->name);
 	FREE_LIST(TimeElement, t->element, sgFree)
 	sgFree(t);
 }
 
-#if __STDC__
 void sgFreeRewrite(struct sgRewrite *rew)
-#endif
 {
-	if (rew->name != NULL) sgFree(rew->name);
-	if (rew->logfile != NULL) sgFree(rew->logfile);
+	sgFree(rew->name);
+	sgFree(rew->logfile);
 	FREE_LIST(sgRegExp, rew->rewrite, sgFreePatternBuffer)
 	sgFree(rew);
 }
 
-#if __STDC__
 void sgFreeAcl(struct Acl *acl)
-#endif
 {
-	if (acl->name != NULL) sgFree(acl->name);
-	if (acl->redirect != NULL) sgFree(acl->redirect);
-	if (acl->logfile != NULL) sgFree(acl->logfile);
+	sgFree(acl->name);
+	sgFree(acl->redirect);
+	sgFree(acl->logfile);
 
 	FREE_LIST(AclDest, acl->pass, sgFreeAclDest)
 
@@ -183,19 +169,15 @@ void sgFreeAcl(struct Acl *acl)
 	sgFree(acl);
 }
 
-#if __STDC__
 void sgFreeAclDest(struct AclDest *ad)
-#endif
 {
-	if (ad->name != NULL) sgFree(ad->name);
+	sgFree(ad->name);
 	/*struct Destination *dest;*/   /* not dynamically allocated */
 
 	sgFree(ad);
 }
 
-#if __STDC__
 void sgFreeLogFileStat(struct LogFileStat *lfs)
-#endif
 {
 	if (lfs->name != NULL) sgFree(lfs->name);
 	sgFree(lfs);
