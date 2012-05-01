@@ -202,7 +202,7 @@ int main(int argc, char **argv, char **envp)
 					acl = sgAclCheckSource(src);
 					if ((redirect = sgAclAccess(src, acl, &squidInfo)) == NULL ||
 					    redirect == NEXT_SOURCE) {
-						if (src == NULL || src->cont_search == 0 && redirect != NEXT_SOURCE) {
+						if (src == NULL || (src->cont_search == 0 && redirect != NEXT_SOURCE)) {
 							puts("");
 							break;
 						} else

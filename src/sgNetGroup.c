@@ -10,10 +10,10 @@ extern char *krbRealm;
 extern void unescape(char *s);
 extern void stripRealm(char *name, char *realm);
 
-static struct node {
+struct node {
 	struct node *	next;
 	char *		name;
-} **groups;
+};
 
 static char *sstrdup(const char *cp)
 {

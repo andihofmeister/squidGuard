@@ -16,6 +16,9 @@
   (GPL) along with this program.
 */
 
+%option nounput
+%option noinput
+
 %{
 
 #include "y.tab.h"
@@ -82,7 +85,7 @@ weekdays (({weekday}{s}*[, \t]+{s}*)*{weekday})|[\*]
 %%
 
        char string_buf[MAX_BUF];
-       char *string_buf_ptr;
+       char *string_buf_ptr = NULL;
 
 [ \t]*#.*        ;
 "{"         return START_BRACKET;

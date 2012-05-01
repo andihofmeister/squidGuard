@@ -1047,7 +1047,7 @@ struct Source *sgFindSource(struct Source *bsrc, char *net, char *ident, char *d
 	int foundip, founduser, founddomain, unblockeduser;
 	unsigned long i, octet = 0, *op;
 	struct UserInfo *userquota;
-	char *dotnet;
+	char *dotnet = NULL;
 #ifdef HAVE_LIBLDAP
 	int unblockedip;
 	struct IpInfo *ipquota;
@@ -1097,7 +1097,6 @@ struct Source *sgFindSource(struct Source *bsrc, char *net, char *ident, char *d
 					foundip = 1;
 					unblockedip = 1;
 					if (s->ipquota.seconds != 0) {
-						struct IpInfo uq;
 						time_t t = time(NULL) + globalDebugTimeDelta;
 						sgLogDebug("status %d time %d lasttime %d consumed %d", ipquota->status, ipquota->time, ipquota->last, ipquota->consumed);
 						sgLogDebug("renew %d seconds %d", s->ipquota.renew, s->ipquota.seconds);
@@ -1159,7 +1158,6 @@ struct Source *sgFindSource(struct Source *bsrc, char *net, char *ident, char *d
 					founduser = 1;
 					unblockeduser = 1;
 					if (s->userquota.seconds != 0) {
-						struct UserInfo uq;
 						time_t t = time(NULL) + globalDebugTimeDelta;
 						//sgLogError("status %d time %d lasttime %d consumed %d", userquota->status, userquota->time, userquota->last, userquota->consumed);
 						//sgLogError("renew %d seconds %d", s->userquota.renew, s->userquota.seconds);

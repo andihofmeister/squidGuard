@@ -18,6 +18,7 @@
 
 #include "sg.h"
 #include "sgEx.h"
+#include "HTEscape.h"
 
 /* #define METEST 8; */
 
@@ -560,7 +561,13 @@ char *sgParseRedirect(char *redirect, struct SquidInfo *req, struct Acl *acl, st
 				struct UserInfo *userquota;
 				if (defined(s->userDb, req->ident, (char **)&userquota) == 1) {
 					char qbuf[150];
-					sprintf(qbuf, "%d-%d-%d-%d-%d-%d", s->userquota.renew, s->userquota.seconds, userquota->status, userquota->time, userquota->last, userquota->consumed);
+					sprintf(qbuf, "%d-%ld-%d-%ld-%ld-%d",
+					        s->userquota.renew,
+					        s->userquota.seconds,
+					        userquota->status,
+					        userquota->time,
+					        userquota->last,
+					        userquota->consumed);
 					strcat(buf, qbuf);
 				} else {
 					strcat(buf, "noquota");

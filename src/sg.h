@@ -474,3 +474,4 @@ int sgFindIp(struct Source *, char *, struct IpInfo **);
 int expand_url(char *, size_t, const char *, const char *);
 
 int groupmember(void *, char *, const char *);
+int sgCheckNetGroup(void *, char *, char *);

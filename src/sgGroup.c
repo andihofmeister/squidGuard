@@ -70,15 +70,6 @@ listadd(struct node *lh, const char *name)
 	return lh;
 }
 
-static struct node *
-listget(struct node *lp, const char *name)
-{
-	while (lp)
-		if (strcmp(lp->n_name, name) == 0)
-			break;
-	return lp;
-}
-
 static void
 listfree(struct node *lp)
 {
