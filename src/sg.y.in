@@ -92,7 +92,7 @@ rfc1738_unescape(char *s)
 %token DESTINATION REWRITE ACL TIME TVAL DVAL DVALCRON
 %token SOURCE CIDR IPCLASS CONTINUE
 %token IPADDR DBHOME DOMAINLIST URLLIST EXPRESSIONLIST IPLIST GROUPTTL
-%token DOMAIN USER USERLIST GROUP USERQUERY LDAPUSERSEARCH USERQUOTA LDAPIPSEARCH IPQUOTA IP NL NUMBER
+%token DOMAIN USER USERLIST GROUP NETGROUP USERQUERY LDAPUSERSEARCH USERQUOTA LDAPIPSEARCH IPQUOTA IP NL NUMBER
 %token PASS NEXT REDIRECT LOGDIR SUBST CHAR MINUTELY HOURLY DAILY WEEKLY DATE
 %token WITHIN OUTSIDE ELSE LOGFILE SYSLOG ANONYMOUS VERBOSE CONTINIOUS SPORADIC
 %token LDAPCACHETIME EXECUSERLIST EXECCMD LDAPPROTOVER
@@ -217,6 +217,7 @@ source_contents:
 source_content:     DOMAIN domain
                     | USER user 
 		    | GROUP group
+		    | NETGROUP netgroup
                     | USERLIST STRING { sgSourceUserList($2); } 
 @MYSQLLINE@
 @YACCLINE@
@@ -250,6 +251,11 @@ user:
 group:
                     | group STRING { sgSourceGroup($2); }
                     | group ','
+		    ;
+
+netgroup:
+                    | netgroup STRING { sgSourceNetGroup($2); }
+                    | netgroup ','
 		    ;
 
 acl_block: ACL start_block acl_contents stop_block 
@@ -596,6 +602,7 @@ void sgSourceEnd()
  s = lastSource;
  if(s->ip == NULL && s->domainDb == NULL && s->userDb == NULL
        && s->grouplist == NULL
+       && s->netgrouplist == NULL
        && s->ipDb == NULL
        && s->ldapuserurlcount == 0 && s->ldapipurlcount == 0 ){
    sgLogError("sourceblock %s missing active content, set inactive",s->name);
@@ -609,7 +616,7 @@ void sgSourceEnd()
  struct Source *s;
  s = lastSource;
  if(s->ip == NULL && s->domainDb == NULL && s->userDb == NULL &&
-     s->grouplist == NULL){
+     s->grouplist == NULL && s->netgrouplist == NULL){
    sgLogError("sourceblock %s missing active content, set inactive",s->name);
    s->time = NULL;
    s->active = 0;
@@ -1164,7 +1171,7 @@ struct Source *sgFindSource (bsrc, net, ident, domain)
 #endif
 //fin ip
       foundip = 1;
-      if(s->userDb != NULL || s->grouplist != NULL){
+      if(s->userDb != NULL || s->grouplist != NULL || s->netgrouplist != NULL){
       if(*ident == '\0')
 	founduser = 0;
       else {
@@ -1222,6 +1229,8 @@ struct Source *sgFindSource (bsrc, net, ident, domain)
       }
       if (founduser == 0)
         founduser = groupmember(s->grouplist, ident, s->name);
+      if (founduser == 0)
+        founduser = sgCheckNetGroup(s->netgrouplist, ident, s->name);
     } else
       founduser = 1;
     if(s->domainDb != NULL){

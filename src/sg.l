@@ -112,6 +112,7 @@ expressionlist return EXPRESSIONLIST;
 iplist      return IPLIST;
 user        return USER;
 group       return GROUP;
+netgroup    return NETGROUP;
 userlist    return USERLIST;
 userquery   {
 	BEGIN REDIRECT_STATE;

@@ -38,7 +38,7 @@ logdir	= @sg_logdir@
 cfgdir	= @sg_cfgdir@
 infodir	= $(prefix)/info
 
-OBJS	= main.o sgLog.o sgDb.o HTParse.o sgDiv.o sgFree.o sgGroup.o y.tab.o lex.yy.o
+OBJS	= main.o sgLog.o sgDb.o HTParse.o sgDiv.o sgFree.o sgGroup.o sgNetGroup.o y.tab.o lex.yy.o
 
 all::
 	@echo making $@ in `basename \`pwd\``

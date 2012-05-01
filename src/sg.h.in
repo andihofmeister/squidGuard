@@ -299,6 +299,7 @@ struct Source {
   struct sgDb *domainDb;
   struct sgDb *userDb;
   void *grouplist;
+  void *netgrouplist;
   struct Time *time;
   int within;
   int cont_search;
@@ -377,6 +378,7 @@ void   sgSource __P((char *));
 void   sgSourceEnd __P(());
 void   sgSourceUser __P((char *));
 void   sgSourceGroup __P((char *));
+void   sgSourceNetGroup __P((char *));
 void   sgSourceUserList __P((char *));
 #ifdef HAVE_LIBLDAP
 void   sgSourceLdapUserSearch __P((char *));
