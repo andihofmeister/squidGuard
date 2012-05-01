@@ -196,6 +196,47 @@ sgSourceGroup(char *user)
 	sp->grouplist = listadd(sp->grouplist, user);
 }
 
+int
+unhexlify( char c )
+{
+        char ret = c;
+
+        if (c >= '0' && c <= '9') {
+                ret -= '0';
+        } else if (c >= 'A' && c <= 'F') {
+                ret -= 'A' + 10;
+        } else if (c >= 'a' && c <= 'f'){
+                ret -= 'a' + 10;
+        } else {
+                ret = -1;
+        }
+
+        return ret;
+}
+
+void
+unescape( char *s)
+{
+        char *tmp = s;
+        int offset = 0;
+        int len = strlen(s);
+
+        int i;
+        for (i = 0; i < len;) {
+                if ( s[i] == '%' ) {
+                        tmp[offset] = unhexlify(s[i+1]) << 4 | unhexlify(s[i+2]);
+                        offset++;
+                        i += 3;
+                } else {
+                        tmp[offset] = s[i];
+                        offset++;
+                        i++;
+                }
+        }
+
+        s[offset] = '\0';
+}
+
 void
 stripRealm(char *name, char *realm) {
         char *first;
@@ -222,6 +263,8 @@ groupmember(void *grouplist, char *user, const char *source)
 
 	if (grouplist == NULL)
 		return 0;
+
+	unescape(user);
 
 	stripRealm(user, krbRealm);
 
