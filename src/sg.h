@@ -421,6 +421,7 @@ char *sgRegExpSubst(struct sgRegExp *, char *);
 void sgDbInit();
 void sgDbLoadTextFile(struct sgDb *, char *, int);
 void sgDbUpdate(struct sgDb *, char *, char *, size_t);
+struct UserInfo *setuserinfo();
 
 #if DB_VERSION_GT2
 int db_init(char *, DB_ENV * *);

@@ -25,6 +25,7 @@ extern int globalSyslog;
 #endif
 
 #ifdef HAVE_LIBLDAP
+#define LDAP_DEPRECATED 1
 #include "lber.h"
 #include "ldap.h"
 #endif
@@ -45,6 +46,8 @@ static int time_switch = 0;
 static int date_switch = 0;
 
 int numSource = 0;
+
+void sgSourceUserQuery(char *, char *, char *, char *);
 
 void rfc1738_unescape(char *);
 void
@@ -739,7 +742,7 @@ void sgSourceUserList(char *file)
 
 
 /* MySQLsupport */
-void sgSourceUserQuery(char *query)
+void sgSourceUserQuery(char *query, char * broke_1, char * broke_2, char * broke_4)
 {
 #ifdef HAVE_MYSQL
 	char *dbhome = NULL, *f;
