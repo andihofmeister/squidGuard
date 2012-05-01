@@ -132,6 +132,7 @@ execuserlist {
 userquota   return USERQUOTA;
 domain      return DOMAIN;
 pass        return PASS;
+next        return NEXT;
 rewrite     return REWRITE;
 redirect    { BEGIN REDIRECT_STATE; return REDIRECT; }
 minutely    return MINUTELY;

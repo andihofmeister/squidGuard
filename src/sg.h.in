@@ -115,6 +115,8 @@ int tolower();
 #define REDIRECT_PERMANENT   "301:"
 #define REDIRECT_TEMPORARILY "302:"
 
+#define	NEXT_SOURCE	((char *)-1)
+
 char *progname;
 
 struct LogFileStat {
@@ -333,6 +335,7 @@ struct AclDest {
   char *dns_suffix;
   struct Destination *dest;
   int    access;
+  int    next_source;
   int    type;
   struct AclDest *next;
 };

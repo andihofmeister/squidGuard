@@ -93,7 +93,7 @@ rfc1738_unescape(char *s)
 %token SOURCE CIDR IPCLASS CONTINUE
 %token IPADDR DBHOME DOMAINLIST URLLIST EXPRESSIONLIST IPLIST
 %token DOMAIN USER USERLIST USERQUERY LDAPUSERSEARCH USERQUOTA LDAPIPSEARCH IPQUOTA IP NL NUMBER
-%token PASS REDIRECT LOGDIR SUBST CHAR MINUTELY HOURLY DAILY WEEKLY DATE
+%token PASS NEXT REDIRECT LOGDIR SUBST CHAR MINUTELY HOURLY DAILY WEEKLY DATE
 %token WITHIN OUTSIDE ELSE LOGFILE SYSLOG ANONYMOUS VERBOSE CONTINIOUS SPORADIC
 %token LDAPCACHETIME EXECUSERLIST EXECCMD LDAPPROTOVER
 %token LDAPBINDDN LDAPBINDPASS MYSQLUSERNAME MYSQLPASSWORD DATABASE
@@ -265,6 +265,7 @@ access_contents:
                    ;
 
 access_content:    PASS access_pass { }
+                  | NEXT access_next { }
                   | REWRITE WORD { sgAclSetValue("rewrite",$2,0); }
                   | REDIRECT STRING { sgAclSetValue("redirect",$2,0); }
                   | LOGFILE ANONYMOUS STRING {sgLogFile(SG_BLOCK_ACL,1,0,$3);}
@@ -278,6 +279,12 @@ access_pass:
                   | access_pass WORD { sgAclSetValue("pass",$2,1);}
                   | access_pass '!' WORD { sgAclSetValue("pass",$3,0);}
 		  | access_pass ',' 
+                  ;
+
+access_next:
+                  | access_next WORD { sgAclSetValue("next",$2,1);}
+                  | access_next '!' WORD { sgAclSetValue("next",$3,0);}
+                  | access_next ','
                   ;
 
 cidr:             CIDR { sgIp($1); }
@@ -2411,7 +2418,7 @@ void sgAclSetValue (what, value, allowed)
   struct sgRewrite *rewrite = NULL;
   struct AclDest *acldest;
   int type = ACL_TYPE_TERMINATOR;
-  if(!strcmp(what,"pass")){
+  if(!strcmp(what,"pass") || !strcmp(what,"next")){
     if(!strcmp(value,"any") || !strcmp(value,"all"))
     {
       allowed = 1;
@@ -2438,6 +2445,7 @@ void sgAclSetValue (what, value, allowed)
     strcpy(acldest->name,value);
     acldest->dest = dest;
     acldest->access = allowed;
+    acldest->next_source = !strcmp(what,"next");
     acldest->type = type;
     if (type == ACL_TYPE_DNSBL)
     {
@@ -2695,7 +2703,8 @@ char *sgAclAccess(src, acl, req)
 	redirect = defaultAcl->redirect;
       else
 	redirect = acl->redirect;
-    }
+    } else if(aclpass->next_source)
+      redirect = NEXT_SOURCE;
   } else {  /* acl->pass == NULL, probably defaultAcl->pass == NULL */
     access=0;
     redirect = defaultAcl->redirect;
@@ -2713,7 +2722,7 @@ char *sgAclAccess(src, acl, req)
        return redirect;
       }
     }
-  } else if(redirect != NULL) {
+  } else if(redirect != NULL && redirect != NEXT_SOURCE) {
     redirect = sgParseRedirect(redirect, req, acl, aclpass);
   }
   if(src != NULL && src->logfile != NULL)
