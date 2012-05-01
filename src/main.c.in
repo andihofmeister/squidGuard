@@ -72,14 +72,7 @@ char *globalLogDir = NULL;
 int globalSyslog = 0;
 
 
-#if __STDC__
 int main(int argc, char **argv, char **envp)
-#else
-int main(argc, argv, envp)
-int argc;
-char *argv[];
-char *envp[];
-#endif
 {
 	extern int groupDebug;
 	int ch;
@@ -266,11 +259,7 @@ char *envp[];
 	exit(0);
 }
 
-#if __STDC__
 void usage()
-#else
-void usage()
-#endif
 {
 	fprintf(stderr,
 		"Usage: squidGuard [-u] [-C block] [-t time] [-c file] [-v] [-d] [-P]\n");

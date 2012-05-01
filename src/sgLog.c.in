@@ -27,11 +27,7 @@ extern struct LogFileStat *globalErrorLog;
 #endif
 extern int globalSyslog;   /* from main.c */
 
-#if __STDC__
 void sgSetGlobalErrorLogFile()
-#else
-void sgSetGlobalErrorLogFile()
-#endif
 {
 	static char file[MAX_BUF];
 
@@ -46,20 +42,13 @@ void sgSetGlobalErrorLogFile()
 	globalErrorLog = sgLogFileStat(file);
 }
 
-#if __STDC__
 void sgLog(struct LogFileStat *log, char *format, ...)
-#else
-void sgLog(log, format, va_alist)
-struct LogFileStat *log;
-char *format;
-va_dcl
-#endif
 {
 	FILE *fd;
 	char *date = NULL;
 	char msg[MAX_BUF];
 	va_list ap;
-	VA_START(ap, format);
+	va_start(ap, format);
 	if (vsnprintf(msg, MAX_BUF, format, ap) > (MAX_BUF - 1))
 		fprintf(stderr, "ERROR: overflow in vsnprintf (sgLog): %s", strerror(errno));
 	va_end(ap);
@@ -81,17 +70,11 @@ va_dcl
 	}
 }
 
-#if __STDC__
 void sgLogDebug(char *format, ...)
-#else
-void sgLogDebug(format, va_alist)
-char *format;
-va_dcl
-#endif
 {
 	char msg[MAX_BUF];
 	va_list ap;
-	VA_START(ap, format);
+	va_start(ap, format);
 	if (vsnprintf(msg, MAX_BUF, format, ap) > (MAX_BUF - 1))
 		sgLog(globalErrorLog, "FATAL: overflow in vsnprintf (sgLogError): %s", strerror(errno));
 	va_end(ap);
@@ -103,17 +86,11 @@ va_dcl
 }
 
 
-#if __STDC__
 void sgLogNotice(char *format, ...)
-#else
-void sgLogNotice(format, va_alist)
-char *format;
-va_dcl
-#endif
 {
 	char msg[MAX_BUF];
 	va_list ap;
-	VA_START(ap, format);
+	va_start(ap, format);
 	if (vsnprintf(msg, MAX_BUF, format, ap) > (MAX_BUF - 1))
 		sgLog(globalErrorLog, "FATAL: overflow in vsnprintf (sgLogError): %s", strerror(errno));
 	va_end(ap);
@@ -124,17 +101,11 @@ va_dcl
 		 @NOSYSLOG1@ } @NOSYSLOG2@
 }
 
-#if __STDC__
 void sgLogWarn(char *format, ...)
-#else
-void sgLogWarn(format, va_alist)
-char *format;
-va_dcl
-#endif
 {
 	char msg[MAX_BUF];
 	va_list ap;
-	VA_START(ap, format);
+	va_start(ap, format);
 	if (vsnprintf(msg, MAX_BUF, format, ap) > (MAX_BUF - 1))
 		sgLog(globalErrorLog, "FATAL: overflow in vsnprintf (sgLogError): %s", strerror(errno));
 	va_end(ap);
@@ -145,17 +116,11 @@ va_dcl
 		 @NOSYSLOG1@ } @NOSYSLOG2@
 }
 
-#if __STDC__
 void sgLogError(char *format, ...)
-#else
-void sgLogError(format, va_alist)
-char *format;
-va_dcl
-#endif
 {
 	char msg[MAX_BUF];
 	va_list ap;
-	VA_START(ap, format);
+	va_start(ap, format);
 	if (vsnprintf(msg, MAX_BUF, format, ap) > (MAX_BUF - 1))
 		sgLog(globalErrorLog, "FATAL: overflow in vsnprintf (sgLogError): %s", strerror(errno));
 	va_end(ap);
@@ -166,17 +131,11 @@ va_dcl
 		 @NOSYSLOG1@ } @NOSYSLOG2@
 }
 
-#if __STDC__
 void sgLogFatal(char *format, ...)
-#else
-void sgLogFatal(format, va_alist)
-char *format;
-va_dcl
-#endif
 {
 	char msg[MAX_BUF];
 	va_list ap;
-	VA_START(ap, format);
+	va_start(ap, format);
 	if (vsnprintf(msg, MAX_BUF, format, ap) > (MAX_BUF - 1))
 		return;
 	va_end(ap);
@@ -189,17 +148,9 @@ va_dcl
 }
 
 
-#if __STDC__
-void sgLogRequest(struct LogFile *log, struct SquidInfo *req, struct Acl *acl, struct AclDest *aclpass, struct sgRewrite *rewrite, int request)
-#else
-void sgLogRequest(log, req, acl, aclpass, rewrite, request)
-struct LogFile *log;
-struct SquidInfo *req;
-struct Acl *acl;
-struct AclDest *aclpass;
-struct sgRewrite *rewrite;
-int request;
-#endif
+void sgLogRequest(struct LogFile *log, struct SquidInfo *req,
+                  struct Acl *acl, struct AclDest *aclpass,
+                  struct sgRewrite *rewrite, int request)
 {
 	char *ident = req->ident;
 	char *srcDomain = req->srcDomain;
