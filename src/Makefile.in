@@ -2,7 +2,6 @@ SHELL=/bin/sh
 .SUFFIXES:
 .SUFFIXES: .c .o .pl .pm .pod .html .man
 
-
 CC	= @CC@
 CPP	= @CPP@
 LEX	= @LEX@
@@ -16,7 +15,11 @@ MKDIR = @top_srcdir@/mkinstalldirs
 
 RM = rm -f
 
-CFLAGS	= @CFLAGS@
+CFLAGS	= @CFLAGS@ \
+	-DDEFAULT_CONFIGFILE="\"@sg_config@\"" \
+	-DEFAULT_LOGDIR="\"@sg_logdir@\"" \
+	-DDEFAULT_DBHOME="\"@sg_dbhome@\""
+
 CPPFLAGS= @CPPFLAGS@
 LDFLAGS	= @LDFLAGS@
 LIBS	= @LIBS@

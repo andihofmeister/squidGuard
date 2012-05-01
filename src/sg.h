@@ -65,24 +65,16 @@
 #define WARNING_LOGFILE "squidGuard.log"
 #define ERROR_LOGFILE   "squidGuard.error"
 
-#define DEFAULT_CONFIGFILE "@prefix@/squidGuard/squidGuard.conf"
-#define DEFAULT_LOGDIR "@prefix@/squidGuard/log"
-#define DEFAULT_DBHOME "@prefix@/squidGuard/db"
-#define EXEC_PROGRAM "@prefix@/bin/squidGuard"
-
-#ifdef ACCONFIG
-#undef DEFAULT_CONFIGFILE
-#define DEFAULT_CONFIGFILE "@sg_config@"
+#ifndef DEFAULT_CONFIGFILE
+#define DEFAULT_CONFIGFILE "/usr/local/squidGuard/squidGuard.conf"
 #endif
 
-#ifdef ACLOGDIR
-#undef DEFAULT_LOGDIR
-#define DEFAULT_LOGDIR "@sg_logdir@"
+#ifndef DEFAULT_LOGDIR
+#define DEFAULT_LOGDIR "/usr/local/squidGuard/log"
 #endif
 
-#ifdef ACDBHOME
-#undef DEFAULT_DBHOME
-#define DEFAULT_DBHOME "@sg_dbhome@"
+#ifndef DEFAULT_DBHOME
+#define DEFAULT_DBHOME "/usr/local/squidGuard/db"
 #endif
 
 #define INVALID_IP_ADDR 1
