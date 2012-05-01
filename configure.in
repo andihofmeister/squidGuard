@@ -1,0 +1,504 @@
+dnl
+dnl Autoconf configuration for squidGuard
+dnl
+
+AC_INIT(src/main.c)
+AC_CONFIG_HEADER(src/config.h)
+
+dnl
+dnl Checks for programs.
+dnl
+AC_PROG_CC
+AC_PROG_CPP
+AC_PROG_MAKE_SET
+AC_PROG_INSTALL
+AC_PROG_YACC
+AC_PROG_LEX
+AC_PATH_PROG(LYNX,lynx,false,$PATH:/usr/bin:/usr/local/bin/:/local/bin:/local/perl/bin:/usr/local/perl/bin)
+AC_PATH_PROG(PERL,perl,no,$PATH:/usr/bin:/usr/local/bin/:/local/bin:/local/perl/bin:/usr/local/perl/bin)
+if test $PERL = no; then
+	echo
+	echo "** No Perl found in the PATH. Perl is required"
+	echo "   for squidGuard.cgi to work "
+	echo 
+fi
+
+squiduser=squid
+NOLOG1=
+NOLOG2=
+ldap_yacc=""
+sg_config=/usr/local/squidGuard/squidGuard.conf
+sg_dbhome=/usr/local/squidGuard/db
+sg_logdir=/usr/local/squidGuard/log
+sg_cfgdir=/usr/local/squidGuard
+syslog_facility=LOCAL4
+dbprefix=/usr/local
+ldapprefix=/usr
+
+default_directory="/usr /usr/local"
+
+db_lib=-L$dbprefix/BerkeleyDB/lib
+db_inc=-I$dbprefix/BerkeleyDB/include
+ldap_lib=-L$ldapprefix/lib
+ldap_inc=-I$ldapprefix/include
+
+AC_DEFUN(FAIL_MESSAGE,[
+   echo
+   echo
+   echo "**********************************************"
+   echo "  ERROR: unable to find" $1
+   echo "  checked in the following places"
+   echo " "
+   echo "    /usr   /usr/local"
+   echo " "
+   echo "**********************************************"
+   echo
+   exit 1
+])
+
+dnl
+dnl Handle command line arguments
+dnl
+
+AC_ARG_WITH(db,
+	[  --with-db=DIR           location of the Berkley DB distribution],
+                db_distribution=$withval)
+
+if test -n "$db_distribution"; then
+	db_lib="-L${db_distribution}/lib"
+	db_inc="-I${db_distribution}/include"
+fi
+
+AC_ARG_WITH(db_lib,
+	[  --with-db-lib=DIR       location of the Berkley DB library],
+                [db_lib="-L${withval}"])
+AC_ARG_WITH(db_inc,
+	[  --with-db-inc=DIR       location of the Berkley DB include files],
+                [db_inc="-I${withval}"])
+
+AC_ARG_WITH(sg_config,
+	[  --with-sg-config=FILE   location of squidGuard config file],
+                sg_config=$withval)
+
+AC_ARG_WITH(sg_logdir,
+	[  --with-sg-logdir=DIR    location of squidGuard log file],
+                sg_logdir=$withval)
+
+AC_ARG_WITH(sg_dbhome,
+	[  --with-sg-dbhome=DIR    location of squidGuard db dirs],
+                sg_dbhome=$withval)
+
+AC_ARG_WITH(nolog,
+ 	[  --with-nolog=ARG        supress logging except for start and stop messages (default: ARG=no)],
+	        nolog=$withval )
+
+AC_ARG_WITH(syslog,
+	[  --with-syslog=ARG       send log messages to syslog for logging (default: ARG=no)],
+	        syslog=$withval )
+
+AC_ARG_WITH(syslog_facility,
+        [  --with-syslog-facility=FAC   use FAC as syslog facility (default: FAC=LOCAL4)],
+                syslog_facility=$withval )
+
+AC_ARG_WITH(squiduser,
+        [  --with-squiduser=USER   do set squid user to USER (default: squid)],
+	     squiduser=$withval)
+
+AC_ARG_WITH(ldap, AC_HELP_STRING([--with-ldap], [use ldap for authentication (default: no ldap)]))
+
+AC_ARG_WITH(ldap_lib,
+        [  --with-ldap-lib=DIR     location of the LDAP library],
+                [ldap_lib="-L${withval}"])
+
+AC_ARG_WITH(ldap_inc,
+        [  --with-ldap-inc=DIR     location of the LDAP include files],
+                [ldap_inc="-I${withval}"])
+
+
+if test -n "$sg_config"; then
+	AC_DEFINE(ACCONFIG, 1, [Defined if you supply --with-sg-config])
+changequote(, )dnl
+	sg_cfgdir=`echo $sg_config|sed "s%/[^/][^/]*$%%"`
+changequote([, ])dnl
+fi
+
+if test -n "$sg_logdir"; then
+	AC_DEFINE(ACLOGDIR, 1, [Defined if you supply --with-sg-logdir])
+fi
+
+if test -n "$sg_dbhome"; then
+	AC_DEFINE(ACDBHOME, 1, [Defined if you supply --with-sg-dbhome])
+fi
+
+CFLAGS="$CFLAGS $db_inc $ldap_inc"
+CXXFLAGS="$CXXFLAGS $db_inc $ldap_inc"
+CPPFLAGS="$CPPFLAGS $db_inc $ldap_inc"
+LDFLAGS="$LDFLAGS $db_lib $ldap_lib"
+
+dnl
+dnl Checks for header files.
+dnl
+
+AC_HEADER_STDC
+AC_CHECK_HEADERS(db.h regex.h unistd.h)
+
+AC_CHECK_HEADER(db.h,,[
+	echo
+	echo "** No db.h found"
+	echo "   The Berkley DB library is required for squidGuard"
+	echo "   to compile. Get it from http://www.oracle.com"
+	echo "   use --with-db=DIR or --with-db-inc=DIR to specify"
+	echo "   its location. (default is $dbprefix/BerkeleyDB)"
+	echo
+	exit 1
+       ])
+
+if test $HAVE_REGEX.H = no; then
+	echo 
+	echo "** No regex.h found"
+	echo "   The regexp library is required for squidGuard"
+	echo "   to compile. Get it from http://www.gnu.org"
+	echo
+	exit 1
+fi
+
+dnl
+dnl Checks if runtime logmessages shall be suppressed. 
+dnl
+AC_ARG_WITH(nolog)
+if test "$nolog" = "yes" -o "$nolog" = "true"; then
+echo "checking suppress runtime logging... yes"
+NOLOG1="/* nolog option set:"
+NOLOG2="*/"
+else
+echo "checking suppress runtime logging... no"
+fi
+
+dnl
+dnl Checks if logmessages shall be send to syslog.
+dnl
+AC_ARG_WITH(syslog)
+if test "$syslog" = "yes" -o "$syslog" = "true"; then
+AC_CHECK_HEADER(syslog.h,,[
+        echo
+        echo "** No syslog.h found"
+        echo "   You cannot use syslog for logging."
+        echo
+        exit 1
+       ])
+echo "checking syslog for logging... yes"
+LOGFAC="$syslog_facility"
+AC_DEFINE(USE_SYSLOG, 1, [Defined if SYSLOG support should be compiled])
+else
+NOSYSLOG1="/* syslog not configured"
+NOSYSLOG2="*/"
+echo "checking syslog for logging... no"
+fi
+
+dnl
+dnl Checks if squid runtime user is set
+dnl
+AC_ARG_WITH(squiduser)
+if test "$squiduser"; then
+echo "checking squid runtime user ... $squiduser"
+squiduser=$squiduser
+fi
+
+
+dnl
+dnl Checks for libraries. Do in least-dependent to most-dependent order.
+dnl
+
+dnl Check ldap
+if test "$with_ldap" = "yes" -o "$with_ldap" = "true"; then
+  AC_CHECK_LIB( ldap, ldap_init,
+       [
+	echo "checking for ldap support... yes"
+	with_ldap=yes
+	LIBS="$LIBS -lldap $ldap_lib"
+	YACCLINE="                     | LDAPUSERSEARCH STRING { sgSourceLdapUserSearch(\$2); }"
+	YACCLINE2="                     | LDAPIPSEARCH WORD { sgSourceLdapIpSearch(\$2); }"
+       ],[
+       AC_MSG_WARN([Cannot find LDAP libraries. LDAP support disabled])
+       with_ldap=no
+       ])
+else
+	echo "checking for ldap support... no"
+	with_ldap=no
+	YACCLINE=""
+	YACCLINE2=""
+fi
+if test "$with_ldap" = "yes"; then
+       AC_DEFINE(HAVE_LIBLDAP, 1, [Define if LDAP support should be compiled])
+       AC_RUN_IFELSE([
+
+       #include <ldap.h>
+       int main()
+       {
+               LDAP *p;
+               p = ldap_init("localhost", LDAP_PORT);
+               exit(0);
+       }
+       ],,[
+               echo
+               echo "Unable to link to LDAP library."
+               echo
+               exit 1
+       ],[
+               ac_status=0
+       ])
+fi
+
+dnl
+dnl Checks for libraries. Do in least-dependent to most-dependent order.
+dnl
+
+dnl Check mysql
+AC_ARG_WITH(mysql,
+    [  --with-mysql=DIR        support for mysql],
+    [ with_mysql="$withval" ],
+    [ with_mysql=no ])
+
+if test "$with_mysql" != "no"; then
+  if test "$with_mysql" = "yes"; then
+    mysql_directory="$default_directory";
+    mysql_fail="yes"
+  elif test -d "$withval"; then
+    mysql_directory="$withval"
+    mysql_fail="yes"
+  elif test "$with_mysql" = ""; then
+    mysql_directory="$default_directory";
+    mysql_fail="yes"
+  fi
+
+  AC_MSG_CHECKING(for mysql)
+  MYSQLLINE="                    | USERQUERY WORD WORD WORD WORD { sgSourceUserQuery(\$2,\$3,\$4,\$5); }"
+
+  for i in $mysql_directory; do
+    if test -r $i/include/mysql/mysql.h; then
+      MYSQL_DIR=$i
+      MYSQL_INC_DIR=$i/include/mysql
+    elif test -r $i/include/mysql.h; then
+      MYSQL_DIR=$i
+      MYSQL_INC_DIR=$i/include
+    fi
+  done
+
+  if test -z "$MYSQL_DIR"; then
+    if test "$mysql_fail" != "no"; then
+      
+      tmp=""
+      for i in $mysql_directory; do
+        tmp="$tmp $i/include $i/include/mysql"
+      done
+      FAIL_MESSAGE("mysql headers (mysql.h)", $tmp)
+    else
+      MYSQLLINE=""
+      AC_MSG_RESULT(no)
+    fi
+  else
+
+    for i in lib lib/mysql; do
+      str="$MYSQL_DIR/$i/libmysqlclient.*"
+      for j in `echo $str`; do
+        if test -r $j; then
+          MYSQL_LIB_DIR="$MYSQL_DIR/$i"
+          break 2
+        fi
+      done
+    done
+
+    if test -z "$MYSQL_LIB_DIR"; then
+      if test "$mysql_fail" != "no"; then
+        FAIL_MESSAGE("mysqlclient library",
+                     "$MYSQL_DIR/lib $MYSQL_DIR/lib/mysql")
+      else
+        MYSQLLINE=""
+        AC_MSG_RESULT(no)
+      fi
+    else
+      AC_MSG_RESULT(yes)
+      LDFLAGS="${LDFLAGS} -L${MYSQL_LIB_DIR}"
+      CPPFLAGS="${CPPFLAGS} -I${MYSQL_INC_DIR}"
+      AC_CHECK_LIB(z, compress)
+      LIBS="-lmysqlclient ${LIBS}"
+      AC_DEFINE(HAVE_MYSQL, 1, [Define if MySQL support should be compiled])
+    fi
+  fi
+else
+  MYSQLLINE=""
+  echo "checking for mysql support... no"
+fi
+
+dnl Check threads... ok if it fails
+AC_CHECK_LIB(pthread,pthread_create,,[
+       echo
+       echo "Thread library not found, this may cause problems if your"
+       echo "db libraries require threading support, but most of the time"
+       echo "it is not an issue."
+       echo
+       ])
+
+dnl Check DB
+LIBS="$LIBS -ldb"
+AC_RUN_IFELSE([
+	#include <db.h>
+	int main() 
+	{
+		int major, minor, patch;
+		float ver;
+#if DB_VERSION_MAJOR
+                major = DB_VERSION_MAJOR;
+                minor = DB_VERSION_MINOR;
+                patch = DB_VERSION_PATCH;
+#else
+                db_version(&major, &minor, &patch);
+#endif
+		ver = major + ((float) minor / 1000);
+                if (ver >= 2.006)
+			exit (0);
+		exit (1);
+	}	
+	], db_ok_version=yes, db_ok_version=no, db_ok_version=yes)
+
+if test $db_ok_version = no; then
+	echo
+	echo "** The Berkley DB library version 2.6.4 or newer"
+	echo "   is required. Get it from http://www.oracle.com"
+	echo "   use --with-db=DIR or --with-db-inc=DIR, "
+	echo "   --with-db-lib=DIR to specify its location"
+	echo "   (default is $dbprefix/BerkeleyDB)"
+	echo 
+	exit 1;
+fi
+
+AC_RUN_IFELSE([
+	#include <db.h>
+	int main() 
+	{
+		int major, minor, patch;
+		float ver;
+#if DB_VERSION_MAJOR
+                major = DB_VERSION_MAJOR;
+                minor = DB_VERSION_MINOR;
+                patch = DB_VERSION_PATCH;
+#else
+                db_version(&major, &minor, &patch);
+#endif
+		ver = major + ((float) minor / 1000);
+                if (ver > 2.007 && ver < 3.002)
+			exit (1);
+		exit (0);
+	}	
+	], db_ok_version=yes, db_ok_version=no, db_ok_version=yes)
+
+if test $db_ok_version = no; then
+	echo
+	echo "** The Berkley DB library version 3.2.* or newer"
+	echo "   is required, when using 3.* versions of the library"
+	echo "   Get it from http://www.oracle.com"
+	echo "   use --with-db=DIR or --with-db-inc=DIR, "
+	echo "   --with-db-lib=DIR to specify its location"
+	echo "   (default is $dbprefix/BerkeleyDB)"
+	echo 
+	exit 1;
+fi
+
+AC_RUN_IFELSE([
+	#include <db.h>
+	int main() 
+	{
+		int major, minor, patch;
+		float ver;
+#if DB_VERSION_MAJOR
+                major = DB_VERSION_MAJOR;
+                minor = DB_VERSION_MINOR;
+                patch = DB_VERSION_PATCH;
+#else
+                db_version(&major, &minor, &patch);
+#endif
+		ver = major + ((float) minor / 1000);
+                if (ver >= 3.002)
+			exit (0);
+		exit (1);
+	}	
+	], dbg2_ok_version=yes, dbg2_ok_version=no, dbg2_ok_version=yes)
+
+if test $dbg2_ok_version = yes; then
+	AC_DEFINE(DB_VERSION_GT2, 1, [Define if you have dbversion greater than 3.2])
+fi
+
+AC_RUN_IFELSE([
+        #include <db.h>
+        int main()
+        {
+                int major, minor, patch;
+                float ver;
+#if DB_VERSION_MAJOR
+                major = DB_VERSION_MAJOR;
+                minor = DB_VERSION_MINOR;
+                patch = DB_VERSION_PATCH;
+#else
+                db_version(&major, &minor, &patch);
+#endif
+                ver = major + ((float) minor / 1000);
+                if (ver >= 4.002)
+                        exit (0);
+                exit (1);
+        }
+        ], dbg3_ok_version=yes, dbg3_ok_version=no, dbg3_ok_version=yes)
+
+if test $dbg3_ok_version = yes; then
+        AC_DEFINE(DB_VERSION_GT3, 1, [Define if you have dbversion greater than 4.0])
+fi
+
+
+
+dnl Checks for typedefs, structures, and compiler characteristics.
+AC_C_CONST
+AC_TYPE_SIZE_T
+AC_STRUCT_TM
+
+dnl Checks for library functions.
+
+AC_CHECK_FUNCS(regcomp, , AC_MSG_ERROR([No regcomp library function.]))
+AC_CHECK_FUNCS(regerror, , AC_MSG_ERROR([No regerror library function.]))
+AC_CHECK_FUNCS(regexec, , AC_MSG_ERROR([No regexec library function.]))
+AC_CHECK_FUNCS(strdup, , AC_MSG_ERROR([No strdup library function.]))
+AC_CHECK_FUNCS(strerror, , AC_MSG_ERROR([No strerror library function.]))
+AC_CHECK_FUNCS(vsnprintf, , AC_MSG_ERROR([No vsnprintf library function.]))
+AC_CHECK_FUNCS(sigaction)
+AC_CHECK_FUNCS(signal)
+
+
+VERSION=`pwd | sed 's%.*/squidGuard-%%'`
+TESTDIR="`pwd`/test"
+
+
+AC_SUBST(ac_n)
+AC_SUBST(ac_c)
+AC_SUBST(sg_config)
+AC_SUBST(sg_cfgdir)
+AC_SUBST(sg_logdir)
+AC_SUBST(sg_dbhome)
+AC_SUBST(NOLOG1)
+AC_SUBST(NOLOG2)
+AC_SUBST(NOSYSLOG1)
+AC_SUBST(NOSYSLOG2)
+AC_SUBST(LOGFAC)
+AC_SUBST(YACCLINE)
+AC_SUBST(YACCLINE2)
+AC_SUBST(MYSQLLINE)
+AC_SUBST(squiduser)
+AC_SUBST(VERSION)
+AC_SUBST(PERL)
+AC_SUBST(LYNX)
+AC_SUBST(TESTDIR)
+AC_SUBST(FTPDIR)
+AC_SUBST(CGIFILE)
+AC_SUBST(SQUIDGUARDROBOT)
+AC_SUBST(SQUIDGUARDROBOTUA)
+AC_SUBST(ROBOTEXCEPTIONS)
+AC_SUBST(BLACKLISTS)
+
+AC_OUTPUT(Makefile src/Makefile src/main.c src/sgLog.c src/sgDiv.c src/sg.h src/sg.y test/Makefile test/test1.conf test/test2.conf samples/Makefile samples/sample.conf samples/squidGuard.cgi samples/squidGuard-simple.cgi samples/squidGuard-simple-de.cgi contrib/Makefile contrib/squidGuardRobot/squidGuardRobot contrib/sgclean/sgclean contrib/hostbyname/hostbyname)

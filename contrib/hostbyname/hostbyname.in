@@ -1,0 +1,47 @@
+#!@PERL@ -w
+
+# By Pål Baltzersen Feb, 2000
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License (version 2) as
+# published by the Free Software Foundation.  It is distributed in the
+# hope that it will be useful, but WITHOUT ANY WARRANTY; without even
+# the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+# PURPOSE.  See the GNU General Public License (GPL) for more details.
+
+# Hostbyname takes a squidGuard domain or url list and does some half
+# harted effort to expand it with the corresponding IP-addresses.
+# Usage:
+#   hostbyname < urls > urls.new
+#   hostbyname < domains > domains.new
+
+my $version = "0.0.1";
+
+use strict;
+use Socket;
+
+my ($hostname, $url, $h, $i, $a);
+my ($name,$aliases,$addrtype,$length,@addrs);
+
+while(<>) {
+  my %seen;
+  chomp;
+  $url = $_;
+  $hostname = $_;
+  $hostname =~ s/\057.*//;
+  $url =~ s/^$hostname//;
+  print "$hostname$url\n";
+  next if($hostname =~ /^\d.\d.\d.\d$/);
+  foreach $h ($hostname, "www.$hostname", "ftp.$hostname") {
+    #print "-> $h\n";
+    ($name,$aliases,$addrtype,$length,@addrs) = gethostbyname($h);
+    #print "-> $name\n";
+    foreach $i (@addrs) {
+      $a = inet_ntoa($i);
+      #print "-> $a\n";
+      next if($seen{$a});
+      $seen{$a} = 1;
+      print "$a$url\n";
+    }
+  }
+}

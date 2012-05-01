@@ -1,0 +1,2055 @@
+#! @PERL@ -w
+
+#
+# A domain and url collector robot for squidGuard
+#
+# By Pål Baltzersen 1999-2000 (pal.baltzersen@ost.eltele.no)
+# Based on earlier work by Lars Erik Håland (leh@nimrod.no)
+#
+
+# By accepting this notice, you agree to be bound by the following
+# agreements:
+# 
+# This software product, squidGuard, is copyrighted (C) 1998-2007
+# by Christine Kronberg, Shalla Secure Services. All rights reserved.
+# 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License (version 2) as
+# published by the Free Software Foundation.  It is distributed in the
+# hope that it will be useful, but WITHOUT ANY WARRANTY; without even
+# the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+# PURPOSE.  See the GNU General Public License (GPL) for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# (GPL) along with this program.
+
+my $VERSION = "2.3.5";
+
+my ($debug,$verbose,$quiet,$washonly,$umask,$home,$lib,$etc,$source_proxy,$link_proxy);
+my ($simultaneous_sources,$simultaneous_links,$bulk,$fake_user_agent);
+my ($sources,$source_timeout,$source_retries,$candidates);
+my ($source_bouncing_ttl,$source_remember,$source_min_ttl,$source_max_ttl);
+my ($links,$link_timeout,$link_retries,);
+my ($link_bouncing_ttl,$link_remember,$link_min_ttl,$link_max_ttl);
+my ($domainexceptions,$urlexceptions,$exceptions,$includes,$redirectors,$patterns);
+my ($domainlist,$domains,$domain_ttl,$urllist,$urls,$url_ttl);
+my ($doinaddr,$dns_timeout,@nameservers);
+my ($domaindiff,@domaindiff,$urldiff,@urldiff);
+
+#
+# USER CONFIGURABLE DEFAULTS:
+#
+
+$quiet			= 0;				# 0 == false; 1 == true;
+$debug			= 0 - $quiet;			# 0 == false; 1 == true;
+$verbose		= $debug || 0 - $quiet;		# 0 == false; 1 == true;
+
+$doinaddr		= 0;				# 0 == false; 1 == true;
+$dns_timeout		= 10;				# SECONDS BEFORE TIMEOUT DURING RESOLVING
+@nameservers		= undef;			# undef||("ns1", "ns2", ...);
+
+$umask			= 0027;				# usually 0002 || 0007
+
+$home			= "/var/spool/www/hosts/proxy.teledanmark.no/filter/robot";
+$lib			= "$home/lib";
+$etc			= "$home/etc";
+
+$source_proxy		= "http://proxy:80/";		# undef||"http://proxy:1234/"
+$link_proxy		= undef;			# undef||$source_proxy
+
+$simultaneous_sources	= 32;				# NUMBER OF SIMULTANEOUS SOURCE REQUESTS
+$simultaneous_links	= 64;				# NUMBER OF SIMULTANEOUS LINK REQUESTS
+$bulk			= 512;				# MAX NUMBER OF REQUESTS IN A BULK
+
+$fake_user_agent	= "Mozilla/4.72 [en] (WinNT; U)";# undef||"Mozilla/4.72 [en] (WinNT; U)"
+
+$sources		= "$etc/source";		# ADD NEW SOURCES HERE; SLURPED AT STARTUP
+$source_timeout		= 60;				# SECONDS BEFORE TIMEOUT DURING "GET"
+$source_retries		= 3;				# NO OF FAILURES BEFORE MARKED AS BOUNCING
+$source_bouncing_ttl	= 30;				# DAYS BEFORE RETESTING A SOURCE MARKED AS BOUNCING
+$source_remember	= 365;				# DAYS BEFORE REMOVING A SOURCE MARKED AS BOUNCING
+$source_min_ttl		= 2;				# MIN DAYS A SOURCE SHOULD BE LISTED AS SUCCEEDING
+$source_max_ttl		= 10;				# MAX DAYS A SOURCE SHOULD BE LISTED AS SUCCEEDING
+$candidates		= "$etc/candidate";		# SOURCE REDIRECTS ARE LOGGED HERE
+
+$links			= "$etc/link";			# ADD NEW URLS HERE; SLURPED AT STARTUP
+$link_timeout		= 15;				# SECONDS BEFORE TIMEOUT DURING HEAD
+$link_retries		= 2;				# FAILURES BEFORE MOVED TO THE BOUNCING LIST
+$link_bouncing_ttl	= 30;				# DAYS BEFORE RETESTING A LINK MARKED AS BOUNCING
+$link_remember		= 180;				# DAYS BEFORE REMOVING A LINK MARKED AS BOUNCING
+$link_min_ttl		= 30;				# MIN DAYS A LINK SHOULD BE LISTED AS SUCCEEDING
+$link_max_ttl		= 60;				# MAX DAYS A LINK SHOULD BE LISTED AS SUCCEEDING
+
+$domainexceptions	= "$etc/domainexception";	# ADD NEW DOMAIN EXCEPTIONS HERE; SLURPED AT STARTUP
+$urlexceptions		= "$etc/urlexception";		# ADD NEW URL EXCEPTIONS HERE; SLURPED AT STARTUP
+$exceptions		= "$etc/exception";		# ADD NEW EXCEPTIONS HERE; SLURPED AT STARTUP
+$includes		= "$etc/include";		# ADD NEW INCLUDES HERE; SLURPED AT STARTUP
+$redirectors		= "$etc/redirector";		# ADD NEW REDIRECTORS HERE; SLURPED AT STARTUP
+
+$patterns		= "$etc/patterns";		# file || undef	# LIST OF BAD STRINGS AND PERLRE(3)
+							# DOMAIN MATCH FORCES A DOMAIN LIST ENTRY
+
+$domains		= "$etc/domain";		# CREATED AND MAINTAINED BY THIS PROGRAM
+$domain_ttl		= $link_max_ttl+7;		# DAYS TO KEEP AN UNTOUCHED DOMAIN
+$urls			= "$etc/url";			# CREATED AND MAINTAINED BY THIS PROGRAM
+$url_ttl		= $link_max_ttl+7;		# DAYS TO KEEP AN UNTOUCHED URL
+
+$domainlist		= "$etc/domains";		# THE DOMAIN LIST CREATED BY THIS PROGRAM
+$urllist		= "$etc/urls";			# THE URL LIST CREATED BY THIS PROGRAM
+$domaindiff		= "$etc/domains.%Y%m%d.diff";	# THE DOMAIN CHANGES THIS TIME; CREATED BY THIS PROGRAM
+$urldiff		= "$etc/urls.%Y%m%d.diff";	# THE URL CHANGES THIS TIME; CREATED BY THIS PROGRAM
+
+#
+# END USER CONFIGURABLE DEFAULTS
+#
+
+unshift(@INC, "$lib");
+use strict;
+use Config;
+use Getopt::Std;
+use POSIX qw(strftime);
+use DB_File;
+use Fcntl qw(:flock);
+use Net::DNS;
+use IO::Select;
+use HTTP::Request;
+use HTTP::Response;
+use HTTP::Status;
+use HTML::LinkExtor;
+require RobotUserAgent;
+
+my $progname = $0; $progname =~ s/.*\057//;
+my (%source,$sourcedb);
+my (%candidate, $candidatedb);
+my (%link,$linkdb);
+my (%domain,$domaindb);
+my (%url,$urldb);
+my (%domainexception,$domainexceptiondb);
+my (%urlexception,$urlexceptiondb);
+my (%exception,$exceptiondb);
+my (%include,$includedb);
+my (%redirector,$redirectordb);
+my (@patterns);
+my ($start, $now, $checkpoint, $delta, %signal) = time;
+my %keys = (
+	    found => 1,
+	    id => 1,
+	    last => 1,
+	    referer => 1,
+	    remote => 1,
+	    retries => 1,
+	    status => 1,
+	    ttl => 1,
+	    used => 1,
+	   );
+
+sub init();
+sub load();
+sub usage($);
+sub date($);
+sub strtime($);
+sub msg($@);
+sub status($@);
+sub info($@);
+sub debug($@);
+sub warning($@);
+sub error($@);
+sub mirror($);
+sub domaincmp($$);
+sub linkmatch($$);
+sub domainmatch($$);
+sub urlmatch($$);
+sub exceptionmatch($$);
+sub trunc($);
+sub addnew($$);
+sub patterns($);
+sub expire();
+sub expiredomains();
+sub expireurls();
+sub washlinks();
+sub release($);
+sub min($$);
+sub addlink($$);
+sub addcandidate($$);
+sub dumpcandidates();
+sub extract();
+sub success($);
+sub redirect($);
+sub spliturl($);
+sub domain($);
+sub check();
+sub adddomain($$);
+sub addurl($$$);
+sub addresses($$@);
+sub washdomains();
+sub washurls();
+sub wash();
+sub optimum($);
+sub compile();
+sub today();
+sub export();
+sub valid($);
+sub total($);
+sub dumpkeys($$);
+sub end($);
+sub disconnect();
+sub reconnect();
+sub fixconnect();
+
+sub init() {
+  my (%opts, $i, $fd);
+  getopts("hc:dqQvVw", \%opts) || usage(1);
+  if (defined($opts{h})) {
+    usage(0);
+  }
+  if (defined($opts{c})) {
+    open(CONFIG, $opts{c}) || error("$opts{c}: $!");
+    while(<CONFIG>) {
+      eval;
+    }
+    close(CONFIG);
+  }
+  if (defined($opts{"d"})) {
+    $debug = 1;
+    $verbose = 1;
+    $quiet = 0;
+  }
+  if (defined($opts{"q"})) {
+    $debug = 0;
+    $verbose = 0;
+  }
+  if (defined($opts{"Q"})) {
+    $debug = 0;
+    $verbose = 0;
+    $quiet = 1;
+  }
+  if (defined($opts{"v"})) {
+    $verbose = 1;
+    $quiet = 0;
+  }
+  if (defined($opts{"V"})) {
+    print "$VERSION\n";
+    exit(0);
+  }
+  if (defined($opts{"w"})) {
+    $washonly = 1;
+  }
+  status("Started");
+  
+  umask $umask;
+  select(STDERR);$|=1;
+  select(STDOUT);$|=1;
+  
+  $i = 0;
+  foreach(split(' ', $Config{sig_name})) {
+    $signal{$_} = $i++;
+  }
+  
+  $DB_BTREE->{compare} = \&linkmatch;
+  $sourcedb = tie(%source,"DB_File","$sources.db",O_CREAT|O_RDWR,0664,$DB_BTREE)
+    || error("$sources.db: $!");
+  $fd = $sourcedb->fd;
+  open(SOURCES, "+<&=$fd") || die("dup: $!");
+  flock(SOURCES, LOCK_EX|LOCK_NB) || die("$sources.db: $!");
+
+  $DB_BTREE->{compare} = \&linkmatch;
+  $candidatedb = tie(%candidate,"DB_File","$candidates.db",O_CREAT|O_RDWR,0664,$DB_BTREE)
+    || error("$candidates.db: $!");
+  $fd = $candidatedb->fd;
+  open(CANDIDATES, "+<&=$fd") || die("dup: $!");
+  flock(CANDIDATES, LOCK_EX|LOCK_NB) || die("$candidates.db: $!");
+  
+  $DB_BTREE->{compare} = \&linkmatch;
+  $linkdb = tie(%link,"DB_File","$links.db",O_CREAT|O_RDWR,0664,$DB_BTREE)
+    || error("$links.db: $!");
+  $fd = $linkdb->fd;
+  open(LINKS, "+<&=$fd") || die("dup: $!");
+  flock(LINKS, LOCK_EX|LOCK_NB) || die("$links.db: $!");
+  
+  $DB_BTREE->{compare} = \&domainmatch;
+  $domaindb = tie(%domain,"DB_File","$domains.db",O_CREAT|O_RDWR,0664,$DB_BTREE)
+    || error("$domains.db: $!");
+  $fd = $domaindb->fd;
+  open(DOMAINS, "+<&=$fd") || die("dup: $!");
+  flock(DOMAINS, LOCK_EX|LOCK_NB) || die("$domains.db: $!");
+  
+  $DB_BTREE->{compare} = \&urlmatch;
+  $urldb = tie(%url,"DB_File","$urls.db",O_CREAT|O_RDWR,0664,$DB_BTREE)
+    || error("$urls.db: $!");
+  $fd = $urldb->fd;
+  open(URLS, "+<&=$fd") || die("dup: $!");
+  flock(URLS, LOCK_EX|LOCK_NB) || die("$urls.db: $!");
+  
+  $DB_BTREE->{compare} = \&domainmatch;
+  $domainexceptiondb = tie(%domainexception,"DB_File","$domainexceptions.db",O_CREAT|O_RDWR,0664,$DB_BTREE)
+    || error("$domainexceptions.db: $!");
+  $fd = $domainexceptiondb->fd;
+  open(DOMAINEXCEPTIONS, "+<&=$fd") || die("dup: $!");
+  flock(DOMAINEXCEPTIONS, LOCK_EX|LOCK_NB) || die("$domainexceptions.db: $!");
+  
+  $DB_BTREE->{compare} = \&urlmatch;
+  $urlexceptiondb = tie(%urlexception,"DB_File","$urlexceptions.db",O_CREAT|O_RDWR,0664,$DB_BTREE)
+    || error("$urlexceptions.db: $!");
+  $fd = $urlexceptiondb->fd;
+  open(URLEXCEPTIONS, "+<&=$fd") || die("dup: $!");
+  flock(URLEXCEPTIONS, LOCK_EX|LOCK_NB) || die("$urlexceptions.db: $!");
+  
+  $DB_BTREE->{compare} = \&exceptionmatch;
+  $exceptiondb = tie(%exception,"DB_File","$exceptions.db",O_CREAT|O_RDWR,0664,$DB_BTREE)
+    || error("$exceptions.db: $!");
+  $fd = $exceptiondb->fd;
+  open(EXCEPTIONS, "+<&=$fd") || die("dup: $!");
+  flock(EXCEPTIONS, LOCK_EX|LOCK_NB) || die("$exceptions.db: $!");
+  
+  $DB_BTREE->{compare} = \&urlmatch;
+  $includedb = tie(%include,"DB_File","$includes.db",O_CREAT|O_RDWR,0664,$DB_BTREE)
+    || error("$includes.db: $!");
+  $fd = $includedb->fd;
+  open(INCLUDES, "+<&=$fd") || die("dup: $!");
+  flock(INCLUDES, LOCK_EX|LOCK_NB) || die("$includes.db: $!");
+  
+  $DB_BTREE->{compare} = \&domainmatch;
+  $redirectordb = tie(%redirector,"DB_File","$redirectors.db",O_CREAT|O_RDWR,0664,$DB_BTREE)
+    || error("$redirectors.db: $!");
+  $fd = $redirectordb->fd;
+  open(REDIRECTORS, "+<&=$fd") || die("dup: $!");
+  flock(REDIRECTORS, LOCK_EX|LOCK_NB) || die("$redirectors.db: $!");
+  
+  $SIG{INT} = \&end;
+  $SIG{TERM} = \&end;
+  
+  $now = $checkpoint = time;
+  status("Initialized in %s", strtime($now-$start));
+}
+
+sub trunc($) {
+  my $file = shift || return;
+  if (-s $file) {
+    my ($added, $ignored, $key, $val) = (0, 0);
+    status("Truncating $file..");
+    open(FILE, ">$file") || error("$file: $!");
+    close(FILE);
+  }
+}
+
+sub load() {
+  my (@new,$wash,$key,$k,$v,$n);
+  my $new = 0;
+  $new += scalar(addnew(\%source, $sources));
+  $sourcedb->sync();
+  trunc($sources);
+  $new += scalar(addnew(\%link, $links));
+  $linkdb->sync();
+  trunc($links);
+  @new = addnew(\%domain, $domains);
+  $new += scalar(@new);
+  $domaindb->sync();
+  trunc($domains);
+  foreach $key (@new) {
+    push(@domaindiff,"+$key");
+  }
+  @new = addnew(\%url, $urls);
+  $new += scalar(@new);
+  $urldb->sync();
+  trunc($urls);
+  foreach $key (@new) {
+    push(@urldiff,"+$key");
+  }
+  $new += scalar(addnew(\%include, $includes));
+  $includedb->sync();
+  trunc($includes);
+  if (@new) {
+    $new += scalar(@new);
+    $wash++;
+    foreach $key (@new) {
+      $k = $key;
+      $v = 0;
+      for ($n = $includedb->seq($k,$v,R_CURSOR);
+	   $n == 0 && urlmatch($k,$key) == 0;
+	   $k = $key, $n = $includedb->seq($k,$v,R_CURSOR)) {
+	info("Removing obsoleted include: %s", $k);
+	$includedb->del_dup($k,$v);
+	$includedb->sync();
+      }
+    }
+  }
+  @new = addnew(\%domainexception, $domainexceptions);
+  $domainexceptiondb->sync();
+  trunc($domainexceptions);
+  if (@new) {
+    $new += scalar(@new);
+    $wash++;
+    foreach $key (@new) {
+      $k = $key;
+      $v = 0;
+      for ($n = $urldb->seq($k,$v,R_CURSOR);
+	   $n == 0 && urlmatch($k,$key) == 0;
+	   $k = $key, $n = $urldb->seq($k,$v,R_CURSOR)) {
+	unless(exists($include{$k})) {
+	  my %data = split(/[=;]/, $v);
+	  info("Removing obsoleted url (domainexception=%s): %s",$key,$k);
+	  push(@urldiff,"-$k");
+	  release($data{referer});
+	  $urldb->del_dup($k,$v);
+	  $urldb->sync();
+	}
+      }
+      $k = $key;
+      $v = 0;
+      for ($n = $domaindb->seq($k,$v,R_CURSOR);
+	   $n == 0 && domainmatch($k,$key) == 0;
+	   $k = $key, $n = $domaindb->seq($k,$v,R_CURSOR)) {
+	my %data = split(/[=;]/, $v);
+	info("Removing obsoleted domain (domainexception=%s): %s",$key,$k);
+	push(@domaindiff,"-$k");
+	release($data{referer});
+	$domaindb->del_dup($k,$v);
+	$domaindb->sync();
+      }
+    }
+  }
+  @new = addnew(\%urlexception, $urlexceptions);
+  $urlexceptiondb->sync();
+  trunc($urlexceptions);
+  if (@new) {
+    $new += scalar(@new);
+    $wash++;
+    foreach $key (@new) {
+      $k = $key;
+      $v = 0;
+      for ($n = $urldb->seq($k,$v,R_CURSOR);
+	   $n == 0 && urlmatch($k,$key) == 0;
+	   $k = $key, $n = $urldb->seq($k,$v,R_CURSOR)) {
+	my %data = split(/[=;]/, $v);
+	info("Removing obsoleted url (urlexception=%s): %s",$key,$k);
+	push(@urldiff,"-$k");
+	release($data{referer});
+	$urldb->del_dup($k,$v);
+	$urldb->sync();
+      }
+    }
+  }
+  @new = addnew(\%exception, $exceptions);
+  $exceptiondb->sync();
+  trunc($exceptions);
+  if (@new) {
+    $new += scalar(@new);
+    $wash++;
+    foreach $key (@new) {
+      while(exists($url{$key})) {
+	my %data = split(/[=;]/, $url{$key});
+	info("Removing obsoleted url (exception): %s", $key);
+	release($data{referer});
+	$k = $key;
+	$v = $url{$key};
+	$urldb->del_dup($k,$v);
+	push(@urldiff,"-$k");
+	$urldb->sync();
+      }
+      while(exists($domain{$key})) {
+	my %data = split(/[=;]/, $domain{$key});
+	info("Removing obsoleted domain (exception): %s", $key);
+	release($data{referer});
+	$k = $key;
+	$v = $domain{$key};
+	$domaindb->del_dup($k,$v);
+	push(@domaindiff,"-$k");
+	$domaindb->sync();
+      }
+    }
+  }
+  $new += scalar(addnew(\%redirector, $redirectors));
+  $redirectordb->sync();
+  trunc($redirectors);
+  $now = time;
+  status("Loaded %d new entries in %s",$new,strtime($now-$checkpoint));
+  $checkpoint = $now;
+  @patterns = patterns($patterns);
+  washlinks() if($wash);
+}
+
+sub usage($) {
+  my $exit = shift;
+  print STDERR "\n$progname $VERSION\n\n";
+  print STDERR "Usage: $progname \133options\135\n";
+  print STDERR "Where the options are:\n";
+  print STDERR "\t-h\t\t\t\043 help\n";
+  print STDERR "\t-q|-v\t\t\t\043 quiet or verbose\n";
+  print STDERR "\t-V\t\t\t\043 print version number and exit\n";
+  print STDERR "\t-w\t\t\t\043 cleanup inconsistencies only\n";
+  print STDERR "\t-c <config_file>\t\043 File with Perl code to override the defaults\n";
+  print STDERR "\n";
+  exit($exit);
+}
+
+sub date($) {
+  my $time = shift;
+  strftime("%Y.%m.%d %T", localtime($time));
+}
+
+sub strtime($) {
+  my $time = shift;
+  sprintf("%d:%02d:%02d", $time/3600, $time/60%60, $time%60);
+}
+
+sub msg($@) {
+  my $format = shift;
+  printf STDOUT "%s $progname: $format\n", date(time), @_;
+}
+
+sub status($@) {
+  return if($quiet);
+  my $format = shift;
+  $format = "STATUS: $format" unless($format =~ /^status:/i);
+  msg($format, @_);
+}
+
+sub info($@) {
+  return unless($verbose);
+  my $format = shift;
+  $format = "INFO: $format" unless($format =~ /^info:/i);
+  msg($format, @_);
+}
+	  
+sub debug($@) {
+  return unless($debug);
+  my $format = shift;
+  $format = "DEBUG: $format" unless($format =~ /^debug:/i);
+  msg($format, @_);
+}
+
+sub warning($@) {
+  my $format = shift;
+  $format = "WARNING: $format" unless($format =~ /^(error|warning):/i);
+  printf STDERR "%s $progname: $format\n", date(time), @_;
+}
+
+sub error($@) {
+  my $format = shift;
+  $format = "ERROR: $format" unless($format =~ /^(error|warning):/i);
+  warning($format, @_);
+  end(-1);
+}
+
+sub mirror($) {
+  scalar(reverse(shift));
+}
+
+sub domaincmp($$) {
+  my $search = join("\0",reverse(split(/\./,lc(shift))));
+  my $found = join("\0",reverse(split(/\./,lc(shift))));
+  #debug("domaincmp(%s,%s)", $search, $found);
+  return($search . "\0" cmp $found . "\0");
+}
+
+sub linkmatch($$) {
+  my $search = shift;
+  my $found = shift;
+  $search = lc($search);
+  $found = lc($found);
+  #debug("linkmatch(%s,%s)", $search, $found);
+  $search =~ s@/(index\.s?html?|default\.(s?html?|asp))$@@;
+  $found =~ s@/(index\.s?html?|default\.(s?html?|asp))$@@;
+  if ($search eq $found
+      || $search . "/" eq $found
+      || $search eq $found . "/") {
+    return(0);
+  } else {
+    return($search cmp $found);
+  }
+}
+
+sub domainmatch($$) {
+  my $search = lc(shift);
+  my $found = lc(shift);
+  #debug("domainmatch(%s,%s)", $search, $found);
+  if ($search eq $found) {
+    return(0);
+  } else {
+    $found = join("\0",reverse(split(/\./,$found)));
+    $search = substr(join("\0",reverse(split(/\./,$search))),0,length($found));
+    #debug("domainmatch(%s,%s)", $search, $found);
+    return($search cmp $found)
+  }
+}
+
+sub urlmatch($$) {
+  my $search = shift;
+  my $found = shift;
+  #debug("urlmatch(%s,%s)", $search, $found);
+  $search = lc($search) . "/";
+  $found = lc($found) . "/";
+  if ($search eq $found) {
+    return(0);
+  } else {
+    $search = substr($search,0,length($found));
+    return($search cmp $found);
+  }
+}
+
+sub exceptionmatch($$) {
+  my $search = shift;
+  my $found = shift;
+  #debug("exceptionmatch(%s,%s)", $search, $found);
+  $search = lc($search);
+  $found = lc($found);
+  if ($search eq $found) {
+    return(0);
+  } else {
+    $search =~ s@/([^/]+\.(s?html?|cgi|php\d?|asp|jpe?g|gif|ra?m|mpe?g?|mov|movie|qt|avi|dif|dvd?|mpv2|mp3))?$@@;
+    return($search cmp $found);
+  }
+}
+
+sub addnew($$) {
+  my ($db, $file) = @_;
+  my @new;
+  if (-f $file) {
+    my ($added, $ignored, $key, $val) = (0, 0);
+    status("Adding new entries from $file..");
+    open(FILE, $file) || error("$file: $!");
+    while(<FILE>) {
+      chomp;
+      s/\043.*//;
+      next unless($_);
+      ($key, $val) = split(/\s+/, $_);
+      if (exists($db->{$key})) {
+	$ignored++;
+	debug("Ignored (seen before): %s", $key);
+      } else {
+	$added++;
+	push(@new,$key);
+	$val = "" unless($val);
+	$db->{$key} = $val;
+	info("Added: %s", $key);
+      }
+    }
+    close(FILE);
+    status("Added $added and ignored $ignored entries from $file.");
+  } else {
+    warning("$file: $!");
+  }
+  return(@new)
+}
+
+sub patterns($) {
+  my $file = shift;
+  my @patterns;
+  if (-f $file) {
+    my $added = 0;
+    status("Loading patterns from $file..");
+    open(FILE, $file) || error("$file: $!");
+    while(<FILE>) {
+      chomp;
+      s/\043.*//;
+      next unless($_);
+      push(@patterns, $_);
+    }
+    close(FILE);
+    status("Loaded %d patterns from $file.", scalar(@patterns));
+  } else {
+    warning("$file: $!");
+  }
+  return(@patterns)
+}
+
+sub release($) {
+  my $key = shift || return;
+  my %data = split(/[=;]/, $link{$key} || "");
+  my ($val,$k,$v);
+  $val="";
+  $data{used} = 0;
+  while(($k,$v) = each(%data)) {
+    next unless($k && $keys{$k});
+    $v =~ s/\075/%3D/g;
+    $v =~ s/\073/%3B/g;
+    $val.="$k=$v;"
+  }
+  $linkdb->put($key, $val);
+  $linkdb->sync();
+}
+
+sub expiredomains() {
+  my ($had,$key,$val,$status,%expired,%obsolete,%redundant,%bad);
+  status("Checking the domain list for expired and redundant entries..");
+  undef($domaindb);
+  untie(%domain);
+  $DB_BTREE->{compare} = \&domaincmp;
+  $domaindb = tie(%domain,"DB_File","$domains.db",O_CREAT|O_RDWR,0664,$DB_BTREE)
+    || error("$domains.db: $!");
+  $had = total($domaindb);
+  $key = $val = 0;
+  for ($status = $domaindb->seq($key, $val, R_FIRST);
+       $status == 0;
+       $status = $domaindb->seq($key, $val, R_NEXT)) {
+    my %data = split(/[=;]/, $val || "");
+    #debug("Checking: %s",$key);
+    if (!(exists($data{last}) && exists($data{ttl}) && exists($data{referer}))) {
+      info("Removing expired domain: %s: %s", $key, $val || "undef");
+      push(@domaindiff,"-$key");
+      $expired{$key} = $val;
+    } elsif ($data{last} + ($domain_ttl*86400) < $now) {
+      info("Removing expired domain: %s: %s", $key, $val);
+      push(@domaindiff,"-$key");
+      release($data{referer});
+      $expired{$key} = $val;
+    } elsif (exists($domainexception{$key}) && !exists($include{$key})) {
+      info("Removing obsolete domain (domainexception): %s", $key);
+      push(@domaindiff,"-$key");
+      release($data{referer});
+      $obsolete{$key} = $val;
+    } elsif (exists($exception{$key}) && !exists($include{$key})) {
+      info("Removing obsolete domain (exception): %s", $key);
+      push(@domaindiff,"-$key");
+      release($data{referer});
+      $obsolete{$key} = $val;
+    } elsif ($key =~ /^[\d.]+$/ && $key !~ /^\d+\.\d+\.\d+\.\d+$/) {
+      info("Removing bad domain (subnet): %s", $key);
+      push(@domaindiff,"-$key");
+      release($data{referer});
+      $bad{$key} = $val;
+    } else {
+      my ($host,$domain) = split(/\./, $key, 2);
+      if($domain && exists($domain{$domain})) {
+	info("Removing redundant domain: %s", $key);
+	push(@domaindiff,"-$key");
+	release($data{referer});
+	$redundant{$key} = $val;
+      }
+    }
+  }
+  while(($key,$val) = each(%expired)) {
+    $domaindb->del_dup($key,$val);
+    $domaindb->sync();
+  }
+  while(($key,$val) = each(%obsolete)) {
+    $domaindb->del_dup($key,$val);
+    $domaindb->sync();
+  }
+  while(($key,$val) = each(%redundant)) {
+    $domaindb->del_dup($key,$val);
+    $domaindb->sync();
+  }
+  while(($key,$val) = each(%bad)) {
+    $domaindb->del_dup($key,$val);
+    $domaindb->sync();
+  }
+  undef($domaindb);
+  untie(%domain);
+  $DB_BTREE->{compare} = \&domainmatch;
+  $domaindb = tie(%domain,"DB_File","$domains.db",O_CREAT|O_RDWR,0664,$DB_BTREE)
+    || error("$domains.db: $!");
+  $now = time;
+  status("Removed %d expired, %d obsolete %d redundant and %d bad of %d domains in %s",
+         scalar(keys(%expired)), scalar(keys(%obsolete)), scalar(keys(%redundant)),
+	 scalar(keys(%bad)), $had, strtime($now-$checkpoint));
+  $checkpoint = $now;
+}
+
+sub expireurls() {
+  my ($had,$key,$val,$status,%expired,%obsolete,%redundant);
+  status("Checking the url list for expired and redundant entries..");
+  $had = total($urldb);
+  $key = $val = 0;
+  for ($status = $urldb->seq($key, $val, R_FIRST);
+       $status == 0;
+       $status = $urldb->seq($key, $val, R_NEXT)) {
+    my %data = split(/[=;]/, $val || "");
+    #debug("Checking: %s",$key);
+    if ($data{last} + ($url_ttl*86400) < $now) {
+      info("Removing expired url: %s: %s", $key, $val);
+      push(@urldiff,"-$key");
+      release($data{referer});
+      $expired{$key} = $val;
+    } elsif (exists($domainexception{$key}) && !exists($include{$key})) {
+      info("Removing obsolete url (domainexception): %s", $key);
+      push(@urldiff,"-$key");
+      release($data{referer});
+      $obsolete{$key} = $val;
+    } elsif (exists($urlexception{$key}) && !exists($include{$key})) {
+      info("Removing obsolete url (urlexception): %s", $key);
+      push(@urldiff,"-$key");
+      release($data{referer});
+      $obsolete{$key} = $val;
+    } elsif (exists($exception{$key}) && !exists($include{$key})) {
+      info("Removing obsolete url (exception): %s", $key);
+      push(@urldiff,"-$key");
+      release($data{referer});
+      $obsolete{$key} = $val;
+    } else {
+      my $domain = $key;
+      $domain =~ s@/.*@@;
+      if(exists($domain{$domain})) {
+	my %d = split(/[=;]/, $domain{$domain});
+	info("Removing redundant url: %s", $key);
+	push(@urldiff,"-$key");
+	release($data{referer}) unless(lc($data{referer}) eq lc($d{referer}));
+	$redundant{$key} = $val;
+      } else {
+	my $k = $key;
+	$k =~ s@/[^/]+/?$@@;
+	if(exists($url{$k})) {
+	  my %u = split(/[=;]/, $url{$k});
+	  info("Removing redundant url: %s", $key);
+	  push(@urldiff,"-$key");
+	  release($data{referer}) unless(lc($data{referer}) eq lc($u{referer}));
+	  $redundant{$key} = $val;
+	}
+      }
+    }
+  }
+  while(($key,$val) = each(%expired)) {
+    $urldb->del_dup($key,$val);
+    $urldb->sync();
+  }
+  while(($key,$val) = each(%obsolete)) {
+    $urldb->del_dup($key,$val);
+    $urldb->sync();
+  }
+  while(($key,$val) = each(%redundant)) {
+    $urldb->del_dup($key,$val);
+    $urldb->sync();
+  }
+  $now = time;
+  status("Removed %d expired, %d obsolete and %d redundant of %d urls in %s",
+         scalar(keys(%expired)), scalar(keys(%obsolete)), scalar(keys(%redundant)),
+	 $had, strtime($now-$checkpoint));
+  $checkpoint = $now;
+}
+
+sub expire() {
+  expiredomains();
+  expireurls();
+}
+
+sub washlinks() {
+  my ($key,$val,$status,$removed);
+  status("Washing the link list..");
+  $removed = 0;
+  $key = $val = 0;
+  for ($status = $linkdb->seq($key, $val, R_FIRST);
+       $status == 0;
+       $status = $linkdb->seq($key, $val, R_NEXT)) {
+    my ($domain,$path,$url) = spliturl($key);
+    #debug("Checking: %s",$key);
+    unless($domain) {
+      info("Removing (bad format): %s", $key);
+      $linkdb->del($key);
+      $linkdb->sync();
+      $removed++;
+      next;
+    }
+    #next if(exists($source{$key}));
+    unless(exists($include{$url})) {
+      if(exists($domainexception{$domain})) {
+	info("Removing (domainexception): %s", $key);
+	$linkdb->del($key);
+	$linkdb->sync();
+	$removed++;
+	next;
+      }
+      if(exists($urlexception{$url})) {
+	info("Removing (urlexception): %s", $key);
+	$linkdb->del($key);
+	$linkdb->sync();
+	$removed++;
+	next;
+      }
+      if(exists($exception{$url})) {
+	info("Removing (exception): %s", $key);
+	$linkdb->del($key);
+	$linkdb->sync();
+	$removed++;
+	next;
+      }
+    }
+  }
+  $now = time;
+  status("Removed %d of %d links in %s",$removed, total($linkdb), strtime($now-$checkpoint));
+  $checkpoint = $now;
+}
+
+sub addlink($$) {
+  my ($link, $referer) = @_;
+  my ($domain,$path,$url) = spliturl($link);
+  my $found = $checkpoint;
+  return(0) unless($domain);
+  $link =~ s/\043.*//;
+  $link =~ s/(\s)/sprintf("%%%02x",ord($1))/eg;
+  $link =~ s/^(https?|ftp):\057\057([^\100\057]*\100)/$1:\057\057/;
+  if(exists($link{$link}) && $link{$link}) {
+    debug("Ignored (seen before): %s", $link);
+    return(0);
+  }
+  unless(exists($include{$url})) {
+    if(exists($domainexception{$domain})) {
+      debug("Ignored (domainexception): %s", $link);
+      return(0);
+    }
+    if(exists($urlexception{$url})) {
+      debug("Ignored (urlexception): %s", $link);
+      return(0);
+    }
+    if(exists($exception{$url})) {
+      debug("Ignored (exception): %s", $link);
+      return(0);
+    }
+  }
+  if (exists($source{$link})) {
+    my %data = split(/[=;]/, $source{$link});
+    $found = $data{found} || $checkpoint;
+  }
+  info("Adding new link: %s (referer=%s)", $link, $referer);
+  $referer =~ s/\075/%3D/g;
+  $referer =~ s/\073/%3B/g;
+  $link =~ s@>.*@@;
+  $link =~ s@/(index|welcome|default).(s?html?|cgi)@@i;
+  $linkdb->put($link, "last=0;ttl=0;status=0;found=$found;used=0;referer=$referer;");
+  $linkdb->sync();
+  return(1);
+}
+
+sub min($$) {
+  my ($a,$b) = @_;
+  if($a < $b) {
+    return($a);
+  } else {
+    return($b);
+  }
+}
+
+sub addcandidate($$) {
+  my ($candidate, $referer) = @_;
+  my ($domain,$path,$url) = spliturl($candidate);
+  return(0) unless($domain);
+  if(exists($candidate{$candidate}) && $candidate{$candidate}) {
+    debug("Ignored (seen before): %s", $candidate);
+    return(0);
+  }
+  unless(exists($include{$url})) {
+    if(exists($domainexception{$domain})) {
+      debug("Ignored (domainexception): %s", $candidate);
+      return(0);
+    }
+    if(exists($urlexception{$url})) {
+      debug("Ignored (urlexception): %s", $candidate);
+      return(0);
+    }
+    if(exists($exception{$url})) {
+      debug("Ignored (exception): %s", $candidate);
+      return(0);
+    }
+  }
+  info("Adding new candidate: %s (referer=%s)", $candidate, $referer);
+  $referer =~ s/\075/%3D/g;
+  $referer =~ s/\073/%3B/g;
+  $candidatedb->put($candidate, "found=$checkpoint;referer=$referer;");
+  $candidatedb->sync();
+  return(1);
+}
+
+sub dumpcandidates() {
+  my ($key,$val);
+  open(CANDIDATE, ">$candidates") || error("$candidates: $!");
+  while(($key,$val) = each(%candidate)) {
+    print CANDIDATE "$key\t$val\n";
+  }
+  close(CANDIDATE);
+}
+
+sub extract() {
+  my @requests;
+  my ($key,$val,$status);
+  status("Checking the status of the sources..");
+  $key = $val = 0;
+  if (defined($sourcedb->seq($key, $val, R_FIRST))) {
+    my ($k,$v,%data,$request);
+    my $retry = time-($source_bouncing_ttl*86400);
+    my ($new,$succeeded,$failed,$downloads,$rest) = (0,0,0,0,0);
+    $key = $val = 0;
+    for ($status = $sourcedb->seq($key, $val, R_FIRST);
+	 $status == 0;
+	 $status = $sourcedb->seq($key, $val, R_NEXT)) {
+      %data = split(/[=;]/, $val || "");
+      if(!exists($data{found}) || !exists($data{last})
+	 || !exists($data{ttl}) || !exists($data{retries})) {
+	$data{found} = $start unless(exists($data{found}));
+	$data{last} = 0 unless(exists($data{last}));
+	$data{ttl} = 0 unless(exists($data{ttl}));
+	$data{retries} = $source_retries unless(exists($data{retries}));
+	$val="";
+	while(($k,$v) = each(%data)) {
+	  next unless($k && $keys{$k});
+	  $v =~ s/\075/%3D/g;
+	  $v =~ s/\073/%3B/g;
+	  $val.="$k=$v;"
+	}
+	$sourcedb->put($key, $val);
+	$sourcedb->sync();
+      }
+      if(($data{last}>=0 && $data{last}+$data{ttl}<$now)
+	 || ($data{last}<0 && -$data{last}+$data{ttl}<$retry)) {
+	debug("Prepairing: %s", $key);
+	push(@requests, HTTP::Request->new(GET => $key));
+      }
+    }
+    $sourcedb->sync();
+    $now = time;
+    status("Chosed %d of %d sources in %s",
+	   scalar(@requests), total($sourcedb),
+	   strtime($now-$checkpoint));
+    $checkpoint = $delta = $now;
+    $downloads = $rest = scalar(@requests);
+    while(@requests) {
+      my ($ua,$response,$domain,$extor,%extorelements,$tag,%links,$link,$found,$n);
+      $now = time;
+      status("Downloading bulk of %d of %d chosen sources..",
+	   min(scalar(@requests),$bulk), $downloads);
+      $checkpoint = $now;
+      $ua = RobotUserAgent->new();
+      $ua->proxy(['http', 'ftp'], $source_proxy) if($source_proxy);
+      $ua->agent($fake_user_agent) if($fake_user_agent);
+      $ua->timeout($source_timeout) if($source_timeout);
+      $ua->redirect(0);
+      $ua->in_order(0);
+      $ua->remember_failures(1);
+      $ua->max_hosts($simultaneous_sources||1);
+      $ua->max_req(4);
+      while(@requests) {
+	last if($n++ >= $bulk);
+	my $request = @requests%2? shift(@requests) : pop(@requests);
+	$rest--;
+	warning($response->status_line) if($response = $ua->register($request));
+      }
+      $SIG{PIPE} = "IGNORE";
+      $response = $ua->wait();
+      $SIG{PIPE} = "DEFAULT";
+      $now = time;
+      $found = 0;
+      status("Downloaded %d of %d chosen sources in %s",
+	     scalar(keys(%$response)),
+	     $downloads,
+	     strtime($now-$checkpoint)
+	    );
+      status("Parsing %d downloaded sources..", scalar(keys(%$response)));
+      %extorelements = %HTML::LinkExtor::LINK_ELEMENT;
+      %HTML::LinkExtor::LINK_ELEMENT = (a => "href",
+					#img => "src",
+					form => "action",
+					base => "href");
+      foreach (keys(%$response)) {
+	$key = $response->{$_}->{request}->{_uri};
+	%data = split(/[=;]/, $source{$key});
+	$data{status} = $response->{$_}->response->code;
+	if ($response->{$_}->response->is_success) {
+	  debug("Checking %s: %s", $key, $response->{$_}->response->status_line);
+	  $succeeded++;
+	  $data{last} = $checkpoint;
+	  $data{ttl} = int(rand($source_max_ttl - $source_min_ttl + 1))*86400;
+	  $data{retries} = $source_retries;
+	  $extor = HTML::LinkExtor->new(undef, $response->{$_}->response->base);
+	  $extor->parse($response->{$_}->response->content);
+	  addlink($key, $key) unless($key =~ /\?/);
+	  foreach ($extor->links) {
+	    ($tag, %links) = @$_;
+	    foreach (keys(%links)) {
+	      $link = $links{$_};
+	      ($domain) = spliturl($link);
+	      $found++ if(addlink($link, $key));
+	    }
+	  }
+	} else {
+	  status("Failed %s: %s", $key, $response->{$_}->response->status_line);
+	  $failed++;
+	  $data{retries} = 0 if($data{status} == 404);
+	  if($data{retries}-- <= 0) {
+	    $data{retries} = $source_retries;
+	    if ($data{last} < 0) {
+	      $data{ttl} += int(rand($source_max_ttl - $source_min_ttl + 1))*86400;
+	    } else {
+	      $data{last} = -$checkpoint ;
+	      $data{ttl} = int(rand($source_max_ttl - $source_min_ttl + 1))*86400;
+	    }
+	  }
+	  if (redirect($data{status})) {
+	    addcandidate($response->{$_}->response->header("Location"), $key);
+	  }
+        }
+	if ($data{ttl} > $source_remember*86400 && $data{last} < 0) {
+	  info("Removing bouncing source: %s (last=%d,ttl=%d,retries=%d,status=%s)",
+	       $key,$data{last},$data{ttl},$data{retries},$data{status});
+          $sourcedb->del($key);
+	  $sourcedb->sync();
+	} else {
+	  $val="";
+	  while(($k,$v) = each(%data)) {
+	    next unless($k && $keys{$k});
+	    $v =~ s/\075/%3D/g;
+	    $v =~ s/\073/%3B/g;
+	    $val.="$k=$v;"
+	  }
+	  $sourcedb->put($key, $val);
+	  $sourcedb->sync();
+	}
+      }
+      $sourcedb->sync();
+      $linkdb->sync();
+      %HTML::LinkExtor::LINK_ELEMENT = %extorelements;
+      $checkpoint = $now;
+      $now = time;
+      status("Added %d new links from bulk of %d sources in %s",
+	     $found, $n, strtime($now-$checkpoint));
+      $new += $found;
+      status("Still %d of %d chosen sources to go..", $rest, $downloads) if($rest);
+    }
+    $checkpoint = $now;
+    $now = time;
+    status("Added %d new links from %d chosen sources", $new, $downloads);
+    status("Downloaded and parsed %d chosen of %d sources in %s, %d succeeded and %d failed",
+	   $downloads, total($sourcedb), strtime($now-$delta),
+	   $succeeded, $failed);
+  }
+}
+
+sub success($) {
+  my $code = shift;
+  return(1) if ($code >= 200 && $code < 300);
+  return(1) if ($code == RC_UNAUTHORIZED);
+  return(1) if ($code == RC_PAYMENT_REQUIRED);
+  return(1) if ($code == RC_FORBIDDEN);
+  return(0);
+}
+
+sub redirect($) {
+  my $code = shift;
+  return(1) if ($code == RC_MOVED_PERMANENTLY);
+  return(1) if ($code == RC_FOUND);
+  return(0);
+}
+
+sub spliturl($) {
+  my $link = lc(shift);
+  my ($proto, $host, $domain, $path, $url);
+  $link =~ /^(https?|ftp):\057\057([^\100\057]*\100)?((www|web|ftp)\d{0,2}\.)?([-.a-z0-9]+)\.?(:\d*)?([^\043]*)/i;
+  $proto = $1 || return(undef,undef,undef,undef);
+  $domain = $5 || return(undef,undef,undef,undef);
+  $host = ($3 || "") . $domain;
+  $domain =~ s@%20@@g;
+  $path = $7 || "";
+  $path =~ s@^[%20\s]+@@;
+  $path =~ s@\?.*@@ unless(exists($redirector{$domain}));
+  $path =~ s@>.*@@;
+  $path =~ s@/[^/]+\.(s?html?|cgi|php\d?|asp|jpe?g|gif|ra?m|mpe?g?|mov|movie|qt|avi|dif|dvd?|mpv2|mp3)$@@;
+  $path =~ s@/+$@@;
+  $path =~ s@//+@/@g;
+  $path =~ s@/pub/?$@/@;
+  $path =~ s/(\s)/sprintf("%%%02x",ord($1))/eg;
+  $path =~ s/%([a-f\d]{2})/if(hex($1)==9||hex($1)==10||hex($1)==13||hex($1)==32){"%$1"}else{chr(hex($1))}/egi;
+  $url = $domain . $path;
+  return(($domain, $path, $url, $host));
+}
+
+sub domain($) {
+  my $link = shift;
+  my ($domain, $path, $url);
+  $link =~ /^(https?|ftp):\057\057([^\100\057]*\100)?((www|web|ftp)\d{0,2}\.)?([-.a-z0-9]+)\.?(:\d*)?([^\043]*)/i;
+  return($5 || "");
+}
+
+sub check() {
+  my (%request,%lnk,$lnkdb,@requests);
+  my ($key,$val,$status,$links);
+  status("Checking the status of the links..");
+  $key = $val = 0;
+  if (defined($linkdb->seq($key, $val, R_FIRST))) {
+    my ($k,$v,%data,$request);
+    my $retry = time-($link_bouncing_ttl*86400);
+    my ($new,$succeeded,$failed,$tests,$rest) = (0,0,0,0,0);
+    $DB_BTREE->{compare} = \&linkmatch;
+    $lnkdb = tie(%lnk,"DB_File",undef,O_CREAT|O_RDWR,0664,$DB_BTREE) || error("tie: $!");
+    $key = $val = 0;
+    for ($status = $linkdb->seq($key, $val, R_FIRST);
+	 $status == 0;
+	 $status = $linkdb->seq($key, $val, R_NEXT)) {
+      if(exists($lnk{$key}) || exists($request{$key})) {
+	info("INGNORING DUPLICATE: %s");
+	for (my $i = 10;
+	     $i && $linkdb->del($key) == 0;
+	     $i--) {
+	  $linkdb->sync();
+	}
+	$linkdb->sync();
+	$linkdb->put($key, $val);
+	$linkdb->sync();
+	next;
+      }
+      $links++;
+      next if($key =~ /^https:/); # Parallel::UserAgent can not handle 'https'-requests.
+      %data = split(/[=;]/, $val);
+      if (exists($source{$key})) {
+	my %srcdata = split(/[=;]/, $source{$key});
+	$data{last} = $srcdata{last};
+	$data{ttl} = $srcdata{ttl};
+	$data{retries} = $srcdata{retries};
+      }
+      if (!exists($data{last})
+	  || !exists($data{ttl})
+	  || !exists($data{retries})
+	  || !exists($data{used})
+	  || !exists($data{found})
+	  || !exists($data{status})) {
+	$data{last} = 0 unless(exists($data{last}));
+	$data{ttl} = 0 unless(exists($data{ttl}));
+	$data{retries} = $link_retries unless(exists($data{retries}));
+	$data{used} = 0 unless(exists($data{used}));
+	$data{found} = $now unless(exists($data{found}));
+	$data{status} = 0 unless(exists($data{status}));
+	$val="";
+	while(($k,$v) = each(%data)) {
+	  next unless($k && $keys{$k});
+	  $v =~ s/\075/%3D/g;
+	  $v =~ s/\073/%3B/g;
+	  $val.="$k=$v;"
+	}
+	$lnkdb->put($key, $val);
+	$lnkdb->sync();
+      }
+      if(($data{used} && $data{last} > 0 && $data{last}+$data{ttl} < $now)
+	 || $data{last} == 0
+	 || $data{found} > $start
+	 || ($data{last} < 0 && -$data{last}+$data{ttl} < $retry)) {
+	debug("Prepairing: %s", $key);
+	$request{$key} = HTTP::Request->new(HEAD => $key);
+      } else {
+	debug("Skiping: %s", $key);
+      }
+    }
+    $lnkdb->sync();
+    $key = $val = 0;
+    for ($status = $lnkdb->seq($key, $val, R_FIRST);
+	 $status == 0;
+	 $status = $lnkdb->seq($key, $val, R_NEXT)) {
+      $linkdb->del($key);
+      $linkdb->sync();
+      $linkdb->put($key, $val);
+      $linkdb->sync();
+    }
+    undef($lnkdb);
+    untie(%lnk);
+    @requests = values(%request);
+    $now = time;
+    status("Chosed %d of %d links in %s",
+	   scalar(@requests), $links,
+	   strtime($now-$checkpoint));
+    $checkpoint = $delta = $now;
+    $tests = $rest = scalar(@requests);
+    while(@requests) {
+      my ($ua,$response,$link,$found,$n);
+      $now = time;
+      status("Verifying bulk of %d of %d chosen links..",
+	   min(scalar(@requests),$bulk), $tests);
+      $checkpoint = $now;
+      $ua = RobotUserAgent->new();
+      $ua->proxy(['http', 'ftp'], $link_proxy) if($link_proxy);
+      $ua->agent($fake_user_agent) if($fake_user_agent);
+      $ua->timeout($link_timeout) if($link_timeout);
+      $ua->redirect(0);
+      $ua->in_order(0);
+      $ua->remember_failures(1);
+      $ua->max_hosts($simultaneous_links||1);
+      $ua->max_req(4);
+      while(@requests) {
+	last if($n++ >= $bulk);
+	my $request = @requests%2? shift(@requests) : pop(@requests);
+	$rest--;
+	warning($response->status_line) if($response = $ua->register($request));
+      }
+      $SIG{PIPE} = "IGNORE";
+      $response = $ua->wait();
+      $SIG{PIPE} = "DEFAULT";
+      $now = time;
+      $found = 0;
+      status("Verified %d of %d chosen links in %s",
+	     scalar(keys(%$response)), $tests, strtime($now-$checkpoint));
+      status("Updating status for %d verified links..", scalar(keys(%$response)));
+      foreach (keys(%$response)) {
+	$key = $response->{$_}->{request}->{_uri};
+	%data = split(/[=;]/, $link{$key} || "");
+	$data{status} = $response->{$_}->response->code;
+	$data{last} = 0 unless($data{last});
+	$data{retries} = 0 unless($data{retries});
+	$data{ttl} = 0 unless($data{ttl});
+        if (success($data{status})) {
+	  debug("Checking %s: %s", $key, $response->{$_}->response->status_line);
+	  $succeeded++;
+	  $data{last} = $checkpoint;
+	  $data{ttl} = int(rand($link_max_ttl - $link_min_ttl + 1))*86400;
+	  $data{retries} = $link_retries;
+	} elsif (redirect($data{status})) {
+	  my ($domain,$path,$url) = spliturl($key);
+	  if (exists($redirector{$domain})
+	      || $path =~ /^\057cgi(-bin)?\057/
+	      || $path =~ /\?/) {
+	    my $location = $response->{$_}->response->header("Location");
+	    debug("Checking %s: %s", $key, $response->{$_}->response->status_line);
+	    $succeeded++;
+	    $found += addlink($location, $key)
+	      if($location && domain($location) ne $domain);
+	    $data{last} = $checkpoint;
+	    $data{ttl} = int(rand($link_max_ttl - $link_min_ttl + 1))*86400;
+	    $data{retries} = $link_retries;
+	  } else {
+	    my $ok;
+	    foreach (@patterns) {
+	      if ($key =~ /$_/) {
+		$ok++;
+		last;
+	      }
+	    }
+	    if ($ok) {
+	      my $location = $response->{$_}->response->header("Location");
+	      debug("Checking %s: %s", $key, $response->{$_}->response->status_line);
+	      $succeeded++;
+	      $found += addlink($location, $key)
+		if($location && domain($location) ne $domain);
+	      $data{last} = $checkpoint;
+	      $data{ttl} = int(rand($link_max_ttl - $link_min_ttl + 1))*86400;
+	      $data{retries} = $link_retries;
+	    } else {
+	      status("Failed %s: %s", $key, $response->{$_}->response->status_line);
+	      $failed++;
+	      if($data{retries}-- <= 0) {
+	        $data{retries} = $link_retries;
+	        if ($data{last} < 0) {
+		  $data{ttl} += int(rand($link_max_ttl - $link_min_ttl + 1))*86400;
+	        } else {
+		  $data{last} = -$checkpoint ;
+		  $data{ttl} = int(rand($link_max_ttl - $link_min_ttl + 1))*86400;
+	        }
+	      }
+	    }
+	  }
+        } else {
+	  status("Failed %s: %s", $key, $response->{$_}->response->status_line);
+	  $failed++;
+	  $data{retries} = 0 if($data{status} == 404);
+	  if($data{retries}-- <= 0) {
+	    $data{retries} = $link_retries;
+	    if ($data{last} < 0) {
+	      $data{ttl} += int(rand($link_max_ttl - $link_min_ttl + 1))*86400;
+	    } else {
+	      $data{last} = -$checkpoint ;
+	      $data{ttl} = int(rand($link_max_ttl - $link_min_ttl + 1))*86400;
+	    }
+	  }
+	}
+	if ($data{ttl} > $link_remember*86400 && $data{last} < 0) {
+	  info("Removing bouncing link: %s (last=%d,ttl=%d,retries=%d,status=%s)",
+	       $key,$data{last},$data{ttl},$data{retries},$data{status});
+          $linkdb->del($key);
+	  $linkdb->sync();
+	} else {
+	  $val="";
+	  while(($k,$v) = each(%data)) {
+	    next unless($k && $keys{$k});
+	    $v =~ s/\075/%3D/g;
+	    $v =~ s/\073/%3B/g;
+	    $val.="$k=$v;"
+	  }
+	  $linkdb->put($key, $val);
+	  $linkdb->sync();
+	}
+      }
+      $linkdb->sync();
+      $checkpoint = $now;
+      $now = time;
+      status("Added %d new links from bulk of %d links in %s",
+	     $found, $n, strtime($now-$checkpoint));
+      $new += $found;
+      status("Still %d of %d chosen links to go..", $rest, $tests) if($rest);
+    }
+    $checkpoint = $now;
+    status("Added %d new links from redirects from %d verified links",$new,$tests);
+    status("Verified %d of %d chosen links in %s, %d succeeded and %d failed",
+	   $tests, $links, strtime($now-$delta),
+	   $succeeded, $failed);
+  }
+}
+
+sub adddomain($$) {
+  my ($domain, $referer) = @_;
+  my ($d,$val,$k,$v,$n);
+  return(0) unless($domain && $referer && $domain =~ /\w+\.\w+/);
+  return(0) if($domain =~ /^[\d.]+$/ && $domain !~ /^\d+\.\d+\.\d+\.\d+$/);
+  $domain =~ s/\.$//;
+  $d = $domain;
+  $v = 0;
+  if ($domaindb->seq($d,$v,R_CURSOR) == 0 && lc($domain) eq lc($d)) {
+    my %data = split(/[=;]/, $v);
+    $data{last} = $checkpoint;
+    $data{ttl} = ($domain_ttl < $link_max_ttl) ? $link_max_ttl*86400 : $domain_ttl*86400;
+    $val="";
+    while(($k,$v) = each(%data)) {
+      next unless($k && $keys{$k});
+      $v =~ s@=@%3D@g;
+      $v =~ s@;@%3B@g;
+      $val.="$k=$v;"
+    }
+    $domaindb->put($d, $val);
+    $domaindb->sync();
+    debug("Refreshed (seen before): %s", $domain);
+    return(0);
+  }
+  if (exists($domain{$domain})) {
+    debug("Ignored (redundant): %s", $domain);
+    return(0);
+  }
+  if (exists($domainexception{$domain}) && !exists($include{$domain})) {
+    debug("Ignored (domainexception): %s", $domain);
+    return(0);
+  }
+  info("Adding new domain: %s (referer=%s)", $domain, $referer);
+  push(@domaindiff,"+$domain");
+  my $id = int(rand(2147483647));
+  $k = $domain;
+  $v = 0;
+  for ($n = $urldb->seq($k,$v,R_CURSOR);
+       $n == 0 && urlmatch($k,$domain) == 0;
+       $k = $domain, $n = $urldb->seq($k,$v,R_CURSOR)) {
+    my %data = split(/[=;]/, $v || "");
+    info("Removing redundant url: %s", $k);
+    push(@urldiff,"-$k");
+    $urldb->del_dup($k,$v);
+    $domaindb->sync();
+    release($data{referer}) unless(lc($data{referer}) eq lc($referer));
+  }
+  $k = $domain;
+  $v = 0;
+  for ($n = $domaindb->seq($k,$v,R_CURSOR);
+       $n == 0 && domainmatch($k,$domain) == 0;
+       $k = $domain, $n = $domaindb->seq($k,$v,R_CURSOR)) {
+    my %data = split(/[=;]/, $v || "");
+    info("Removing redundant domain: %s", $k);
+    push(@domaindiff,"-$k");
+    $domaindb->del_dup($k,$v);
+    $domaindb->sync();
+    release($data{referer}) unless(lc($data{referer}) eq lc($referer));
+  }
+  $referer =~ s/\075/%3D/g;
+  $referer =~ s/\073/%3B/g;
+  $v = $domain_ttl*86400;
+  $domaindb->put($domain, "last=$checkpoint;ttl=$v;found=$checkpoint;referer=$referer;id=$id;");
+  $domaindb->sync();
+  return(1);
+}
+
+sub addurl($$$) {
+  my ($url, $domain, $referer) = @_;
+  my ($d,$u,$val,$k,$v,$n);
+  return(0) unless($url && $referer && $url =~ /\.\w+/);
+  $d = $domain;
+  $v = 0;
+  if ($domaindb->seq($d,$v,R_CURSOR) == 0 && lc($domain) eq lc($d)) {
+    my %data = split(/[=;]/, $v);
+    $data{last} = $checkpoint;
+    $data{ttl} = ($domain_ttl < $link_max_ttl) ? $link_max_ttl*86400 : $domain_ttl*86400;
+    $val="";
+    while(($k,$v) = each(%data)) {
+      next unless($k && $keys{$k});
+      $v =~ s@=@%3D@g;
+      $v =~ s@;@%3B@g;
+      $val.="$k=$v;"
+    }
+    $domaindb->put($d, $val);
+    $domaindb->sync();
+    debug("Refreshed (seen before): %s", $domain);
+    return(0);
+  }
+  if (exists($domain{$domain})) {
+    debug("Ignored (redundant): %s", $url);
+    return(0);
+  }
+  if (exists($domainexception{$domain}) && !exists($include{$url})) {
+    debug("Ignored (domainexception): %s", $url);
+    return(0);
+  }
+  $u = $url;
+  $v = 0;
+  if ($urldb->seq($u,$v,R_CURSOR) == 0 && lc($u) eq lc($url)) {
+    my %data = split(/[=;]/, $v);
+    $data{last} = $checkpoint;
+    $data{ttl} = ($url_ttl < $link_max_ttl) ? $link_max_ttl*86400 : $url_ttl*86400;
+    $val="";
+    while(($k,$v) = each(%data)) {
+      next unless($k && $keys{$k});
+      $v =~ s/\075/%3D/g;
+      $v =~ s/\073/%3B/g;
+      $val.="$k=$v;"
+    }
+    $urldb->put($u, $val);
+    $urldb->sync();
+    debug("Refreshed (seen before): %s", $url);
+    return(0);
+  }
+  if (exists($url{$url})) {
+    debug("Ignored (redundant): %s", $url);
+    return(0);
+  }
+  info("Adding new url: %s (referer=%s)", $url, $referer);
+  push(@urldiff,"+$url");
+  my $id = int(rand(2147483647));
+  $k = $url;
+  $v = 0;
+  for ($n = $urldb->seq($k,$v,R_CURSOR);
+       $n == 0 && urlmatch($k,$url) == 0;
+       $k = $url, $n = $urldb->seq($k,$v,R_CURSOR)) {
+    my %data = split(/[=;]/, $v || "");
+    info("Removing redundant url: %s", $k);
+    push(@urldiff,"-$k");
+    $urldb->del_dup($k,$v);
+    $urldb->sync();
+    release($data{referer}) unless(lc($data{referer}) eq lc($referer));
+  }
+  $referer =~ s/\075/%3D/g;
+  $referer =~ s/\073/%3B/g;
+  $v = $url_ttl*86400;
+  $urldb->put($url, "last=$checkpoint;ttl=$v;found=$checkpoint;referer=$referer;id=$id;");
+  $urldb->sync();
+  return(1);
+}
+
+sub addresses($$@) {
+  my ($resolver,$host,$level) = @_;
+  my (%addresses,$socket,$select,@ready,$rr,$address);
+  return(undef) unless($resolver);
+  return(undef) unless($host);
+  return(undef) if($host =~ /^\d+\.\d+\.\d+\.\d+$/);
+  $socket = $resolver->bgsend($host);
+  $select = new IO::Select($socket);
+  @ready = $select->can_read($dns_timeout);
+  foreach(@ready) {
+    my $response = $resolver->bgread($socket) || next;
+    foreach $rr ($response->answer) {
+      if ($rr->type eq "A") {
+	$addresses{$rr->address}++;
+      } elsif ($rr->type eq "CNAME") {
+	unless($level++ > 10) {
+	  foreach $address (addresses($resolver, $rr->cname, $level)) {
+	    $addresses{$address}++;
+	  }
+	}
+      }
+    }
+  }
+  $select->remove($socket);
+  return(keys(%addresses));
+}
+
+sub washdomains() {
+  my ($key,$val,$status,%redundant);
+  status("Checking the domain list for redundancy..");
+  undef($domaindb);
+  untie(%domain);
+  $DB_BTREE->{compare} = \&domaincmp;
+  $domaindb = tie(%domain,"DB_File","$domains.db",O_CREAT|O_RDWR,0664,$DB_BTREE)
+    || error("$domains.db: $!");
+  $key = $val = 0;
+  for ($status = $domaindb->seq($key, $val, R_FIRST);
+       $status == 0;
+       $status = $domaindb->seq($key, $val, R_NEXT)) {
+    my %data = split(/[=;]/, $val || "");
+    my ($host,$domain) = split(/\./, $key, 2);
+    #debug("Checking: %s",$key);
+    if($domain && exists($domain{$domain})) {
+      info("Ooops! Removing redundant domain: %s", $key);
+      push(@domaindiff,"-$key");
+      release($data{referer});
+      $redundant{$key} = $val;
+    }
+  }
+  while(($key,$val) = each(%redundant)) {
+    $domaindb->del_dup($key,$val);
+    $domaindb->sync();
+  }
+  $DB_BTREE->{compare} = \&domainmatch;
+  $domaindb = tie(%domain,"DB_File","$domains.db",O_CREAT|O_RDWR,0664,$DB_BTREE)
+    || error("$domains.db: $!");
+  $now = time;
+  status("Removed %d redundant of %d domains in %s",
+         scalar(keys(%redundant)), total($domaindb),
+	 strtime($now-$checkpoint));
+  $checkpoint = $now;
+}
+
+sub washurls() {
+  my ($status,$key,$val,%data,$domain,%redundant);
+  status("Checking the url list for redundancy..");
+  $key = $val = 0;
+  for ($status = $urldb->seq($key, $val, R_FIRST);
+       $status == 0;
+       $status = $urldb->seq($key, $val, R_NEXT)) {
+    #debug("Checking: %s",$key);
+    $domain = $key;
+    $domain =~ s@/.*@@;
+    %data = split(/[=;]/, $val);
+    if(exists($domain{$domain})) {
+      my %d = split(/[=;]/, $domain{$domain});
+      release($data{referer}) unless(lc($data{referer}) eq lc($d{referer}));
+      $redundant{$key} = $val;
+    } else {
+      my $k = $key;
+      $k =~ s@/[^/]+/?$@@;
+      if(exists($url{$k})) {
+	my %u = split(/[=;]/, $url{$k});
+	release($data{referer}) unless(lc($data{referer}) eq lc($u{referer}));
+	$redundant{$key} = $val;
+      }
+    }
+  }
+  while(($key,$val) = each(%redundant)) {
+    info("Removing redundant url: %s", $key);
+    push(@urldiff,"-$key");
+    $urldb->del_dup($key,$val);
+    $urldb->sync();
+  }
+  $now = time;
+  status("Removed %d redundant of %d urls in %s",
+         scalar(keys(%redundant)), total($urldb), strtime($now-$checkpoint));
+  $checkpoint = $now;
+}
+
+sub wash() {
+  washdomains();
+  washurls();
+  washlinks();
+}
+
+sub optimum($) {
+  my $url = shift || return(undef);
+  my ($domain, @dirs) = split(/\057/,$url);
+  my ($pattern, $key, $val);
+  #debug("Findig the optimal key for %s..", $url);
+  $key = $domain;
+  $val = 0;
+  if ($domaindb->seq($key,$val,R_CURSOR) == 0 && domainmatch($domain,$key) == 0) {
+    $url = $domain;
+    undef(@dirs);
+  } else {
+    $key = $url;
+    $val = 0;
+    if ($urldb->seq($key,$val,R_CURSOR) == 0 && urlmatch($url,$key) == 0) {
+      $url = $key;
+      ($domain, @dirs) = split(/\057/,$url);
+    }
+  }
+  foreach $pattern (@patterns) {
+    if ($domain =~ /$pattern/) {
+      my @zones = split(/\./,$domain);
+      my $zone = pop(@zones);
+      while(@zones) {
+	if($zone =~ /$pattern/) {
+	  return($zone) if((!exists($domainexception{$zone})
+			    && !exists($exception{$zone}))
+			   || exists($include{$zone}));
+	}
+	return($zone) if(exists($domain{$zone}));
+	$zone = pop(@zones) . ".$zone";
+      }
+      return($zone) if((!exists($domainexception{$zone})
+			&& !exists($exception{$zone}))
+		       || exists($include{$zone}));
+    }
+  }
+  if (@dirs) {
+    my $url = "$domain";
+    while (@dirs) {
+      $url .= "/" . shift(@dirs);
+      foreach $pattern (@patterns) {
+	if($url =~ /$pattern/) {
+	  return($url) if((!exists($urlexception{$url})
+			   && !exists($exception{$url}))
+			  || exists($include{$url}));
+	}
+	return($url) if(exists($url{$url}));
+      }
+    }
+  }
+  return($url);
+}
+
+sub compile() {
+  status("Compiling..");
+  my ($resolver,$key,$val,$status,$domain,$path,$url,$host,$k,$v,$links);
+  my ($domains,$urls) = (0,0);
+  if ($doinaddr) {
+    $resolver = new Net::DNS::Resolver;
+    $resolver->nameservers(@nameservers) if(@nameservers);
+  }
+  $key = $val = 0;
+  for ($status = $linkdb->seq($key, $val, R_FIRST);
+       $status == 0;
+       $status = $linkdb->seq($key, $val, R_NEXT)) {
+    my %data = split(/[=;]/, $val || "");
+    my $used = 0;
+    $links++;
+    $data{last} = 0 unless($data{last});
+    $data{used} = 0 unless($data{used});
+    $data{used} = 0 if($data{used} < 0);
+    $data{found} = $now unless($data{found});
+    next if($data{last} < 0);
+    next if($data{last} < $start && $data{used});
+    ($domain,$path,$url,$host) = spliturl($key);
+    $url = optimum($url);
+    #debug("Choosing: %s", $url);
+    if ($url =~ /\057/) {
+      my $d = $url;
+      $d =~ s@\057.*@@;
+      if((!exists($domainexception{$d}) && !exists($urlexception{$url}))
+	 || exists($include{$url})) {
+	#debug("addurl(%s,%s,%s)",$url,$domain,$key);
+	if (addurl($url,$domain,$key)) {
+	  $used++;
+	  $urls++;
+	  $data{used}++;
+	}
+	if ($doinaddr && $data{last} > $start && $host !~ /^\d+\.\d+\.\d+\.\d+$/) {
+	  $path = $url;
+	  $path =~ s@^[^/]+@@;
+	  foreach (addresses($resolver,$host)) {
+	    $url = $_ . $path;
+	    #debug("addurl(%s,%s,%s)",$url,$domain,$key);
+	    if (addurl($url,$domain,$key)) {
+	      $used++;
+	      $urls++;
+	      $data{used}++;
+	    }
+	  }
+	}
+      }
+    } else {
+      if(!exists($domainexception{$url}) || exists($include{$url})) {
+	#debug("adddomain(%s,%s)",$url,$key);
+	if (adddomain($url,$key)) {
+	  $used++;
+	  $domains++;
+	  $data{used}++;
+	}
+	if ($doinaddr && $data{last} > $start && $host !~ /^\d+\.\d+\.\d+\.\d+$/) {
+	  foreach (addresses($resolver,$host)) {
+	    #debug("adddomain(%s,%s)",$_,$key);
+	    if (adddomain($_,$key)) {
+	      $used++;
+	      $domains++;
+	      $data{used}++;
+	    }
+	  }
+	}
+      }
+    }
+    if($used) {
+      $val="";
+      while(($k,$v) = each(%data)) {
+	next unless($k && $keys{$k});
+	$v =~ s/\075/%3D/g;
+	$v =~ s/\073/%3B/g;
+	$val.="$k=$v;"
+      }
+      $linkdb->put($key, $val);
+      $linkdb->sync();
+    }
+  }
+  $domaindb->sync();
+  $urldb->sync();
+  $linkdb->sync();
+  $now = time;
+  status("Compiled %d links into %d domains and %d urls in %s",
+	 $links, total($domaindb), total($urldb),
+	 strtime($now-$checkpoint));
+  status("Added %d new domains and %d new urls", $domains, $urls);
+  $checkpoint = $now;
+}
+
+sub today() {
+  my ($sec,$min,$hour,$mday,$mon,$year) = localtime();
+  return(sprintf("%4d%02d%02d\n",$year+1900,$mon+1,$mday));
+}
+
+sub export() {
+  my ($k,$n);
+  $checkpoint = time;
+  status("Dumping the domainlist..");
+  ($k,$n) = dumpkeys($domaindb, $domainlist);
+  $now = time;
+  status("Dumped %d keys of which %d new to the domainlist in %s..",
+	 $k,$n,strtime($now-$checkpoint));
+  $checkpoint = $now;
+  status("Dumping the urllist..");
+  ($k,$n) = dumpkeys($urldb, $urllist);
+  $now = time;
+  status("Dumped %d keys of which %d new to the urllist in %s..",
+	 $k,$n,strtime($now-$checkpoint));
+  $checkpoint = $now;
+}
+
+sub valid($) {
+  my $db = shift;
+  my ($status, $key, $val, %data);
+  my $n = 0;
+  $key = $val = 0;
+  for ($status = $db->seq($key, $val, R_FIRST);
+       $status == 0;
+       $status = $db->seq($key, $val, R_NEXT)) {
+    %data = split(/[=;]/, $val || "");
+    $n++ if($data{last} && $data{last} > 0);
+  }
+  return($n);
+}
+
+sub total($) {
+  my $db = shift;
+  my ($status, $key, $val);
+  my $n = 0;
+  $key = $val = 0;
+  for ($status = $db->seq($key, $val, R_FIRST);
+       $status == 0;
+       $status = $db->seq($key, $val, R_NEXT)) {
+    $n++;
+  }
+  return($n);
+}
+
+sub dumpkeys($$) {
+  my ($db, $list) = @_;
+  my ($status, $key, $val, %data, $k, $n);
+  open(LIST, ">$list") || error("$list: $!");;
+  print LIST "#\n";
+  print LIST "# !!! WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING !!!\n";
+  print LIST "#\n";
+  print LIST "# This list is entierly a product of a dumb robot ($progname-$VERSION).\n";
+  print LIST "# We strongly recommend that you review the lists before using them!\n";
+  print LIST "# Don't blame us if there are mistakes, but please report errors with\n";
+  print LIST "# the online tool at http://www.squidguard.org/blacklist/\n";
+  print LIST "#\n";
+  print LIST "# !!! WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING !!!\n";
+  print LIST "#\n";
+  printf LIST "# This list was compiled in %s on %s.\n",
+  strtime(time-$start), date(time);
+  printf LIST "# This list was compiled from %d link sources and %d links,\n",
+  valid($sourcedb), total($linkdb);
+  printf LIST "# of which %d tested successfully.\n", valid($linkdb);
+  print LIST "#\n";
+  $key = $val = $k = $n = 0;
+  for ($status = $db->seq($key, $val, R_FIRST);
+       $status == 0;
+       $status = $db->seq($key, $val, R_NEXT)) {
+    $k++;
+    print LIST "$key\n";
+    %data = split(/[=;]/, $val || "");
+    if($data{found} && $data{found} > $start) {
+      $n++;
+    }
+  }
+  close(LIST);
+  return(($k,$n));
+}
+
+sub end($) {
+  my $exit = shift;
+  $exit = -1 unless(defined($exit));
+  if ($exit =~ /^[A-Z]+$/) {
+    $SIG{$exit} = "IGNORE";
+    status("Got %s signal..", $exit);
+    status("Cleaning up..");
+  }
+  unless($washonly || $exit) {
+    export() if($domaindb && $urldb && $linkdb);
+  }
+  if(@domaindiff) {
+    my $file = strftime("$domaindiff",localtime);
+    local *DIFF;
+    if (-f $file) {
+      open(DIFF,">>$file") || die("$file: $!");
+    } else {
+      open(DIFF,">$file") || die("$file: $!");
+    }
+    foreach(@domaindiff) {
+      chomp;
+      print DIFF "$_\n";
+    }
+    close(DIFF);
+  }
+  if(@urldiff) {
+    my $file = strftime("$urldiff",localtime);
+    local *DIFF;
+    if (-f $file) {
+      open(DIFF,">>$file") || die("$file: $!");
+    } else {
+      open(DIFF,">$file") || die("$file: $!");
+    }
+    foreach(@urldiff) {
+      chomp;
+      print DIFF "$_\n";
+    }
+    close(DIFF);
+  }
+  if($sourcedb) {
+    undef($sourcedb);
+    untie(%source);
+  }
+  if($candidatedb) {
+    dumpcandidates() unless($washonly || $exit);
+    undef($candidatedb);
+    untie(%candidate);
+  }
+  if($linkdb) {
+    undef($linkdb);
+    untie(%link);
+  }
+  if($domaindb) {
+    undef($domaindb);
+    untie(%domain);
+  }
+  if($urldb) {
+    undef($urldb);
+    untie(%url);
+  }
+  if($domainexceptiondb) {
+    undef($domainexceptiondb);
+    untie(%domainexception);
+  }
+  if($urlexceptiondb) {
+    undef($urlexceptiondb);
+    untie(%urlexception);
+  }
+  if($exceptiondb) {
+    undef($exceptiondb);
+    untie(%exception);
+  }
+  if($redirectordb) {
+    undef($redirectordb);
+    untie(%redirector);
+  }
+  if ($exit =~ /^[A-Z]+$/) {
+    status("Killed by a %s signal.", $exit);
+    $exit = $signal{$exit} || -2;
+  }
+  $exit = -3 unless($exit =~ /^\d+$/);
+  status("Total runtime %s", strtime(time-$start));
+  exit($exit);
+}
+
+sub disconnect() {
+  my ($status,$key,$val,$k,$v,$n);
+  status("Marking all links as unused..");
+  $key = $val = $n = 0;
+  for ($status = $linkdb->seq($key, $val, R_FIRST);
+       $status == 0;
+       $status = $linkdb->seq($key, $val, R_NEXT)) {
+    #debug("Checking: %s", $key);
+    my %data = split(/[=;]/, $val);
+    next unless($data{used});
+    info("Resetting: %s", $key);
+    $data{used} = 0;
+    $val="";
+    while(($k,$v) = each(%data)) {
+      next unless($k && $keys{$k});
+      $v =~ s@=@%3D@g;
+      $v =~ s@;@%3B@g;
+      $val.="$k=$v;"
+    }
+    $linkdb->put($key, $val, R_SETCURSOR);
+    $linkdb->sync();
+    $n++;
+  }
+  $now = time;
+  status("Reset %d of %d links in %s", $n, total($linkdb), strtime($now-$checkpoint));
+  $checkpoint = $now;
+}
+
+sub reconnect() {
+  my ($status,$key,$val,$referer,$k,$v,$n);
+  status("Marking all links refered in the domain and url lists as used..");
+  $key = $val = $n = 0;
+  for ($status = $domaindb->seq($key, $val, R_FIRST);
+       $status == 0;
+       $status = $domaindb->seq($key, $val, R_NEXT)) {
+    #debug("Checking: %s", $key);
+    my %data = split(/[=;]/, $val);
+    next unless($data{referer});
+    $referer = $data{referer};
+    info("Updating: %s: %s", $key, $referer);
+    if (exists($link{$referer})) {
+      my %data = split(/[=;]/, $link{$referer});
+      $data{used}++;
+      $val="";
+      while(($k,$v) = each(%data)) {
+	next unless($k && $keys{$k});
+	$v =~ s@=@%3D@g;
+        $v =~ s@;@%3B@g;
+        $val.="$k=$v;"
+      }
+      $linkdb->put($referer, $val);
+      $linkdb->sync();
+    } else {
+      $linkdb->put($referer, "last=0;ttl=0;status=0;found=$checkpoint;used=1;referer=$referer;");
+      $linkdb->sync();
+    }
+    $n++;
+  }
+  $now = time;
+  status("Marked %d of %d links refered from the domain list in %s",
+         $n, total($linkdb), strtime($now-$checkpoint));
+  $checkpoint = $now;
+  $key = $val = $n = 0;
+  for ($status = $urldb->seq($key, $val, R_FIRST);
+       $status == 0;
+       $status = $urldb->seq($key, $val, R_NEXT)) {
+    #debug("Checking: %s", $key);
+    my %data = split(/[=;]/, $val);
+    next unless($data{referer});
+    $referer = $data{referer};
+    info("Updating: %s: %s", $key, $referer);
+    if (exists($link{$referer})) {
+      my %data = split(/[=;]/, $link{$referer});
+      $data{used}++;
+      $val="";
+      while(($k,$v) = each(%data)) {
+	next unless($k && $keys{$k});
+	$v =~ s@=@%3D@g;
+        $v =~ s@;@%3B@g;
+        $val.="$k=$v;"
+      }
+      $linkdb->put($referer, $val);
+      $linkdb->sync();
+    } else {
+      $linkdb->put($referer, "last=0;ttl=0;status=0;found=$checkpoint;used=1;referer=$referer;");
+      $linkdb->sync();
+    }
+    $n++;
+  }
+  $now = time;
+  status("Marked %d of %d links refered from the url list in %s",
+         $n, total($linkdb), strtime($now-$checkpoint));
+  $checkpoint = $now;
+}
+
+sub fixconnect() {
+  disconnect();
+  reconnect();
+}
+
+#
+# NOW JUST DO IT:
+#
+init();
+if ($washonly) {
+  fixconnect();
+} else {
+  expire();
+  load();
+  extract();
+  check();
+  compile();
+  wash();
+  end(0);
+}

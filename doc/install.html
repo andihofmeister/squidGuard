@@ -1,0 +1,282 @@
+
+
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN" "http://www.w3.org/TR/REC-html40/loose.dtd">
+
+<html><head>
+
+<title>SquidGuard </title>
+
+<meta name="keywords" content="Squidguard, Squid, Redirector, Proxy, Download, URL, Blacklist, Patches, Source, Software">
+
+<meta name="distribution" content="global">
+
+<link rel="Shortcut Icon" href="/favicon.ico" type="image/x-icon" />
+
+</head>
+
+<body bgcolor="#F0FFFF">
+
+<table bgcolor="#001199" width=100%>
+
+<tr><td bgcolor="#8EE5EE">
+
+
+
+<center>
+
+<h2><img alt="" src="/Logos/squidGuard.gif" align=middle> SquidGuard </h2>
+
+</center>
+
+
+
+<table border=0 bgcolor="#001199" width=100%>
+
+<tr>
+
+<th><a href="/index.html" target=_top><font color=white>HOME</font></a></th>
+
+<th><a href="/download.html" target=_top><font color=white>Downloads</font></a></th>
+
+<th><a href="/Doc/" target=_top><font color=white>Documentation</font></a></th>
+
+<th><a href="/Devel/" target=_top><font color=white>Development</font></a></th>
+
+<th><a href="/blacklists.html" target=_top><font color=white>Blacklists</font></a></th>
+
+<th><a href="/Contrib/" target=_top><font color=white>Contributions</font></a></th>
+
+<th><a href="/impressum.html" target=body><font color=white>Contact</font></a></th>
+
+</tr>
+
+</table>
+
+
+
+<table border=0 width=100%>
+
+<tr><td width=85% bgcolor="#8EE5EE" valign=top>
+
+
+
+
+
+<br><br>
+<h2> &nbsp; Installing squidGuard</h2>
+<br>
+<center>
+<table width=97%>
+<tr><td align=left>
+
+<ol>
+<li>  Unpack the source<br><br>
+<table width="75%" cellpadding="0" cellspacing="0" style="background-color: #f2fff0; border: solid 1px #4455bb;">
+<tr>
+<td>
+<pre> tar xvzf squidGuard-1.2.1.tar.gz
+</pre>
+</td></tr></table>
+
+<br>
+<li> Compiling<br>
+Let's assume it is squidGuard-1.2.1 we are trying to install:<br><br>
+<table width="75%" cellpadding="0" cellspacing="0" style="background-color: #f2fff0; border: solid 1px #4455bb;">
+<tr>
+<td>
+<pre> cd squidGuard-1.2.1
+ ./configure
+ make
+</pre>
+</td></tr></table>
+<br>
+If no errors occurred squidGuard is now installed in <tt>/usr/local/</tt>. 
+There are a couple of option you can use when running ./configure. For
+example:<br><br>
+
+<table width="75%" cellpadding="0" cellspacing="0" style="background-color: #f2fff0; border: solid 1px #4455bb;">
+<tr>
+<td style="background-color: #223499; border-bottom: 1px solid #888;"> 
+<font size="-1" color=white>Installing in a different location</font>
+</td></tr>
+<tr>
+<td>
+<pre> ./configure --prefix=/some/other/directory
+</pre>
+</td></tr></table>
+<br>
+
+<table width="75%" cellpadding="0" cellspacing="0" style="background-color:
+#f2fff0; border: solid 1px #4455bb;">
+<tr>
+<td style="background-color: #223499; border-bottom: 1px solid #888;"> <font
+size="-1" color=white>BerkeleyDB not in 
+/usr/local/BerkeleyDB installed</font>
+</td></tr>
+<tr>
+<td>
+<pre> ./configure  --with-db=/directory/of/BerkeleyDB/installation
+</pre>
+</td></tr></table>
+<br>
+When installed from the sources the BerkeleyDB will be located in
+/usr/local/BerkeleyDBx.y with x.y denoting the version number.<br>
+Annotation: Make sure that the shared library of your BerkeleyDB installation
+is known by your system (check /etc/ld.so.conf, add your BerkeleyDB library
+path if it is not already there and run ldconfig).
+<br>
+<br>
+<table width="75%" cellpadding="0" cellspacing="0" style="background-color: #f2fff0; border: solid 1px #4455bb;">
+<tr>
+<td style="background-color: #223499; border-bottom: 1px solid #888;"> 
+<font size="-1" color=white>See all ./configure options</font>
+</td></tr>
+<tr>
+<td>
+<pre> ./configure --help
+</pre>
+</td></tr></table>
+<br>
+
+A complete overview of all configure options with some explanations can be
+found <a href="configops.html">here</a>.
+<br><br>
+<li> Installing<br><br>
+
+<table width="75%" cellpadding="0" cellspacing="0" style="background-color: #f2fff0; border: solid 1px #4455bb;">
+<tr>
+<td>
+<pre> su -
+ make install
+</pre>
+</td></tr></table>
+<br>
+
+<li> Installing the blacklists<br><br>
+
+Copy your blacklists into the desired blacklist directory (default:
+<tt>/usr/local/squidGuard/db</tt>) and unpack them. In the table
+below we assume that the default location is used. Make sure that
+you have the proper permissions to write to that directory.<br><br>
+<table width="75%" cellpadding="0" cellspacing="0" style="background-color: #f2fff0; border: solid 1px #4455bb;">
+<tr>
+<td>
+<pre> cp /path/to/your/blacklist.tar.gz /usr/local/squidGuard/db
+ cd /usr/local/squidGuard/db
+ gzip -d blacklist.tar.gz
+ tar xfv blacklist.tar
+</pre>
+</td></tr></table>
+<br>
+Now the blacklists should be ready to use.
+</ol>
+<br><br>
+Congratulation. You have just completed the installation of squidGuard. The
+next step is to configure
+the software according to your needs. After this you should verify your 
+installation before you finally modify your squid configuration to work
+with squidGuard.
+<br><br>
+Proceed with:&nbsp;&nbsp;&nbsp;&nbsp;<img alt="" src="/Logos/arrow-green.gif">
+<a href="configure.html">Basic Configuration of SquidGuard</a>
+<br><br>
+
+
+</td></tr></table>
+
+</td>
+<td valign=top>
+<br><br><br><br>
+
+<a href="/Doc/index.html"><font color=black>Documentation</font></a>
+
+<hr color="#001199">
+
+<a href="/Doc/install.html"><font color=black>Installation</font></a>
+
+<hr color="#001199">
+
+Configuration</a>
+
+<table border=0 cellspacing=1 cellpadding=1>
+
+<tr><td>&nbsp;<a href="/Doc/configure.html"><font color=black size=-1>Getting started</font></a></td></tr>
+
+<tr><td>&nbsp;<font size=-1>Destination ACLs</font></td></tr>
+
+<tr><td>&nbsp;<font size=-1>Source ACLs</font></td></tr>
+
+<tr><td>&nbsp;<a href="/Doc/redirect.html"><font color=black size=-1>Redirect Rule</font></a></td></tr>
+
+<tr><td>&nbsp;<a href="/Doc/extended.html#times"><font color=black size=-1>Time Constraints</font></a></td></tr>
+
+<tr><td>&nbsp;<a href="/Doc/authentication.html"><font color=black size=-1>Authentication</font></a></td></tr>
+
+<tr><td>&nbsp;<a href="/Doc/expressionlist.html"><font color=black size=-1>Regular Expressions</font></a></td></tr>
+
+<tr><td>&nbsp;<a href="/Doc/examples.html"><font color=black size=-1>Examples</font></a></td></tr>
+
+</table>
+
+<hr color="#001199">
+
+<a href="runtimeops.html" target=body><font color=black>Runtime
+
+Options</font></a>
+
+<hr color="#001199">
+
+<a href="aboutblocking.html"><font color=black>About blocking</font></a>
+
+<hr color="#001199">
+
+<a href="troubleshoot.html"><font color=black>Troubleshooting </font></a>
+
+<hr color="#001199">
+
+<a href="known_issues.html"><font color=black>Known Issues</font></a>
+
+<hr color="#001199">
+
+<a href="other_sources.html"><font color=black>Other Sources</font></a>
+
+<hr color="#001199">
+
+
+
+</td></tr>
+
+
+
+</table>
+
+
+
+<br><br>
+
+<hr width=100%>
+
+<font size=-2>
+
+&nbsp; &copy; Powered by <a href="http://www.shalla.de/">Shalla Secure
+
+Services</a> 2007-2008<br><br>
+
+</font>
+
+</td>
+
+</tr>
+
+</table>
+
+
+
+</body>
+
+</html>
+
+
+

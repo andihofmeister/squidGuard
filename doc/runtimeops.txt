@@ -1,0 +1,90 @@
+                                 SquidGuard
+
+   [1]HOME [2]Downloads [3]Documentation [4]Development [5]Blacklists
+   [6]Contributions [7]Contact
+
+  squidGuard - Runtime Options
+
+   SquidGuard accept the following options:
+   -v Setting this option will display the version number.
+   -d Setting this option will direct all errors to stderr (usually the
+   terminal you started squidGuard from). This is extremely helpful when
+   verifying a fresh installation or for troubleshooting purposes.
+   -b Switch on the progress bar when updating the blacklists. This option
+   is available with version 1.4 and later.
+   -c file This option allows you to specify another configuration file.
+   Use this when testing new configurations before making them active.
+   -t time This option allows you to set the startup time format to
+   yyyy-mm-ddTHH:MM:SS. This is especially interesting if you are testing
+   time acls.
+   -u file Updating the entire domains and urls files can be quite time
+   consuming. It is much faster to work with .diff files and just include
+   the changes into the db files. Using this option squidGuard will look
+   in the category directories for .diff files and prepare the changes
+   accordingly. The changes will be made active once squid is reconfigured
+   (squid -k reconfigure).
+   -C file|all Using -C all will create the db files for all configured
+   categories anew. If you only want to update a specific file, you can
+   enter it directly, f.e. -C porn/domains.
+   -P If set squidguard will not go into emergency mode when an error with
+   the blacklists is encountered. This option only works when used with
+   option -C. This option is available with version 1.4 and later.
+
+   [8]Documentation
+     __________________________________________________________________
+
+   [9]Installation
+     __________________________________________________________________
+
+   Configuration
+    [10]Getting started
+    Destination ACLs
+    Source ACLs
+    [11]Redirect Rule
+    [12]Time Constraints
+    [13]Authentication
+    [14]Regular Expressions
+    [15]Examples
+     __________________________________________________________________
+
+   [16]Runtime Options
+     __________________________________________________________________
+
+   [17]About blocking
+     __________________________________________________________________
+
+   [18]Troubleshooting
+     __________________________________________________________________
+
+   [19]Known Issues
+     __________________________________________________________________
+
+   [20]Other Sources
+     __________________________________________________________________
+   _______________________________________________________________________
+
+     © Powered by [21]Shalla Secure Services 2007-2008
+
+References
+
+   1. http://www.squidguard.org/index.html
+   2. http://www.squidguard.org/download.html
+   3. http://www.squidguard.org/Doc/
+   4. http://www.squidguard.org/Devel/
+   5. http://www.squidguard.org/blacklists.html
+   6. http://www.squidguard.org/Contrib/
+   7. http://www.squidguard.org/impressum.html
+   8. http://www.squidguard.org/Doc/index.html
+   9. http://www.squidguard.org/Doc/install.html
+  10. http://www.squidguard.org/Doc/configure.html
+  11. http://www.squidguard.org/Doc/redirect.html
+  12. http://www.squidguard.org/Doc/extended.html#times
+  13. http://www.squidguard.org/Doc/authentication.html
+  14. http://www.squidguard.org/Doc/expressionlist.html
+  15. http://www.squidguard.org/Doc/examples.html
+  16. http://www.squidguard.org/Doc/runtimeops.html
+  17. http://www.squidguard.org/Doc/aboutblocking.html
+  18. http://www.squidguard.org/Doc/troubleshoot.html
+  19. http://www.squidguard.org/Doc/known_issues.html
+  20. http://www.squidguard.org/Doc/other_sources.html
+  21. http://www.shalla.de/

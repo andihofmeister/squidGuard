@@ -1,0 +1,135 @@
+                         Another squidguard website
+
+   [1]Home [2]Documentation [3]Download [4]Blacklists [5]Useful stuff
+   [6]Installation [7]Basic Configuration [8]Extended Configuration
+   [9]Known Issues
+
+  Extended Configuration of SquidGuard
+
+   There are several more options to configure SquidGuard according to
+   your needs.
+
+   [10]Not allowing IP adresses          [11]Times
+   [12]Rules based on source IP adresses [13]Logging blocked access tries
+
+     Not allowing IP adresses
+   To make sure that people don't bypass the URL filter by simply using
+   the IP addresses instead of the fully qualified domain names, you can
+   add the   !in-addr   following to your acl:
+
+   Disallowing access to IP addresses
+ acl {
+        default {
+                pass !in-addr all
+                redirect http://localhost/block.html
+        }
+ }
+
+     Blocking based on times
+   There are two ways to define times and dates where access to websites
+   are allowed or disallowed. The  weekly  directive is used for
+   reoccuring access time, f.e. allowing web access to blocked sites after
+   work.
+   Using the  date  directive you can additionally define special days
+   where access may be granted. Wildcards can be used.
+
+   Defining access times
+time afterwork {
+  weekly   * 17:00-24:00            # After work
+  weekly   fridays 16:00-17:00      # On friday we close earlier
+  weekly   saturdays sundays        # Weekend
+  date   *.01.01                    # New Year's Day
+  date   *.12.24 12:00-24:00        # Christmas Eve
+  date   2006.04.14-2006.04.17      # Easter 2006
+  date   2006.05.01                 # Maifeiertag
+}
+
+   To apply the defined times you can use the qualifiers  within  and
+   outside , respectively. Now your acl looks like that:
+
+acl {
+        all within afterwork {
+                pass all
+        }
+        else {
+                pass    !adv !porn !warez all
+        }
+        default {
+                pass    none
+                redirect http://localhost/block.html
+                }
+}
+
+   This means that for everyone free access to web sites is possible
+   during the times defines in afterwork. Outsite these times people
+   cannot access whatever is defined in adv, porn and warez.
+
+     Rules based on source IP adresses
+   If you have policies in place granting some people access to more sites
+   than others you have different options how to implement this policy.
+   One way is to define source IP acls. This can only work if your user
+   groups are well separated within your network.
+   Assuming that this is the case you can now define the source IP ranges
+   in your squidGuard.conf the following way:
+
+   Defining source IP addresses
+src admins {
+        ip      192.168.2.0-192.168.2.255
+        ip      172.16.12.0/255.255.255.0
+        ip      10.5.3.1/28
+}
+
+   You can secify IP addresses directly as well as defining IP ranges
+   using a from-to notation, defining the netmask or use the netmask
+   prefix abbreviation.
+   Annotation: If you have many network definitions for a user group you
+   can put that info into a separate file and just tell your
+   squidGuard.conf about the location of the file. In this case you write
+   in your squidGuard.conf:
+
+src admins {
+        iplist      adminlist
+}
+
+   SquidGuard will look for a file called adminlist located wherever you
+   pointed your dbhome directive to. Alternatively you can specify an
+   absolute path with your filename. The file itself holds the information
+   in the following style:
+
+192.168.2.0-192.168.2.255
+172.16.12.0/255.255.255.0
+10.5.3.1/28
+
+     Logging blocked access tries
+   It may be of interest who is accessing blocked sites. To track that
+   down you can add a log directive to your src or dest definitions in
+   your squidGuard.conf. If only a file name is given, the file is search
+   in the directory specified in the logdir directive. Alternatively you
+   can specify an absolute path with your logfilename.
+
+   Logging blocked access tries
+dest porn {
+        domainlist porn/domains
+        urllist porn/urls
+        log pornaccesses
+}
+     __________________________________________________________________
+
+   Mirko Lorenz - mirko at shalla.de
+   26.03.2006
+
+References
+
+   1. http://squidguard.shalla.de/index.html
+   2. http://squidguard.shalla.de/Doc/index.html
+   3. http://squidguard.shalla.de/download.html
+   4. http://squidguard.shalla.de/blacklists.html
+   5. http://squidguard.shalla.de/addsoft.html
+   6. http://squidguard.shalla.de/Doc/install.html
+   7. http://squidguard.shalla.de/Doc/configure.html
+   8. http://squidguard.shalla.de/Doc/extended.html
+   9. http://squidguard.shalla.de/Doc/known_issues.html
+  10. http://squidguard.shalla.de/Doc/extended.html#notIP
+  11. http://squidguard.shalla.de/Doc/extended.html#times
+  12. http://squidguard.shalla.de/Doc/extended.html#sourceIP
+  13. http://squidguard.shalla.de/Doc/extended.html#blocklog

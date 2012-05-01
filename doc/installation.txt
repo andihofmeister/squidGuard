@@ -1,0 +1,334 @@
+   [1][squidGuard.gif] Installing squidGuard [install.gif]
+   [2]squidGuard is an ultrafast and free filter, redirector and access
+   controller for [3]Squid
+   By [4]Pål Baltzersen and [5]Lars Erik Håland
+   [6]Copyright © 1999-2000, [7]Tele Danmark InterNordia
+   Visitors: [counter] (Since 2002-01-08 19:54:05)
+   This page was last modified 2002-01-08
+
+[arrow-red.gif] Installation instructions
+
+   The good news:
+          squidGuard uses Squid's [8]standard redirector interface so no
+          patching of Squid is needed!
+
+   and the not so good news:
+          Currently we don't distribute precompiled versions of
+          squidGuard.
+          Though following these few steps should bring you up and going
+          with squidGuard within a few minutes, provided you have the
+          basic tools:
+
+  [arrow-green.gif] For the impatient/experienced:
+
+    1. Install version 2.X of the [9]Berkeley DB library (if not already
+       installed on your system)
+    2. [10]./configure
+    3. [11]make
+    4. [12]make install
+    5. Create a [13]squidGuard.conf that suits your needs
+    6. Create the [14]domain, [15]url and [16]expression lists you want
+    7. Test/simulate
+    8. [17]Configure squid to use squidGuard as the redirector and
+       specify the number of redirector processes you want
+    9. [18]Send Squid a HUP signal
+       [19]Voilà!
+
+  [arrow-green.gif] For the less impatient:
+
+    1. Besides [20]Squid you need a basic UNIX development environment
+       with a [21]make compatible build tool, an ANSI [22]C compiler, a
+       [23]yacc compatible parser generator, a [24]lex compatible lexical
+       analyzer generator and a [25]regcomp()/regexec() compatible
+       regular expression library. You also need [26]gzip to unpack the
+       distribution. Don't despair: If you managed to install Squid you
+       most likely have all this! If not the links here points you to all
+       the free sources you need.
+    2. You need a version 2.X of the [27]Berkeley DB library installed on
+       your system. If you don't already have it, [28]download and
+       install the latest 2.X version. It should compile and install
+       right out of the box. (squidGuard is developed with Berkeley DB
+       version 2.x in mind, but it might work with Berkeley DB versions
+       1.85 and 1.86 too. If you have success linking and running with
+       versions 1.85 or 1.86 please [29]report!)
+       Here is a quick installation guide for the Berkeley DB library:
+
+                mkdir -p /local/src (or wherever you like)
+                cd /local/src
+                gzip -dc /wherever/db-2.y.z.tar.gz | tar xvf -
+                cd db-2.y.z/dist
+                ./configure (optionally add the environment and flags you
+                 prefer) *)
+                make
+                make install
+                make clean (optional)
+
+       *) At [30]Tele Danmark we use:
+
+#!/bin/sh -
+   cd build_unix
+   CC=gcc \
+   CXX=g++ \
+   CFLAGS="-O3 -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64" \
+   CXXFLAGS="-O3 -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64" \
+   ../dist/configure \
+     --verbose \
+     --target=sparc-sun-solaris \
+     --enable-dynamic \
+     --enable-compat185 \
+     --enable-rpc \
+     --prefix=/local
+
+       By default the more recent versions of the Berkeley DB library
+       installs itself under /usr/local/BerkeleyDB/{lib,include,bin,docs}
+    3. [31]Download squidGuard and unpack the distribution with:
+
+                mkdir -p /local/src (or wherever you like)
+                cd /local/src
+                gzip -dc /wherever/squidGuard-x.y.z.tar.gz | tar xvf -
+                cd squidGuard-x.y.z
+
+    4. squidGuard now comes with [32]GNU auto configuration for maximum
+       portability and easy compilation setup. For a default environment,
+       simply run:
+
+                ./configure
+
+       If you have [33]gcc you may want to force the use of gcc and
+       optimize more:
+
+                csh|tcsh# (setenv CC "gcc"; setenv CFLAGS "-O3";
+                ./configure)
+
+       or
+
+                sh|bash|ksh# CC="gcc" CFLAGS="-O3" ./configure
+
+       depending on your shell. This will prepare Makefiles to compile
+       and optionally install the squidGuard executable as
+       /usr/local/bin/squidGuard. If you prefer to install squidGuard as
+       for instance /local/squid/bin/squidGuard, use the option:
+
+                ./configure --prefix=/local/squid
+
+       To avoid the need of runing squidGuard with the command line
+       option "-c /wherever/filter.conf"*), you may want to change the
+       default to the actual location of the configuration file at
+       compile time by adding:
+
+                ./configure --with-sg-config=/wherever/filter.conf
+
+       *)Note: squid-2.2.x up to STABLE2are broken and ignores the
+       argument list silently without passing it to the redirector.
+       Therefor with squid-2.2.x up to STABLE2 you must specify the
+       correct config file location with --with-sg-config=... at compile
+       time. Versions up to 2.1.PATCH2 do not have this problem.
+       To see the full list of build configuration options run:
+
+                ./configure --help
+
+       At [34]Tele Danmark we use:
+
+#!/bin/sh -
+   CC="gcc" \
+   CFLAGS="-O3 -Wall" \
+   LIBS="-R/local/lib -lnls" \
+   ./configure \
+   --verbose \
+   --target=sparc-sun-solaris \
+   --prefix=/local/squid \
+   --with-db-lib=/local/lib \
+   --with-db-inc=/local/include \
+   --with-sg-config=/var/spool/www/hosts/proxy.teledanmark.no/filter/conf/filte
+r.conf \
+   --with-sg-logdir=/var/spool/www/hosts/proxy.teledanmark.no/filter/logs \
+   --with-sg-dbhome=/var/spool/www/hosts/proxy.teledanmark.no/filter/db
+
+    5. Now simply run:
+
+                make
+
+       This should compile squidGuard without errors. If you compile with
+       gcc -Wall you may safely ignore warnings for the machine generated
+       code y.tab.{c,h} (from sg.y) and lex.yy.c (from sg.l). You should
+       probably investigate other warnings and errors.
+    6. To test the newly built squidGuard run:
+
+                make test
+
+    7. If all is OK run:
+
+                make install
+
+       This will install the squidGuard executable in
+       prefix/bin/squidGuard where prefix is /usr/local unless you
+       changed it with --prefix=/some/where/else.
+    8. Make a [35]configuration file for squidGuard. Start with a
+       [36]minimal configuration and extend as your experience and needs
+       grow.
+    9. Make the [37]destination lists (databases) you want (if any at
+       all).
+   10. Test your configuration isolated. Put some sample requests in
+       three files named something like test.pass, test.rewrite and
+       test.block. (Omit test.rewrite if you don't have rewrite rules.)
+       The format of these files is:
+
+                URL ip-address/fqdn ident method
+
+       For instance:
+
+                http://freeware.teledanmark.no/squidGuard/ 10.1.2.3/pc123
+                .teledanmark.no fdgh GET
+                http://bad.site.com/dirty/stuff/foo.htm 10.3.2.1/- - GET
+
+       The ip-address is mandatory, the fqdn and ident fields may be "-"
+       depending of how you have configured Squid with respect to reverce
+       DNS lookups and indent lookups. The request method is GET, POST,
+       etc.
+       Put some sample requests that should pass transparently, be
+       rewritten/redirected and blocked in test.pass, test.rewrite and
+       test.block respectively. Now you are ready to simulate real
+       requests. Run the three simulations:
+
+                prefix/bin/squidGuard -c /your/squidGuard.conf < test.pas
+                s > test.pass.out
+                prefix/bin/squidGuard -c /your/squidGuard.conf < test.rew
+                rite > test.rewrite.out
+                prefix/bin/squidGuard -c /your/squidGuard.conf < test.blo
+                ck > test.block.out
+
+       Check the pass output:
+
+                wc -l test.pass
+                wc -l test.pass.out
+                wc -w test.pass.out
+
+       The numerical results should be identical for the first two tests
+       and 0 for the last.
+       Check the rewrite/redirect output (Omit if you don't have rewrite
+       rules.):
+
+                wc -l test.rewrite
+                wc -l test.rewrite.out
+                diff test.rewrite test.rewrite.out | egrep -ic '^> ..* [0
+                -9.]+/..* ..* [a-z]+$'
+                more test.rewrite.out
+
+       The numerical results should be identical for the first three
+       tests. Visually ensure the new URLs are as expected with the more
+       command.
+       Check the block output:
+
+                wc -l test.block
+                wc -l test.block.out
+                diff test.block test.block.out | egrep -ic '^> ..* [0-9.]
+                +/..* ..* [a-z]+$'
+                more test.block.out
+
+       The numerical results should be identical for the first three
+       tests. Visually ensure the new URLs are as expected with the more
+       command.
+   11. Install the empty image, stopsign image, dummy access denied page,
+       the more or less intelligent CGI page or whatever your redirectors
+       points to, on a web server that Squid can access; typically on the
+       proxy server or a nearby server. If you don't have a web server we
+       strongly recommend [38]Apache although any stable web server of
+       your choice can be used.
+   12. Tell Squid to use squidGuard as the redirector by uncommenting and
+       changing the following tags in squid.conf to:
+
+                redirect_program /prefix/bin/squidGuard
+
+       or if squidGuard's config file is somewhere else than set at
+       compile time*):
+
+                redirect_program /prefix/bin/squidGuard -c /wherever/squi
+                dGuard.conf
+
+       where prefix is /usr/local unless you changed it with
+       --prefix=/some/where/else.
+       *)Note: squid-2.2.x up to STABLE2 are broken and ignores the
+       argument list silently without passing it to the redirector.
+       Therefor with squid-2.2.x up to STABLE2 you must specify the
+       correct config file location with --with-sg-config=... at
+       [39]compile time. Versions up to 2.1.PATCH2 do not have this
+       problem.
+       Also configuere the number of redirector processes you think you
+       want:
+
+                redirect_children 4
+
+       I really don't know why one should have more than one squidGuard
+       process on a single CPU system cince squidGuard never blocks
+       indefinitly like the cache_dns_program and optional
+       authenticate_program are more likely to do. Of course with more
+       redirectors there is a chance a request that matches the first
+       client group, rule and destination group could sneak out before a
+       request that matches the last rule. But on the other hand more
+       redirectors also slows down the system by added overhead and
+       memory usage. Anyway 4 seems like a fine number to start with. We
+       haven't done any benchmarking to find the best value and it may
+       vary with the actual configuration.
+   13. Send Squid a HUP signal:
+
+                kill -HUP `cat /somewhere/squid.pid`
+
+       or
+
+                squid -k reconfigure
+
+   14. Test with a browser.
+                        ____________________________
+
+                   [40][gnu-logo.gif] [41][perl-logo.gif]
+
+                 [42][squid-logo.gif] [43][squidGuard.gif]
+
+                           [44][home_header.gif]
+
+References
+
+   1. http://ftp.teledanmark.no/pub/www/proxy/squidGuard/
+   2. http://www.squidguard.org/
+   3. http://www.squid-cache.org/
+   4. http://www.squidguard.org/authors/
+   5. http://www.squidguard.org/authors/
+   6. http://www.squidguard.org/copyright/
+   7. http://www.teledanmark.no/
+   8. http://www.squid-cache.org/Versions/1.1/Release-Notes-1.1.txt
+   9. http://www.squidguard.org/install/#Detailed_install_2
+  10. http://www.squidguard.org/install/#Detailed_install_4
+  11. http://www.squidguard.org/install/#Detailed_install_5
+  12. http://www.squidguard.org/install/#Detailed_install_7
+  13. http://www.squidguard.org/config/
+  14. http://www.squidguard.org/config/#Domainlists
+  15. http://www.squidguard.org/config/#URLlists
+  16. http://www.squidguard.org/config/#Expressionlists
+  17. http://www.squidguard.org/install/#Detailed_install_12
+  18. http://www.squidguard.org/install/#Detailed_install_13
+  19. http://www.squidguard.org/install/#Detailed_install_14
+  20. http://www.squidguard.org/links/#Squid
+  21. http://www.squidguard.org/links/#Gmake
+  22. http://www.squidguard.org/links/#Gcc
+  23. http://www.squidguard.org/links/#Bison
+  24. http://www.squidguard.org/links/#Flex
+  25. http://www.squidguard.org/links/#Regex
+  26. http://www.squidguard.org/links/#Gzip
+  27. http://www.squidguard.org/links/#DB
+  28. http://www.squidguard.org/links/#DB
+  29. mailto:squidguard@squidguard.org
+  30. http://www.teledanmark.no/
+  31. http://www.squidguard.org/download/
+  32. http://www.gnu.org/software/autoconf/
+  33. http://www.squidguard.org/links/#Gcc
+  34. http://www.teledanmark.no/
+  35. http://www.squidguard.org/config/
+  36. http://www.squidguard.org/config/#Minimal
+  37. http://www.squidguard.org/config/#Lists
+  38. http://www.squidguard.org/links/#Apache
+  39. http://www.squidguard.org/install/#Defaultconfigfile
+  40. http://www.gnu.org/
+  41. http://www.perl.com/
+  42. http://www.squid-cache.org/
+  43. http://www.squidguard.org/
+  44. http://www.sleepycat.com/

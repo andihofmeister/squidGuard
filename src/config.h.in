@@ -1,0 +1,32 @@
+/* Defined if you supply --with-sg-config */
+#undef ACCONFIG
+
+/* Defined if you supply --with-sg-logdir */
+#undef ACLOGDIR
+
+/* Defined if you supply --with-sg-dbhome */
+#undef ACDBHOME
+
+/* Define if you have the strerror function.  */
+#undef HAVE_STRERROR
+
+/* Define if you have the sigaction function.  */
+#undef HAVE_SIGACTION
+
+/* Define if you have the signal function.  */
+#undef HAVE_SIGNAL
+
+/* Define if LDAP support for authentication should be comiled */
+#undef HAVE_LIBLDAP
+
+/* Define if MYSQL support for authentication should be comiled */
+#undef HAVE_MYSQL
+
+/* Define if you have dbversion greater than 3.2  */
+#undef DB_VERSION_GT2
+
+/* Define if you have dbversion greater than 4.0  */
+#undef DB_VERSION_GT3
+
+/* Define if syslog shall be used for logging */
+#undef USE_SYSLOG

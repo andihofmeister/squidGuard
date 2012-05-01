@@ -1,0 +1,46 @@
+Known issues:
+=============
+
+Check /www2.squidguard.org/cgi-bin/bugs/query.cgi for more accurate information.
+
+----------------------------------------------------------------------
+
+- squidGuard 1.4-alpha and below:
+  Compilation error with BerkeleyDB 4.7
+
+  Reason:
+  Some old stuff has (finally) been removed from the db sources. SquidGuard
+  unfortunately still uses the old syntax (historical reasons).
+
+  Fix/Workaround:
+        BerkeleyDB up to version 4.6 is known to work properly.
+        Will be fixed in the next version.
+
+  Annotation: 
+  	There are also messages from users working with BerkeleyDB 4.7 without
+	problems.
+
+----------------------------------------------------------------------
+
+- squidGuard 1.2.1-beta under Windows (with LDAP support configured):
+  A linker error has been reported:
+
+ld.exe: symbol `_yyin' defined more than once in lex.yy.o
+make[1]: *** [squidGuard] Error 1
+make[1]: Leaving directory
+`/squidguardsrc/121beta/squidguard-1.2.1-beta/src'
+make: *** [all] Error 1
+
+  Reason: Flex generates code that has two lines for defining yyin
+          (flex is doing this at least since 2001).
+          While this makes no problems on Unix the Windows linker
+          dislikes that. 
+  Remedy: Comment the following in lex.yy.c out
+          FILE *yyin = (FILE *) 0, *yyout = (FILE *) 0;
+          Compile lex.yy.c manually and link the object files
+          manually.  
+
+----------------------------------------------------------------------
+
+
+

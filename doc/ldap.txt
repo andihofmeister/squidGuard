@@ -1,0 +1,115 @@
+                                 SquidGuard
+
+   [1]HOME [2]Downloads [3]Documentation [4]Development [5]Blacklists
+   [6]Contributions [7]Contact
+
+  squidGuard - Tips for using LDAP
+
+   Some user experienced problem running squidGuard with LDAP
+   authentication. In most cases on startup squidGuard gave a syntax or
+   parsing error when the ldapsearch line was read in. This can be result
+   of several shortcomings. The list below is compiled from own
+   experiences and user feedback. Hopefully it assists you to successfully
+   set up LDAP authentication with squidGuard.
+   Please check your installation for the following topics:
+    1. flex and bison
+       Make sure that you have flex and bison installed.
+       You can compile squidguard without but then LDAP will not work. If
+       the squidGuard process encounters the lack of flex and/or bison it
+       takes previously generated files to include them into the code.
+       These flex and bison files have been created without any additional
+       options (to ensure that they can run on most systems).
+    2. Using RPMs
+       Not all available RPMs do have the LDAP functionality compiled in.
+       If no LDAP libraries (or LDAP itself) is on the list or
+       requirements there is a good chance that the package builds without
+       it. You may wish to check with the vendor of the RPM.
+       if you are building squidGuard from the sources check the next
+       topics.
+    3. ldap libraries
+       In order to use LDAP functionalities the system must have the
+       proper LDAP libraries and include files installed (openldap works
+       fine).
+    4. configure with ldap
+       Before you compile squidGuard you must run configure with the ldap
+       option activated:
+
+   Running configure with ldap option:
+  ./configure --with-ldap=yes
+
+    5. name resolution
+       Make sure that the system squidGuard is running on can properly
+       resolve its own name.
+       It has been reported that a syntax error shows up if the system
+       cannot resolve its own name properly.
+    6. AD forrest: answering with referals
+       Currently squidGuard is not able to handle referals as answer from
+       an Active Directory. If you don't need referals in your environment
+       you can turn them off. Otherwise you have to specify a fixed server
+       and path where the user information can be obtained. Please take a
+       look on the [8]"What to do with Active Directory Referals?" page
+       how users solved this problem in their environment.
+    7. configuration errors
+       Make sure that there are no typos your configuration. The correct
+       host is addressed to lookup the correct group membership with the
+       correct password in the correct LDAP tree.
+       [9]Documentation
+         ______________________________________________________________
+
+       [10]Installation
+         ______________________________________________________________
+
+       Configuration
+
+        [11]Getting started
+        Destination ACLs
+        Source ACLs
+        [12]Redirect Rule
+        [13]Time Constraints
+        [14]Authentication
+        [15]Regular Expressions
+        [16]Examples
+         ______________________________________________________________
+
+       [17]Runtime Options
+         ______________________________________________________________
+
+       [18]About blocking
+         ______________________________________________________________
+
+       [19]Troubleshooting
+         ______________________________________________________________
+
+       [20]Known Issues
+         ______________________________________________________________
+
+       [21]Other Sources
+         ______________________________________________________________
+       ___________________________________________________________________
+
+         © Powered by [22]Shalla Secure Services 2007-2008
+
+References
+
+   1. http://www.squidguard.org/index.html
+   2. http://www.squidguard.org/download.html
+   3. http://www.squidguard.org/Doc/
+   4. http://www.squidguard.org/Devel/
+   5. http://www.squidguard.org/blacklists.html
+   6. http://www.squidguard.org/Contrib/
+   7. http://www.squidguard.org/impressum.html
+   8. http://www.squidguard.org/Doc/ldap-ad-tips.html
+   9. http://www.squidguard.org/Doc/index.html
+  10. http://www.squidguard.org/Doc/install.html
+  11. http://www.squidguard.org/Doc/configure.html
+  12. http://www.squidguard.org/Doc/redirect.html
+  13. http://www.squidguard.org/Doc/extended.html#times
+  14. http://www.squidguard.org/Doc/authentication.html
+  15. http://www.squidguard.org/Doc/expressionlist.html
+  16. http://www.squidguard.org/Doc/examples.html
+  17. http://www.squidguard.org/Doc/runtimeops.html
+  18. http://www.squidguard.org/Doc/aboutblocking.html
+  19. http://www.squidguard.org/Doc/troubleshoot.html
+  20. http://www.squidguard.org/Doc/known_issues.html
+  21. http://www.squidguard.org/Doc/other_sources.html
+  22. http://www.shalla.de/

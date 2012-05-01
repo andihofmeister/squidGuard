@@ -1,0 +1,242 @@
+   The squidGuard FAQ 
+   squidGuard is an ultrafast and free filter, redirector and access
+   controller for Squid
+   Originally created by Pål Baltzersen and Lars Erik Håland
+   Maintained by Christine Kronberg.
+   Copyright © 2006-2007, Shalla Secure Services
+
+              FAQ - Frequently Asked/Answered Questions
+
+   This is out of date. Have a look at http://www.maynidea.com/squidguard/faq-plus.html
+
+   Currently in semirandom order:
+    1.
+
+        Is there a mailing list for squidGuard?
+                Yes! See www.shalla.de/mailman/squidguard/.
+
+    2.
+
+        squidGuard does not block?
+                There my be at least 2 reasons for this:
+
+              1. You didn't end your pass rules with "none". Pass rules
+                 ends with an implicit "all". It is good practice to
+                 allways en the pass rules with either "all" or "none" to
+                 make them clear. Ie. use:
+                 pass good none
+                 or
+                 pass good !bad all
+              2. squidGuard goes into emergency mode. Reasons may be
+                 syntax errors in the config file, reference to non
+                 existing database files, filprotection problems or
+                 missing directories. Check the squidGuard log.
+                 Note:When run under Squid, squidGuard is run with the
+                 same user and group ID as Squid (cache_effective_user
+                 and cache_effective_group in squid.conf). The squidGuard
+                 configuration and database files must be readable for
+                 this user and/or group and the squidGuard log directory
+                 must be writable for this user and/or group. If not
+                 squidGuard will go into the "pass all for all" emergency
+                 mode.
+
+    3.
+
+        How do I debug squidGuard?
+                Do something like this:
+                echo "http://foo/bar 10.0.0.1/- - GET" | /usr/local/bin/s
+                quidGuard -c /tmp/test.cfg -d
+                This redirects the log to stderr. The response is either
+                a blank line (pass on) or a the input with the URL part
+                rewritten (redirect).
+
+    4.
+
+        How can I block audio and video?
+                Use an [11]expressionlist with something like this:
+                \.(ra?m|mpe?g?|mov|movie|qt|avi|dif|dvd?|mpv2|mp3)($|\?)
+
+
+
+    5.
+
+        How can I test timeconstraints
+                You can set a simulated start time with the
+                -t yyyy-mm-ddTHH:MM:SS option:
+
+                      squidGuard -c test.conf -t 1999-12-31T23:59:30 -d <
+                      test.in>test.out 2>test.log
+
+                With the -t option squidGuard parses the given date&time
+                and calculates an offset from the current time at startup
+                and then adds this offset to all timevalues during
+                runtime.
+
+    6.
+
+        squidGuard compiles fine and the tests succeed, but it seems to
+                pass all when run under Squid
+                There may be at leaste two reasons for this:
+
+               o Some versions of Squid (supposedly 2.2.*) silently
+                 ignores argumets to the right of
+                 redirect_program prefix/bin/squidGuard. Solutions are
+                 one of:
+                    # Set the actual config file location at
+                      [13]compiletime with --with-sg-config
+                    # Use a shell wraper with
+                      redirect_program prefix/bin/squidGuard.sh and make
+                      prefix/bin/squidGuard.sh an executable shell like:
+
+                                  #! /bin/sh -
+                                  exec prefix/bin/squidGuard -c whatever/
+                                  squidGuard.conf
+
+               o When run under Squid, squidGuard is run with the same
+                 user and group ID as Squid (cache_effective_user and
+                 cache_effective_group in squid.conf). The squidGuard
+                 configuration and database files must be readable for
+                 this user and/or group and the squidGuard log directory
+                 must be writable for this user and/or group. If not
+                 squidGuard will go into the "pass all for all" emergency
+                 mode.
+
+    7.
+
+        compilation of sg.l on fails with "sg.l:line ...: Error: Too many
+                positions" with native lex
+                Some native versions of lex have problems with sg.l. The
+                solution is to use [14]GNU flex wich is better anyway. Do
+                "setenv LEX flex" if configure selects the native lex
+                before flex. Flex should compile right out of the box
+                similar to other GNU programs. (Thanks to
+                laurent.foulonneau@mail.loyalty.nc).
+
+    8.
+
+        Can I use proxy authenticated user the same way as RFC931/Ident
+                user?
+                Yes.
+
+    9.
+
+        Can I manipulate domains.db and urls.db from Perl?
+                Yes, but you must bind custom comparefunctions. Also note
+                the domains are stored with a leading ".":
+
+        use DB_File;
+
+        sub mirror($) {
+          scalar(reverse(shift));
+        }
+
+        sub domainmatch($$) {
+          my $search = mirror(lc(shift));
+          my $found = mirror(lc(shift));
+          if ("$search." eq $found) {
+            return(0);
+          } else {
+            return(substr($search,0,length($found)) cmp $found);
+          }
+        }
+
+        sub urlmatch($$) {
+          my $search = lc(shift) . "/";
+          my $found = lc(shift) . "/";
+          if ($search eq $found) {
+            return(0);
+          } else {
+            return(substr($search,0,length($found)) cmp $found);
+          }
+        }
+
+        my (%url,%domain);
+
+        $DB_BTREE->{compare} = \&urlmatch;
+        my $url_db = tie(%url, "DB_File", "urls.db", O_CREAT|O_RDWR, 0664, $DB_
+BTREE)
+        || die("urls.db: $!\n");
+
+        $DB_BTREE->{compare} = \&domainmatch;
+        my $domain_db = tie(%domain, "DB_File", "domains.db", O_CREAT|O_RDWR, 0
+664, $DB_BTREE)
+        || die("domains.db: $!\n");
+
+        # Now you can operate on %url and %domain just as normal perl hashes:)
+        # Add "playboy.com" to the domainlist unless it's already there:
+        $domain{".playboy.com"} = "" unless(exists($domain{"playboy.com"}));
+        # or use the DB_File functions put, get, del and seq:
+        # Add "sex.com" and "dir.yahoo.com/business_and_economy/companies/sex"
+        # and delete "cnn.com":
+        $domain_db->put(".sex.com","") unless(exists($domain{"sex.com"}));
+        $domain_db->sync; # Seems to only sync the last change.
+        $domain_db->del("cnn.com") if(exists($domain{"cnn.com"}));
+        $domain_db->sync; # Seems to only sync the last change.
+        $url_db->put("xyz.com/~sex","") unless(exists($url{"xyz.com/~sex"}));
+        $url_db->sync; # Seems to only sync the last change.
+
+        $url_db->sync; # Seems to only sync the last change.
+        $domain_db->sync; # Seems to only sync the last change.
+        undef($url_db); # Destroy the object
+        undef($domain_db); # Destroy the object
+        untie(%url); # Sync and close the file and undef the hash
+        untie(%domain); # Sync and close the file and undef the hash
+
+                See the perltie(1) and DB_File(3) man pages that comes
+                with Perl for more info.
+
+   10.
+
+        How can I list domains.db or urls.db from Perl?
+                Use a script like this:
+
+        #!/local/bin/perl -w
+        use strict;
+        use DB_File;
+
+        foreach (@ARGV) {
+          my (%db, $key, $val);
+          die("$_: $!\n") unless(-f);
+          tie(%db, "DB_File", $_, O_RDONLY, 0664, $DB_BTREE) || die("$_: $!\n")
+;
+          foreach $key (keys(%db)) {
+            if($val = $db{$key}) {
+              $val = "\"$val\"";
+            } else {
+              $val = "undef";
+            }
+            print "$key -> $val\n";
+          }
+          untie(%db);
+        }
+
+                See the perltie(1) and DB_File(3) man pages that comes
+                with Perl for more info.
+
+   11.
+
+        How can I get around "make: don't know how to make /bin/false.
+                Stop"?
+                Your system does not have lynx and not /bin/false either:
+                If it has /usr/bin/false do:
+
+        # ln -s ../usr/bin/false /bin/.
+
+                Alternatively:
+
+        # echo exit 255 >/bin/false
+        # chmod a+rx /bin/false
+
+   If you have questions and/or answers that should be on the FAQ list
+   please send them to sg-bugs (at) squidguard.org
+                        ____________________________
+
+
+References
+
+   1. http://www.squidguard.org/
+   2. http://www.squid-cache.org/
+   4. http://www.squidguard.org/Doc/
+   5. http://www.gnu.org/
+   6. http://www.perl.com/
+   7. http://www.squid-cache.org/

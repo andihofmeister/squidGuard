@@ -1,0 +1,203 @@
+#!/usr/bin/perl -w
+#
+#
+# usage: sgclean.pl squidGuard.conf
+#
+# sgclean.pl removes redundant entries in domain files and url files
+#
+# although sgclean.pl makes a backup of the old files, it's always a
+# good idea to make your own backup before running the program
+#
+# By  Lars Erik Håland 1999 (leh@nimrod.no)
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License (version 2) as
+# published by the Free Software Foundation.  It is distributed in the
+# hope that it will be useful, but WITHOUT ANY WARRANTY; without even the
+# implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+# PURPOSE.  See the GNU General Public License (GPL) for more details.
+#  
+# You should have received a copy of the GNU General Public License
+# (GPL) along with this program.
+#
+
+use strict;
+
+use DB_File;
+use Fcntl;
+
+my $VERSION = "1.0.0";
+
+my $tmpfile = "/var/tmp/squidGuard.db";
+my $tmpfile_delete = "/var/tmp/squidGuard.delete.db";
+my $config = shift;
+
+usage() if(!defined $config);
+
+my $files = sg_config($config);
+
+$| = 1;
+
+for(keys %$files){
+  sg_clean($_,$files->{$_});
+}
+
+sub sg_clean {
+  my $file = shift;
+  my $type = shift;
+  print STDERR "cleaning $type $file\n";
+  open(F,$file) || die "can't open $type file $file: $!";
+  open(W,">$file.$$") || die "can't write to $file.$$: $!";
+  sg_clean_dbfiles();
+  my(%SG,%SGD);
+  tie(%SG, 'DB_File',$tmpfile,O_RDWR|O_CREAT,0640,$DB_BTREE);
+  tie(%SGD, 'DB_File',$tmpfile_delete,O_RDWR|O_CREAT,0640,$DB_BTREE);
+  my $count = 1;
+  my $i = 0;
+  print STDERR "loading... ";
+  while(<F>){
+    chomp;
+    my($url,$redirect) = split;
+    $redirect = "" if(!defined $redirect);
+    $SG{$url} = $redirect;
+    $count++;
+  }
+  close(F);
+  print STDERR "complete loading\n";
+  print STDERR "cleaning";
+  my($url,$redirect);
+  while (($url,$redirect) = each %SG) {
+    my $keep = undef;
+    if($type eq "domainlist"){
+      $keep = sg_clean_domain($url,\%SG,1);
+    } elsif($type eq "urllist"){
+      $keep = sg_clean_url($url,\%SG,1);
+    }
+    if(!defined $keep){
+      $SGD{$url}++;
+    }
+    if($i % 100 == 0){
+      my $p = ($i * 100)/$count;
+      print STDERR "." if(int($p) % 10 == 0);
+    }
+    $i++;
+  }
+  print STDERR "complete cleaning\n";
+  print STDERR "updating file";
+  $i = 0;
+  while (($url,$redirect) = each %SG) {
+    next if(defined $SGD{$url});
+    my $line = "$url" . ($redirect ? " $redirect\n" : "\n");
+    print W "$line";
+    if($i % 100 == 0){
+      my $p = ($i * 100)/$count;
+      print STDERR "." if(int($p) % 10 == 0);
+    }
+    $i++;
+  }
+  print "complete updating\n";
+  close(W);
+  sg_update_files($file);
+  untie(%SG);
+  untie(%SGD);
+  sg_clean_dbfiles();
+}
+
+sub sg_clean_domain {
+  my $domain = shift;
+  my $tie = shift;
+  my $exists_ok = shift;
+  my $parts = [split(/[.]/,$domain)];
+  my $d = "";
+  for(reverse @$parts){
+    $d = "$_$d";
+    if(defined $tie->{$d}){
+      if($domain eq $d){
+        #print "$domain exists, skipping\n";
+        return 1 if($exists_ok);
+      } else {
+        #print "$domain is subdomain of $d, skipping\n";
+      }
+      return undef;
+    }
+    $d = ".$d";
+  }
+  return 1;
+}
+
+sub sg_clean_url {
+  my $url = shift;
+  my $tie = shift;
+  my $exists_ok = shift;
+  my $parts = [split(/[\/]/,$url)];
+  my $d = "";
+  for(@$parts){
+    $d = "$d$_";
+    if(defined $tie->{$d}){
+      if($url eq $d){
+        #print "$url exists, skipping\n";
+        return 1 if($exists_ok);
+      } else {
+        #print "$url is part of $d, skipping\n";
+      }
+      return undef;
+    }
+    $d = "$d/";
+  }
+  return 1;
+}
+
+
+sub sg_config {
+  my $file = shift;
+  open(F,$file) || die "can't open sgconfigfile $file: $!";
+  my $dbhome = undef;
+  my $dest = undef;
+  my $files = {};
+  while(<F>){
+    chomp;
+    if(/^\s*dbhome\s+(\S+)/){
+      $dbhome = $1;
+    }
+    if(/^\s*(dest|destination)\s+(\S+)/){
+      $dest = $2;
+    }
+    if(/^\s*(urllist|domainlist)\s+(\S+)/){
+      my $type = $1;
+      my $file = $2;
+      if(!defined $dest){
+        printf("Error in configfile line $.\n");
+        next;
+      }
+      $file = "$dbhome/$file" if(defined $dbhome and $file !~ /^\//);
+      $files->{$file}=$type;
+    }
+  }
+  close(F);
+  return $files;
+}
+
+sub sg_clean_dbfiles {
+  if(-e "$tmpfile"){
+    unlink("$tmpfile") || warn "can't remove $tmpfile: $!";
+  }
+  if(-e "$tmpfile_delete"){
+    unlink("$tmpfile_delete")|| warn "can't remove $tmpfile_delete: $!";
+  }
+}
+
+sub sg_update_files {
+  my $file = shift;
+  if(-e "$file"){
+    system("cp $file $file.old");
+  }
+  if(-e "$file.$$"){
+    rename("$file.$$",$file) || warn "can't rename $file.$$ to $file: $!";
+  }
+}
+
+sub usage {
+  print "Usage: $0 configfile\n";
+  exit;
+}
+

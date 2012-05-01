@@ -1,0 +1,133 @@
+SHELL=/bin/sh
+.SUFFIXES:
+.SUFFIXES: .c .o .pl .pm .pod .html .man
+
+PERL = @PERL@
+
+CC = @CC@
+CFLAGS = @CFLAGS@
+INSTALL = @INSTALL@
+INSTALL_DATA = @INSTALL_DATA@
+INSTALL_PROGRAM = @INSTALL_PROGRAM@
+LDFLAGS = @LDFLAGS@
+LIBS = @LIBS@
+
+RM = rm -f
+MKINSTALLDIRS = mkdir -p
+
+prefix = @prefix@
+exec_prefix = @exec_prefix@
+bindir = $(exec_prefix)/bin
+infodir = $(prefix)/info
+logdir = @sg_logdir@
+configfile = @sg_config@
+dbhomedir = @sg_dbhome@
+SQUIDUSER = @squiduser@
+
+SUBDIRS = src test samples contrib
+INSTALL_TARGETS = install-conf install-build
+
+all::
+	@echo making $@ in `basename \`pwd\``
+
+all update clean distclean realclean::
+	@for subdir in $(SUBDIRS); do \
+		(cd $$subdir && $(MAKE) $(MAKEDEFS) $@) || exit 1; \
+	done
+
+test::
+	@echo making $@ in `basename \`pwd\``
+	(cd $@ && $(MAKE) $(MAKEDEFS) $@)
+
+#
+# Dependencies for installing
+#	
+
+install:	install-build install-conf
+
+install-conf:
+	@echo Installing configuration file  ;
+	@if [ ! -d $(prefix)/squidGuard ]; then \
+		$(MKINSTALLDIRS) $(prefix)/squidGuard ; \
+		echo Created directory $(prefix)/squidGuard ; \
+		chown -R $(SQUIDUSER) $(prefix)/squidGuard || exit 1  ; \
+		echo Assigned $(prefix)/squidGuard to user $(SQUIDUSER) ; \
+	fi ; 
+	@if [ ! -d $(dbhomedir) ]; then \
+		$(MKINSTALLDIRS) $(dbhomedir) ; \
+		echo Created directory $(dbhomedir) ; \
+		chown -R $(SQUIDUSER) $(dbhomedir) || exit 1 ; \
+		echo Assigned $(dbhomedir) to user $(SQUIDUSER) ; \
+	fi ; 
+	@if [ ! -d $(logdir) ]; then \
+		$(MKINSTALLDIRS) $(logdir) ; \
+		echo Created directory $(logdir) ; \
+		chown -R $(SQUIDUSER) $(logdir) || exit 1 ; \
+		echo Assigned $(logdir) to user $(SQUIDUSER) ; \
+	fi ; 
+	@if [ ! -d `dirname $(configfile)` ]; then \
+		umask 022 ; \
+		mkdir -p `dirname $(configfile)` ; \
+		echo No configuration directory found. Created `dirname $(configfile)`. ; \
+	fi;
+	@if test ! -f $(configfile); then \
+		cp samples/sample.conf $(configfile) || exit 1  ; \
+		echo Copied sample squidGuard.conf ; \
+		chmod 644 $(configfile) || exit 1 ; \
+		echo $(configfile) is now readable ; \
+		echo The initial configuration is complete. ; \
+	else \
+		echo Configuration file found. Not changing anything ; \
+	fi; 
+	@echo ;
+	@echo Congratulation. SquidGuard is sucessfully installed. ;
+	@echo ;
+
+install-build:
+	@echo Installing squidGuard 
+	@if [ ! -d $(bindir) ]; then \
+		$(MKINSTALLDIRS) $(bindir) ; \
+	fi ; \
+	cp src/squidGuard $(bindir) || exit 1 ;  \
+	echo Done. ;
+
+clean::
+	@echo making $@ in `basename \`pwd\``
+	$(RM) *~ *.bak core *.log *.error
+
+realclean::
+	@echo making $@ in `basename \`pwd\``
+	$(RM) *~ *.bak core
+	$(RM) TAGS *.orig
+
+distclean::
+	@echo making $@ in `basename \`pwd\``
+	$(RM) *~ *.bak core
+	$(RM) TAGS *.orig
+	$(RM) Makefile config.h config.status config.log config.cache
+
+version::	src/version.h
+	@echo making $@ in `basename \`pwd\``
+	cp -p src/version.h src/version.h~
+	sed 's/^#define VERSION .*/#define VERSION "@VERSION@"/' <src/version.h~ >src/version.h \
+	|| mv -f src/version.h~ src/version.h
+	-cmp -s src/version.h~ src/version.h && mv -f src/version.h~ src/version.h || :
+	$(RM) src/version.h~
+
+update::	announce readme changelog
+	@echo making $@ in `basename \`pwd\``
+
+announce::	ANNOUNCE
+	@echo making $@ in `basename \`pwd\``
+	test -d @FTPDIR@ && ( cmp -s ANNOUNCE @FTPDIR@/ANNOUNCE || \
+	$(INSTALL_DATA) ANNOUNCE @FTPDIR@/ANNOUNCE )
+
+readme:: 	README
+	@echo making $@ in `basename \`pwd\``
+	test -d @FTPDIR@ && ( cmp -s README @FTPDIR@/README || \
+	$(INSTALL_DATA) README @FTPDIR@/README )
+
+changelog::	CHANGELOG
+	@echo making $@ in `basename \`pwd\``
+	test -d @FTPDIR@ && ( cmp -s CHANGELOG @FTPDIR@/CHANGELOG || \
+	$(INSTALL_DATA) CHANGELOG @FTPDIR@/CHANGELOG )

@@ -1,0 +1,213 @@
+
+
+                  squidGuard 1.3 has been released
+                  =======================================
+
+Shalla Secure Services is proud to announce the release of squidGuard
+version 1.3. The new version contains bugfixes and some new features.
+See CHANGELOG for details. Please report problems and bugs to 
+                     sq-bugs@squidguard.org.
+
+
+
+                  squidGuard 1.2.1 has been released
+                  =======================================
+
+Shalla Secure Services is proud to announce the release of squidGuard 
+version 1.2.1. See CHANGELOG for details. Please report problems and 
+bugs to sq-bugs@squidguard.org.
+
+
+
+
+		  squidGuard 1.2.0 has been released
+		  ==================================
+
+Tele Danmark Internordia is proud to announce the release of
+squidGuard vesion 1.2.0
+
+			     Introduction
+			     ============
+
+squidGuard is a combined filter, redirector and
+   access controller plugin for Squid. It is
+     * free
+     * very flexible
+     * extremely fast *)
+     * easily installed
+     * portable
+       
+    squidGuard can be used to
+     * limit the web access for some users to a list of accepted/well
+       known web servers and/or URLs only.
+     * block access to some listed or blacklisted web servers and/or URLs
+       for some users. **)
+     * block access to URLs matching a list of regular expressions or
+       words for some users. **)
+     * enforce the use of domainnames/prohibit the use of IP address in
+       URLs. **)
+     * redirect blocked URLs to an "intelligent" CGI based info page. **)
+     * redirect unregistered user to a registration form.
+     * redirect popular downloads like Netscape, MSIE etc. to local
+       copies.
+     * redirect banners to an empty GIF. **)
+     * have different access rules based on time of day, day of the week,
+       date etc.
+     * have different rules for different user groups.
+     * and much more..
+       
+    Neither squidGuard nor Squid can be used to
+     * filter/censor/edit text inside documents
+     * filter/censor/edit embeded scripting languages like JavaScript or
+       VBscript inside HTML
+       
+   *) 100,000 requests in 10seconds on a 500MHz Pentium with lists of
+            5900 domains
+            7880 urls
+          13780 total
+          
+       100,000 requests in 12seconds on a 500MHz Pentium with lists of
+              5900 domains
+          200000 urls
+          205900 total
+          
+       I.e. domain and URL listsizes have neglectable performance effect
+          
+          
+   **) squidGuard is not a porn or banner filter/blocker, but it is very
+          well suited for these purposes too.
+          
+			     Capabilities
+			     ============
+
+   squidGuard has many powerful configuration options that lets you:
+    1. define different time spaces based on any reasonable
+       combination of
+          + time of day (00:00-08:00 17:00-24:00)
+          + day of the week (sa)
+          + date (1999-05-13)
+          + date range (1999-04-01-1999-04-05)
+          + date wildcards (*-01-01 *-05-17 *-12-25)
+    2. group sources (users/clients) into distinct categories like
+       "managers", "employees", "teachers", "students", "customers",
+       "guests" etc. based on any reasonable combination of
+          + IP address ranges with
+          + prefix notation (172.16.0.0/12)
+          + netmask notation (172.16.0.0/255.240.0.0)
+          + first-last notation (172.16.0.11-172.16.0.35)
+    3. address lists (172.16.134.54 172.16.156.23 ...)
+    4. domain lists (foo.bar.com ...) *)
+    5. user id lists (weho sdgh dfhj asef ...) **) and optionally
+       link the group to a given time space
+          + positively (within business-hours)
+          + negatively (outside leisure-time)
+    6. group destinations (URLs/servers) into distinct categories
+       like "local", "customers", "vendors", "banners", "banned" etc.
+       based on an unlimited number of unlimited lists of
+          + domains, including subdomains (foo.bar.com)
+          + hosts (host.foo.bar.com)
+          + directory URLs, including subdirectories
+            (foo.bar.com/some/dir)
+          + file URLs (foo.bar.com/somewhere/file.html)
+          + regular expressions ((expr1|expr2|...))
+       and optionally link the group to a given time space:
+          + positively (within business-hours)
+          + negatively (outside leisure-time)
+    7. rewrite/redirect URLs based on any reasonable combination of
+          + string/regular expression editing à la sed with
+          + silent squid redirecting rewrite (s@from@to@)
+          + visible client redirecting rewrite (s@from@to@r) ***)
+          + URL replacement with
+          + silent squid redirect to a common URL (redirect "new_url")
+          + visible client redirect to a common URL
+            (redirect "302:new_url") ***)
+       activated by
+          + 1-1 URL redirection
+          + destination group match
+          + a fallback/default for blocked URLs
+          + a fallback/default for blocked/unknown clients
+       and optionally with
+          + runtime string substitution à la strftime or printf
+    8. define access control lists (acl) based on any reasonable
+       combination of the definitions above by
+          + giving each source (user/client) group
+          + a pass list with any reasonable combination of
+          + acceptable destination groups (good-dests ...)
+          + unacceptable destination groups (!bad-dests ...)
+          + block IP address URLs (enforce the use of domain names)
+            (!in-addr)
+          + wildcards/nothing (any|all|none)
+    9. optionally a common rewrite rule set for the source group
+   10. optionally a default replacement URL for blocked destinations
+       for the source group
+       
+        and optionally:
+                
+   11. link the acl to a given time space
+          + positively (within business-hours)
+          + negatively (outside leisure-time)
+   12. defining a fallback/default ruleset
+   13. have selective logging by optional log statements in the: ****)
+          + source/client group declarations to log all translations
+            for the group (log "file")
+          + destination group declarations. Typically used to log
+            blacklist matches. (log "file")
+          + rewrite rule group declarations to log all translations
+            for the rule set (log "file")
+       and optionally anonymized to protect the individuals
+       (log anonymous "file")
+       
+   *) Client access control based on domain name requires enabling
+   reverse lookups (log_fqdn on) in squid.conf.
+   **) Client access control based on user id requires enabling
+   RFC931/ident in squid.conf. Note: The RFC931/ident configuration is
+   changed in squid-2.2 and the RFC931/ident support is broken in
+   squid-2.2 at least up to STABLE2. We currently recommend using
+   squid-2.1.PATCH2 in production if RFC931 is used.
+   ***) Note: Visible redirects (302:new-url) are not supported by some
+   interim versions of Squid (presumably 1.2-2.0).
+   ****) Note: squidGuard is smart enough to open only one filedescriptor
+   per logfile (i.e. not necessarily one per log statement); per spawned
+   process of course. Though logging to too many different files may
+   exeed your system's concurrent filedescriptor limit. 
+   
+			     Portability
+			     ===========
+
+   squidGuard should compile right out of the box on any modern brand of
+   UNIX with a development environment and a recent version (2.7.X or
+   3.2.X) of the Berkeley DB library. squidGuard is developed on Sun
+   Solaris-2.8 with gcc-2.95.3, bison-1.28, flex-2.5.4.
+   We also test regularly on Linux/RedHat with gcc and
+   our most recent copy of the Berkeley DB.
+   
+   Users have reported success on at least, but not limited to:
+     * AIX: 4.1.3, 4.3.2.0/egcs-2.91.66
+     * Dec-Unix: OSF1-4.0/gcc-2.7.2.3, 3.2C/gcc-2.7.2.3
+     * Linux: RedHat-5.2/gcc-2.8.1 and later
+     * Solaris: 2.6/gcc-2.7.2.3
+     * Solaris: 2.8/gcc-2.95.3
+
+
+			      Nota Bene!
+			      ==========
+   .db files created with Berkeley DB version 2.7.X are NOT
+   compatible with Berkeley DB version 3.2.X! If you created files
+   with "squidGuard-1.1.X -C" you must export them to a plain text
+   file and remove all .db files and run "squidGuard-1.2.0 -C"
+
+		       News in squidGuard-1.2.0
+		       ========================
+   o Support for Berkeley DB version 3.2.X.
+   o Support for userquotas.
+   o All known bugs are fixed.
+   See the CHANGELOG for details.
+
+   You can download squidGuard from its homepage:
+
+		      http://www.squidguard.org/
+
+
+			     Kind regards
+
+	   Pål Baltzersen			Lars Erik Håland

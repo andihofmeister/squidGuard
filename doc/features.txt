@@ -1,0 +1,107 @@
+                                 SquidGuard
+
+   [1]HOME [2]Downloads [3]Documentation [4]Development [5]Blacklists
+   [6]Contributions [7]Contact
+
+   squidGuard - 1.4 Features
+
+   With version 1.4 there have been several changes and bug fixes:
+   New Features:
+     * Added mysql support for authentication based on a patch from Chris
+       Fletcher (thank you). Tested with MySQL 5.0. (bug 19)
+     * Added a runtime option to switch the progress bar and off.
+       The default behaviour of squidGuard has been switch back to showing
+       no progress bar. To switch on the progress bar use the runtime
+       option -b.
+     * Added a runtime option to prevent squidGuard from falling into
+       emergeny mode when something with the update of the blacklists goes
+       wrong (patch by Chris Pates and Iain Fothegill of the CLEO Systems
+       at Lancaster University, thank you). If you use the runtime option
+       -P and the creation of the db files fail, squidGuard simply writes
+       an error message but continues. Make sure to test this option
+       before using it in production environments.
+     * Rewrite of the sample script squidGuard.cgi. The language related
+       part has been exported to babel files (one for each language) and
+       the layout has been modified in a way that it is a bit more nice to
+       the eyes and easier to change.
+       If you are going to use the new script make sure to either copy the
+       babel files into your script directory or change the location of
+       the babel files within squidGuard.cgi.
+     * Stopped downloading the documentation from www.squidguard.org. The
+       docs are now updated with the package not by "calling home".
+     *
+     * Added Spanish translation to squidGuard.cgi (thank you, Samuel
+       García for the translation). (bug 26).
+
+   Changes to configure options:
+     * NEW: --with-mysql
+       Use MySQL support. Configure will look in /usr and /usr/local for
+       the installation of MySQL.
+     * CHANGED: --with-nolog=yes
+       This replaces the old configure option "--nolog".
+     * CHANGED: --with-squiduser=<username>
+       This replaces the old configure option "-u=<username>" and
+       "--squiduser=<username>", respectively.
+
+   Bug Fixes:
+     * Reduced "noise" of progress bar.
+     * Moved output of the progress bar from stdout to stderr since squid
+       was complaining about this "input". (bug 39)
+     * Fixed an issue with redirect statements that use a "~" in the url.
+       (bug 23)
+     * Fixed an issue with squidGuard craching when urls ended in "://".
+       (bug40)
+     * Fixed issue with perl warnings about deprecated usage of hash
+       syntax by rewriting squidGuard.cgi as stated above. (bug 37)
+     * Fixed the bypass vulnerability with trailing dots in domain names.
+       This only affects squidGuard when used with squid version 3. (bug
+       38)
+     * Fixed issue that on some systems y.tab.c and y.tab.h were not
+       properly created although bison was installed. Updated the prepared
+       files as well. (bug 34)
+     * Fixed an issue with a forgotten check for the existance of the
+       configuration directory: The "make install" command now tests if
+       the directory of the configuration file exists. If it does not
+       exist, the directory is created. (bug 35)
+     * Fixed an issue that the prepared flex file was not copied when flex
+       is not installed. Now, if no flex/lex is found during the configure
+       run, "make" checks again and copies the prepared file now fine.
+       (bug 31)
+     * Fixed configure.in to give the proper configure file when running
+       autoconf. As a result the syntax of a couple of configure options
+       had to be changed (see above).
+     * Fixed broken "make test". (bug 17)
+
+   [8]HOME
+     __________________________________________________________________
+
+   [9]About squidGuard
+     __________________________________________________________________
+
+   [10]History
+     __________________________________________________________________
+
+   [11]Mailinglist
+     __________________________________________________________________
+
+   [12]Advisories
+     __________________________________________________________________
+   _______________________________________________________________________
+
+     © Powered by [13]Shalla Secure Services 2007-2008
+
+References
+
+   1. http://www.squidguard.org/index.html
+   2. http://www.squidguard.org/download.html
+   3. http://www.squidguard.org/Doc/
+   4. http://www.squidguard.org/Devel/
+   5. http://www.squidguard.org/blacklists.html
+   6. http://www.squidguard.org/Contrib/
+   7. http://www.squidguard.org/impressum.html
+   8. http://www.squidguard.org/index.html
+   9. http://www.squidguard.org/about.html
+  10. http://www.squidguard.org/history.html
+  11. http://www.squidguard.org/mailinglist.html
+  12. http://www.squidguard.org/Doc/advisories.html
+  13. http://www.shalla.de/

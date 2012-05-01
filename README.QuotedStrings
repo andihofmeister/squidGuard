@@ -1,0 +1,34 @@
+Starting with squidGuard 1.5 you can use quotes in the configuration file. 
+
+A quoted string is surrounded by double quotes ("") and can contain \n
+\r \a \b \t \" and \xXX (to introduce a character by its hexadecimal
+value). The string can be split across lines by ending a line with a \
+(in which case the newline is ignored) or if you don't end the line with
+a \ the newline will be kept.
+
+Quoted strings cn be used with the following directives in the configuration
+file:
+
+dbhome
+logdir
+ldapbindpass
+mysqlusername
+mysqlpassword
+mysqldb
+domainlist
+urllist
+expressionlist
+rewrite
+logfile
+userlist
+iplist
+domain
+user
+
+All other directives must be used without quotes. 
+ATTENTION: If you use the user directive with quoted_strings, only usernames
+with less than 16 characters will be treated correctly.
+
+Special thanks to Iain Fothergill for submitting the patch for this
+feature.
+

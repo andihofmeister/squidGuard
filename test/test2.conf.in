@@ -1,0 +1,33 @@
+logdir @TESTDIR@
+dbhome @TESTDIR@
+
+src grownups {
+    ip	   10.0.0.0/24	  # range 10.0.0.0  - 10.0.0.255
+			  # AND
+    user   foo bar	  # ident foo or bar
+}
+
+src kids {
+    ip	   10.0.0.0/22	  # range 10.0.0.0 - 10.0.3.255
+}
+
+dest blacklist {
+    domainlist     blacklist/domains
+    urllist        blacklist/urls
+    expressionlist blacklist/expressions
+}
+
+acl {
+    grownups {
+	pass all
+    }
+
+    kids {
+	pass !blacklist all
+    }
+
+    default {
+	pass none
+	redirect http://info.foo.bar/cgi/blocked?clientaddr=%a&clientname=%n&clientuser=%i&clientgroup=%s&targetgroup=%t&url=%u
+    }
+}

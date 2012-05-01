@@ -1,0 +1,162 @@
+                                 SquidGuard
+
+   [1]HOME [2]Downloads [3]Documentation [4]Development [5]Blacklists
+   [6]Contributions [7]Contact
+
+  Using Expressionlists in SquidGuard
+
+   You will never be able to add a possible "bad" pages to your domains
+   and urls files. To achieve additional blocking expressionlists can be
+   used.
+   In an expressionlist you enter words that are mostly likely part of
+   unwanted domains and urls. Each domains and url will be matched against
+   the entries found in the configured expression lists.
+   Attention: Only use expressionlists if you are sure you do not block
+   away innocent sites. Additionally keep in mind that using these lists
+   can result in a noticable performance impact.
+    1. Adding expression lists to the configuration
+       Expression lists are included in the dest tag. The example below
+       shows the relevant part of the squidGuard configuration file:
+
+       Using expression lists to block porn
+ dest porn {
+      domainlist       porn/domains
+      urllist          porn/urls
+      expressionlist   porn/expressions
+ }
+
+       You can add an expression list to each defined destination if you
+       find this necessary (reminder: performance!). SquidGuard expects
+       the expression file relative to the defined dbhome just as the
+       domains and urls files.
+    2. Syntax of expression lists
+       The expressionlist file format is lines with regular expressions as
+       described in regex(5). Of most interrest is:
+
+   . Matches any single character (use "\." to match a ".").
+   [abc] Matches one of the characters ("[abc]" matches a single "a" or
+   "b" or "c").
+   [c-g] Matches one of the characters in the range ("[c-g]" matches a
+   single "c" or "d" or "e" or "f" or "g".
+   "[a-z0-9]" matches any single letter or digit.
+   "[-/.:?]" matches any single "-" or "/" or "." or ":" or "?".).
+   ? None or one of the preceding ("words?" will match "word" and "words".
+   "[abc]?" matches a single "a" or "b" or "c" or nothing (i.e. "")).
+   * None or more of the preceding ("words*" will match "word", "words"
+   and "wordsssssss". ".*" will match anything including nothing).
+   + One or more of the preceding ("xxx+" will match a sequence of 3 or
+   more "x").
+   (expr1|expr2) One of the expressions, which in turn may contain a
+   similar construction ("(foo|bar)" will match "foo" or "bar".
+   "(foo|bar)? will match "foo" or "bar" or nothing (i.e. "")).
+   $ The end of the line ("(foo|bar)$" will match "foo" or "bar"only at
+   the end of a line).
+   \x Disable the special meaning of x where x is one of the special regex
+   characters ".?*+()^$[]{}\"  ("\." will match a single ".", "\\" a
+   single "\" etc.)
+       The entries to the expression lists are cleartext. Thus a start to
+       block possible sexual material by expression match could look like:
+
+(^|[-\?+=/_])(bondage|boobs?|busty?|hardcore|porno?|sex|xxx+)([-\?+=/_]|$)
+
+       If everything is set up to your liking make the changes active by
+       issuing the command:
+
+squid -k reconfigure
+
+    3. Some notes and hints
+          + Unless you build your expressions very very carefully there is
+            a high risk you will have annoyed users on your neck.
+            Typically you might accidentally block "Essex", "Sussex",
+            "breastcancer", "www.x.org" etc. in your eagerness for
+            blocking pornographic material. In practice you would probably
+            replace some of the words in the example above with some more
+            clearly pornographic related words that I don't find
+            appropriate to list here.
+          + While the size of the domain and urllists only has marginal
+            influence on the performance, too many large or complex
+            expressions will quickly degrade the performance of
+            squidGuard. Though it may depend heavily on the performance of
+            the regex library you link with.
+          + There is a set of sample files for a group of supposedly
+            pornographic sites under samples/dest/adult in the source tree
+            that you can use as a start if porn blocking is one of your
+            tasks. Please note: These lists are very, very old and not
+            intended for production systems. Use them to test your
+            squidGuard. For an initial setup the lists will work, but we
+            recommend that you review these lists before using them. Those
+            domains and urls have been collected automagically by a robot.
+            No manual evaluation of the corresponding contents has been
+            performed. Therefor there is a chance some nonpornographic
+            sites have sliped in.
+          + To avoid publishing to your users a complete guide to banned
+            sites, you probably want to have some or all of these files
+            protected by for instance:
+
+                      chmod 640 /wherever/filter/db/dest/adult/*
+                      chown cache_effective_user /wherever/filter/db/dest/
+                      adult/*
+                      chgrp cache_effective_group /wherever/filter/db/dest
+                      /adult/*
+
+            where cache_effective_user and cache_effective_group are the
+            values for the corresponding tags as defined in squid.conf.
+       [8]Documentation
+         ______________________________________________________________
+
+       [9]Installation
+         ______________________________________________________________
+
+       Configuration
+
+        [10]Getting started
+        Destination ACLs
+        Source ACLs
+        [11]Redirect Rule
+        [12]Time Constraints
+        [13]Authentication
+        [14]Regular Expressions
+        [15]Examples
+         ______________________________________________________________
+
+       [16]Runtime Options
+         ______________________________________________________________
+
+       [17]About blocking
+         ______________________________________________________________
+
+       [18]Troubleshooting
+         ______________________________________________________________
+
+       [19]Known Issues
+         ______________________________________________________________
+
+       [20]Other Sources
+         ______________________________________________________________
+       ___________________________________________________________________
+
+         © Powered by [21]Shalla Secure Services 2007-2008
+
+References
+
+   1. http://www.squidguard.org/index.html
+   2. http://www.squidguard.org/download.html
+   3. http://www.squidguard.org/Doc/
+   4. http://www.squidguard.org/Devel/
+   5. http://www.squidguard.org/blacklists.html
+   6. http://www.squidguard.org/Contrib/
+   7. http://www.squidguard.org/impressum.html
+   8. http://www.squidguard.org/Doc/index.html
+   9. http://www.squidguard.org/Doc/install.html
+  10. http://www.squidguard.org/Doc/configure.html
+  11. http://www.squidguard.org/Doc/redirect.html
+  12. http://www.squidguard.org/Doc/extended.html#times
+  13. http://www.squidguard.org/Doc/authentication.html
+  14. http://www.squidguard.org/Doc/expressionlist.html
+  15. http://www.squidguard.org/Doc/examples.html
+  16. http://www.squidguard.org/Doc/runtimeops.html
+  17. http://www.squidguard.org/Doc/aboutblocking.html
+  18. http://www.squidguard.org/Doc/troubleshoot.html
+  19. http://www.squidguard.org/Doc/known_issues.html
+  20. http://www.squidguard.org/Doc/other_sources.html
+  21. http://www.shalla.de/

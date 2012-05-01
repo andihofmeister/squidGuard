@@ -1,0 +1,124 @@
+                                 SquidGuard
+
+   [1]HOME [2]Downloads [3]Documentation [4]Development [5]Blacklists
+   [6]Contributions [7]Contact
+
+  Installing squidGuard
+
+    1. Unpack the source
+
+ tar xvzf squidGuard-1.2.1.tar.gz
+
+    2. Compiling
+       Let's assume it is squidGuard-1.2.1 we are trying to install:
+
+ cd squidGuard-1.2.1
+ ./configure
+ make
+
+       If no errors occurred squidGuard is now installed in /usr/local/.
+       There are a couple of option you can use when running ./configure.
+       For example:
+
+   Installing in a different location
+ ./configure --prefix=/some/other/directory
+
+   BerkeleyDB not in /usr/local/BerkeleyDB installed
+ ./configure  --with-db=/directory/of/BerkeleyDB/installation
+
+       When installed from the sources the BerkeleyDB will be located in
+       /usr/local/BerkeleyDBx.y with x.y denoting the version number.
+       Annotation: Make sure that the shared library of your BerkeleyDB
+       installation is known by your system (check /etc/ld.so.conf, add
+       your BerkeleyDB library path if it is not already there and run
+       ldconfig).
+
+   See all ./configure options
+ ./configure --help
+
+       A complete overview of all configure options with some explanations
+       can be found [8]here.
+    3. Installing
+
+ su -
+ make install
+
+    4. Installing the blacklists
+       Copy your blacklists into the desired blacklist directory (default:
+       /usr/local/squidGuard/db) and unpack them. In the table below we
+       assume that the default location is used. Make sure that you have
+       the proper permissions to write to that directory.
+
+ cp /path/to/your/blacklist.tar.gz /usr/local/squidGuard/db
+ cd /usr/local/squidGuard/db
+ gzip -d blacklist.tar.gz
+ tar xfv blacklist.tar
+
+       Now the blacklists should be ready to use.
+
+   Congratulation. You have just completed the installation of squidGuard.
+   The next step is to configure the software according to your needs.
+   After this you should verify your installation before you finally
+   modify your squid configuration to work with squidGuard.
+   Proceed with:     [9]Basic Configuration of SquidGuard
+
+   [10]Documentation
+     __________________________________________________________________
+
+   [11]Installation
+     __________________________________________________________________
+
+   Configuration
+    [12]Getting started
+    Destination ACLs
+    Source ACLs
+    [13]Redirect Rule
+    [14]Time Constraints
+    [15]Authentication
+    [16]Regular Expressions
+    [17]Examples
+     __________________________________________________________________
+
+   [18]Runtime Options
+     __________________________________________________________________
+
+   [19]About blocking
+     __________________________________________________________________
+
+   [20]Troubleshooting
+     __________________________________________________________________
+
+   [21]Known Issues
+     __________________________________________________________________
+
+   [22]Other Sources
+     __________________________________________________________________
+   _______________________________________________________________________
+
+     © Powered by [23]Shalla Secure Services 2007-2008
+
+References
+
+   1. http://www.squidguard.org/index.html
+   2. http://www.squidguard.org/download.html
+   3. http://www.squidguard.org/Doc/
+   4. http://www.squidguard.org/Devel/
+   5. http://www.squidguard.org/blacklists.html
+   6. http://www.squidguard.org/Contrib/
+   7. http://www.squidguard.org/impressum.html
+   8. http://www.squidguard.org/Doc/configops.html
+   9. http://www.squidguard.org/Doc/configure.html
+  10. http://www.squidguard.org/Doc/index.html
+  11. http://www.squidguard.org/Doc/install.html
+  12. http://www.squidguard.org/Doc/configure.html
+  13. http://www.squidguard.org/Doc/redirect.html
+  14. http://www.squidguard.org/Doc/extended.html#times
+  15. http://www.squidguard.org/Doc/authentication.html
+  16. http://www.squidguard.org/Doc/expressionlist.html
+  17. http://www.squidguard.org/Doc/examples.html
+  18. http://www.squidguard.org/Doc/runtimeops.html
+  19. http://www.squidguard.org/Doc/aboutblocking.html
+  20. http://www.squidguard.org/Doc/troubleshoot.html
+  21. http://www.squidguard.org/Doc/known_issues.html
+  22. http://www.squidguard.org/Doc/other_sources.html
+  23. http://www.shalla.de/

@@ -1,0 +1,598 @@
+<HTML>
+
+ <HEAD>
+  <TITLE>squidGuard - Installation</TITLE>
+  <META name="keywords" lang="en" content="installation,install,squidGuard,squidguard,squid,Squid,free,redirector,filter">
+  <META name="author" content="Pål Baltzersen">
+  <META name="copyright" content="&copy; 2000 Tele Danmark InterNordia.">
+ </HEAD>
+
+ <!-- Background white, links blue (unvisited), navy (visited), red (active) -->
+ <BODY
+  BACKGROUND="/images/background.jpg"
+  BGCOLOR="#8EE5EE"
+  TEXT="#000000"
+  LINK="#0000FF"
+  VLINK="#000080"
+  ALINK="#FF0000">
+
+  
+
+  <TABLE CELLPADDING=0 CELLSPACING=0 BORDER=0 WIDTH=100%>
+   <TR>
+    <TD ALIGN=LEFT VALIGN=TOP>
+     <TABLE CELLPADDING=0 CELLSPACING=0 BORDER=0>
+      <TR>
+       <TD ALIGN=LEFT VALIGN=BOTTOM>
+	<A HREF="http://ftp.teledanmark.no/pub/www/proxy/squidGuard/"><IMG
+	SRC="/images/squidGuard.gif" BORDER=0
+	VALIGN=TOP></A>
+	<FONT SIZE=+3>
+	 <B>Installing squidGuard</B>
+	</FONT>
+	<IMG SRC="/images/install.gif" BORDER=0 VALIGN=TOP>
+       </TD>
+      </TR>
+      <TR>
+       <TH ALIGN=LEFT VALIGN=TOP>
+	<FONT SIZE=-1>
+	 <A HREF="/">squidGuard</A> is an ultrafast and free filter,
+	 redirector and access controller for <A
+	 HREF="http://www.squid-cache.org/">Squid</A>
+	 <BR>
+	 By <A HREF="/authors/">Pål Baltzersen</A> and <A
+	 HREF="/authors/">Lars Erik Håland</A>
+	 <BR>
+	 <A HREF="/copyright/">Copyright</A> &copy; 1999-2000, <A
+	 HREF="http://www.teledanmark.no/">Tele Danmark InterNordia</A>
+	 <BR>
+	 Visitors: <IMG SRC="/cgi-bin/counter" BORDER=0 ALIGN=TOP>
+	 (Since 2002-01-08 19:54:05)
+	</FONT>
+       </TH>
+      </TR>
+     </TABLE>
+    </TD>
+    <TD ALIGN=RIGHT VALIGN=TOP>
+     <TABLE CELLPADDING=0 CELLSPACING=0 BORDER=0>
+      <TR>
+       <TH ALIGN=RIGHT>
+	<FONT SIZE=-1>
+	 <BR>
+	 This page was last modified 2002-01-08
+	</FONT>
+       </TH>
+      </TR>
+     </TABLE>
+    </TD>
+   </TR>
+  </TABLE>
+
+  <H2>
+   <IMG SRC="/images/arrow-red.gif" BORDER=0 VALIGN=BOTTOM>
+   <A NAME="Installation">Installation instructions</A>
+  </H2>
+
+  <DL>
+   <DT>
+    The good news:
+   </DT>
+   <DD>
+    squidGuard uses Squid's <A
+    HREF="http://www.squid-cache.org/Versions/1.1/Release-Notes-1.1.txt">standard
+    redirector interface</A> so <B>no patching of Squid is
+    needed!</B><BR><BR>
+   </DD>
+   <DT>
+    and the not so good news:
+   </DT>
+   <DD>
+    Currently we don't distribute precompiled versions of
+    squidGuard.<BR> Though following these few steps should bring you
+    up and going with squidGuard within a few minutes, provided you
+    have the basic tools:
+   </DD>
+  </DL>
+
+  <H3>
+   <IMG SRC="/images/arrow-green.gif" BORDER=0 VALIGN=BOTTOM>
+   <A NAME="Quick_install"><B>For the impatient/experienced:</B></A>
+  </H3>
+
+  <OL>
+   <LI>
+    Install version 2.X of the <A HREF="#Detailed_install_2">Berkeley
+    DB</A> library (if not already installed on your system)
+   </LI>
+   <LI>
+    <A HREF="#Detailed_install_4"><TT>./configure</TT></A>
+   </LI>
+   <LI>
+    <A HREF="#Detailed_install_5"><TT>make</TT></A>
+   </LI>
+   <LI>
+    <A HREF="#Detailed_install_7"><TT>make&nbsp;install</TT></A>
+   </LI>
+   <LI>
+    Create a <A HREF="/config/"><TT>squidGuard.conf</TT></A> that
+    suits your needs
+   </LI>
+   <LI>
+    Create the <A HREF="/config/#Domainlists">domain</A>, <A
+    HREF="/config/#URLlists">url</A> and <A
+    HREF="/config/#Expressionlists">expression lists</A> you want
+   </LI>
+   <LI>
+    Test/simulate
+   </LI>
+   <LI>
+    <A HREF="#Detailed_install_12">Configure squid to use
+    squidGuard</A> as the redirector and specify the number of
+    redirector processes you want
+   </LI>
+   <LI>
+    <A HREF="#Detailed_install_13">Send Squid a <TT>HUP</TT>
+    signal</A><BR> <A
+    HREF="#Detailed_install_14"><EM><B>Voilà!</B></EM></A>
+   </LI>
+  </OL>
+
+  <H3>
+   <IMG SRC="/images/arrow-green.gif" BORDER=0 VALIGN=BOTTOM>
+   <A NAME="Detailed_install"><B>For the less impatient:</B></A>
+  </H3>
+
+  <OL>
+   <LI>
+    <A NAME="Detailed_install_1"></A>Besides <A
+    HREF="/links/#Squid">Squid</A> you need a basic UNIX development
+    environment with a <A HREF="/links/#Gmake"><TT>make</TT></A> compatible
+    build tool, an ANSI <A HREF="/links/#Gcc">C compiler</A>, a <A
+    HREF="/links/#Bison"><TT>yacc</TT></A> compatible parser generator, a
+    <A HREF="/links/#Flex"><TT>lex</TT></A> compatible lexical analyzer
+    generator and a <A
+    HREF="/links/#Regex"><TT>regcomp()/regexec()</TT></A> compatible
+    regular expression library. You also need <A
+    HREF="/links/#Gzip"><TT>gzip</TT></A> to unpack the
+    distribution. <B>Don't despair: If you managed to install Squid
+    you most likely have all this!</B> If not the links here points
+    you to all the free sources you need.<BR><BR>
+   </LI>
+   <LI>
+    <A NAME="Detailed_install_2"></A>You need a version 2.X of the <A
+    HREF="/links/#DB">Berkeley DB</A> library installed on your system. If
+    you don't already have it, <A HREF="/links/#DB">download</A> and
+    install the latest 2.X version. It should compile and install
+    right out of the box. (squidGuard is developed with Berkeley DB
+    version 2.x in mind, but it might work with Berkeley DB versions
+    1.85 and 1.86 too. If you have success linking and running with
+    versions 1.85 or 1.86 please <A
+    HREF="mailto:squidguard@squidguard.org">report</A>!)<BR> Here is a
+    quick installation guide for the Berkeley DB library:
+    <DL>
+     <DD>
+      <TT>
+       mkdir&nbsp;-p&nbsp;/local/src&nbsp;</TT><EM>(or&nbsp;wherever&nbsp;you&nbsp;like)</EM><TT><BR>
+       cd&nbsp;/local/src<BR>
+       gzip&nbsp;-dc&nbsp;/<I>wherever</I>/db-2.</TT><EM>y</EM><TT>.</TT><EM>z</EM><TT>.tar.gz&nbsp;|&nbsp;tar&nbsp;xvf&nbsp;-<BR>
+       cd&nbsp;db-2.</TT><EM>y</EM><TT>.</TT><EM>z</EM><TT>/dist<BR>
+       ./configure&nbsp;</TT><EM>(optionally&nbsp;add&nbsp;the&nbsp;environment&nbsp;and&nbsp;flags&nbsp;you&nbsp;prefer)&nbsp;*)</EM><TT><BR>
+       make<BR> make&nbsp;install<BR>
+       make&nbsp;clean&nbsp;</TT><EM>(optional)</EM><TT><BR>
+      </TT>
+     </DD>
+    </DL>
+    *) At <A HREF="http://www.teledanmark.no/">Tele Danmark</A> we
+    use:
+    <DL>
+     <DD>
+      <TT>
+       <PRE>#!/bin/sh -
+   cd build_unix
+   CC=gcc \
+   CXX=g++ \
+   CFLAGS="-O3 -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64" \
+   CXXFLAGS="-O3 -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64" \
+   ../dist/configure \
+     --verbose \
+     --target=sparc-sun-solaris \
+     --enable-dynamic \
+     --enable-compat185 \
+     --enable-rpc \
+     --prefix=/local</PRE>
+      </TT>
+     </DD>
+    </DL>
+    By default the more recent versions of the Berkeley DB library
+    installs itself under
+    <TT>/usr/local/BerkeleyDB/{lib,include,bin,docs}</TT><BR><BR>
+   </LI>
+   <LI>
+    <A NAME="Detailed_install_3"></A><A
+    HREF="/download/">Download</A> squidGuard and unpack the
+    distribution with:
+    <DL>
+     <DD>
+      <TT>
+       mkdir&nbsp;-p&nbsp;/local/src&nbsp;</TT><EM>(or&nbsp;wherever&nbsp;you&nbsp;like)</EM><TT><BR>
+       cd&nbsp;/local/src<BR>
+       gzip&nbsp;-dc&nbsp;/<I>wherever</I>/squidGuard-</TT><EM>x</EM><TT>.</TT><EM>y</EM><TT>.</TT><EM>z</EM><TT>.tar.gz&nbsp;|&nbsp;tar&nbsp;xvf&nbsp;-<BR>
+       cd&nbsp;squidGuard-</TT><EM>x</EM><TT>.</TT><EM>y</EM><TT>.</TT><EM>z</EM><TT>
+      </TT>
+     </DD>
+    </DL><BR>
+   </LI>
+   <LI>
+    <A NAME="Detailed_install_4"></A>squidGuard now comes with <A
+    HREF="http://www.gnu.org/software/autoconf/">GNU auto
+    configuration</A> for maximum portability and easy compilation
+    setup. For a default environment, simply run:
+    <DL>
+     <DD>
+      <TT>
+       ./configure
+      </TT>
+     </DD>
+    </DL>
+    If you have <A HREF="/links/#Gcc">gcc</A> you may want to force the use
+    of <TT>gcc</TT> and optimize more:
+    <DL>
+     <DD>
+      <TT>
+       <B>csh|tcsh#</B>&nbsp;(setenv&nbsp;CC&nbsp;"gcc";&nbsp;setenv&nbsp;CFLAGS&nbsp;"-O3";
+       ./configure)
+      </TT>
+     </DD>
+    </DL>
+    or
+    <DL>
+     <DD>
+      <TT>
+       <B>sh|bash|ksh#</B>&nbsp;CC="gcc"&nbsp;CFLAGS="-O3"&nbsp;./configure
+      </TT>
+     </DD>
+    </DL>
+    depending on your shell. This will prepare Makefiles to compile
+    and optionally install the squidGuard executable as
+    <TT><B>/usr/local/bin/squidGuard</B></TT>. If you prefer to
+    install squidGuard as for instance
+    <TT>/local/squid/bin/squidGuard</TT>, use the option:
+    <DL>
+     <DD>
+      <TT>
+       ./configure&nbsp;<B>--prefix=/local/squid</B>
+      </TT>
+     </DD>
+    </DL>
+    <A NAME="Defaultconfigfile"></A>To avoid the need of runing
+    squidGuard with the command line option
+    "<TT>-c&nbsp;/<I>wherever</I>/filter.conf</TT>"*), you may want to
+    change the default to the actual location of the configuration
+    file at compile time by adding:
+    <DL>
+     <DD>
+      <TT>
+       ./configure&nbsp;<B>--with-sg-config=/<I>wherever</I>/filter.conf</B>
+      </TT>
+     </DD>
+    </DL>
+    <B>*)Note: squid-2.2.x up to STABLE2</B>are broken and ignores the
+    argument list silently without passing it to the
+    redirector. Therefor with squid-2.2.x up to STABLE2 you
+    <U>must</U> specify the correct config file location with
+    <B>--with-sg-config=...</B> at compile time. Versions up to
+    2.1.PATCH2 do not have this problem.<BR> To see the full list of
+    build configuration options run:
+    <DL>
+     <DD>
+      <TT>
+       ./configure&nbsp;<B>--help</B>
+      </TT>
+     </DD>
+    </DL>
+    <A NAME="Logdir"></A><A NAME="DBhome"></A>At <A
+    HREF="http://www.teledanmark.no/">Tele Danmark</A> we use:
+    <DL>
+     <DD>
+      <TT>
+       <PRE>#!/bin/sh -
+   CC="gcc" \
+   CFLAGS="-O3 -Wall" \
+   LIBS="-R/local/lib -lnls" \
+   ./configure \
+   --verbose \
+   --target=sparc-sun-solaris \
+   --prefix=/local/squid \
+   --with-db-lib=/local/lib \
+   --with-db-inc=/local/include \
+   --with-sg-config=/var/spool/www/hosts/proxy.teledanmark.no/filter/conf/filter.conf \
+   --with-sg-logdir=/var/spool/www/hosts/proxy.teledanmark.no/filter/logs \
+   --with-sg-dbhome=/var/spool/www/hosts/proxy.teledanmark.no/filter/db</PRE>
+      </TT>
+     </DD>
+    </DL><BR>
+   </LI>
+   <LI>
+    <A NAME="Detailed_install_5"></A>Now simply run:
+    <DL>
+     <DD>
+      <TT>
+       make
+      </TT>
+     </DD>
+    </DL>
+    This should compile squidGuard without errors. If you compile with
+    <TT>gcc&nbsp;-Wall</TT> you may safely ignore warnings for the machine
+    generated code <TT>y.tab.{c,h}</TT> (from <TT>sg.y</TT>) and
+    <TT>lex.yy.c</TT> (from <TT>sg.l</TT>). You should probably
+    investigate other warnings and errors.<BR><BR>
+   </LI>
+   <LI>
+    <A NAME="Detailed_install_6"></A>To test the newly built
+    squidGuard run:
+    <DL>
+     <DD>
+      <TT>
+       make&nbsp;test
+      </TT>
+     </DD>
+    </DL><BR>
+   </LI>
+   <LI>
+    <A NAME="Detailed_install_7"></A>If all is OK run:
+    <DL>
+     <DD>
+      <TT>
+       make&nbsp;install
+      </TT>
+     </DD>
+    </DL>
+    This will install the squidGuard executable in
+    <TT><I>prefix</I>/bin/squidGuard</TT> where <TT><I>prefix</I></TT>
+    is <TT>/usr/local</TT> unless you changed it with
+    <TT>--prefix=/<I>some</I>/<I>where</I>/<I>else</I></TT>.<BR><BR>
+   </LI>
+   <LI>
+    <A NAME="Detailed_install_8"></A>Make a <A
+    HREF="/config/">configuration</A> file for squidGuard. Start
+    with a <A HREF="/config/#Minimal">minimal configuration</A>
+    and extend as your experience and needs grow.<BR><BR>
+   </LI>
+   <LI>
+    <A NAME="Detailed_install_9"></A>Make the <A
+    HREF="/config/#Lists">destination lists</A> (databases) you
+    want (if any at all).<BR><BR>
+   </LI>
+   <LI>
+    <A NAME="Detailed_install_10"></A>Test your configuration
+    isolated. Put some sample requests in three files named something
+    like <TT>test.pass</TT>, <TT>test.rewrite</TT> and
+    <TT>test.block</TT>. (Omit <TT>test.rewrite</TT> if you don't have
+    rewrite rules.) The format of these files is:
+    <DL>
+     <DD>
+      <TT>
+       URL&nbsp;ip-address/fqdn&nbsp;ident&nbsp;method
+      </TT>
+     </DD>
+    </DL>
+    For instance: 
+    <DL>
+     <DD>
+      <TT>
+       http://freeware.teledanmark.no/squidGuard/&nbsp;10.1.2.3/pc123.teledanmark.no&nbsp;fdgh&nbsp;GET<BR>
+       http://bad.site.com/dirty/stuff/foo.htm&nbsp;10.3.2.1/-&nbsp;-&nbsp;GET
+      </TT>
+     </DD>
+    </DL>
+    The ip-address is mandatory, the fqdn and ident fields may be "-"
+    depending of how you have configured Squid with respect to reverce
+    DNS lookups and indent lookups. The request method is
+    <TT>GET</TT>, <TT>POST</TT>, etc.<BR> Put some sample
+    requests that should pass transparently, be rewritten/redirected
+    and blocked in <TT>test.pass</TT>, <TT>test.rewrite</TT> and
+    <TT>test.block</TT> respectively. Now you are ready to simulate
+    real requests. Run the three simulations:
+    <DL>
+     <DD>
+      <TT>
+       <I>prefix</I>/bin/squidGuard&nbsp;-c&nbsp;/<I>your</I>/squidGuard.conf&nbsp;<&nbsp;test.pass&nbsp;>&nbsp;test.pass.out<BR>
+       <I>prefix</I>/bin/squidGuard&nbsp;-c&nbsp;/<I>your</I>/squidGuard.conf&nbsp;<&nbsp;test.rewrite&nbsp;>&nbsp;test.rewrite.out<BR>
+       <I>prefix</I>/bin/squidGuard&nbsp;-c&nbsp;/<I>your</I>/squidGuard.conf&nbsp;<&nbsp;test.block&nbsp;>&nbsp;test.block.out
+      </TT>
+     </DD>
+    </DL>
+    <BR> Check the pass output:
+    <DL>
+     <DD>
+      <TT>
+       wc&nbsp;-l&nbsp;test.pass<BR> wc&nbsp;-l&nbsp;test.pass.out<BR>
+       wc&nbsp;-w&nbsp;test.pass.out
+      </TT>
+     </DD>
+    </DL>
+    The numerical results should be identical for the first two tests
+    and 0 for the last.<BR> <BR> Check the rewrite/redirect output
+    (Omit if you don't have rewrite rules.):
+    <DL>
+     <DD>
+      <TT>
+       wc&nbsp;-l&nbsp;test.rewrite<BR>
+       wc&nbsp;-l&nbsp;test.rewrite.out<BR>
+       diff&nbsp;test.rewrite&nbsp;test.rewrite.out&nbsp;|&nbsp;egrep&nbsp;-ic&nbsp;'^>&nbsp;..*&nbsp;[0-9.]+/..*&nbsp;..*&nbsp;[a-z]+$'<BR>
+       more&nbsp;test.rewrite.out
+      </TT>
+     </DD>
+    </DL>
+    The numerical results should be identical for the first three
+    tests. Visually ensure the new URLs are as expected with the
+    <TT>more</TT> command.<BR> <BR> Check the block output:
+    <DL>
+     <DD>
+      <TT>
+       wc&nbsp;-l&nbsp;test.block<BR>
+       wc&nbsp;-l&nbsp;test.block.out<BR>
+       diff&nbsp;test.block&nbsp;test.block.out&nbsp;|&nbsp;egrep&nbsp;-ic&nbsp;'^>&nbsp;..*&nbsp;[0-9.]+/..*&nbsp;..*&nbsp;[a-z]+$'<BR>
+       more&nbsp;test.block.out
+      </TT>
+     </DD>
+    </DL>
+    The numerical results should be identical for the first three
+    tests. Visually ensure the new URLs are as expected with the
+    <TT>more</TT> command.<BR><BR>
+   </LI>
+   <LI>
+    <A NAME="Detailed_install_11"></A>Install the empty image,
+    stopsign image, dummy <EM>access denied</EM> page, the more or
+    less intelligent CGI page or whatever your redirectors points to,
+    on a web server that Squid can access; typically on the proxy
+    server or a nearby server. If you don't have a web server we
+    strongly recommend <A HREF="/links/#Apache">Apache</A> although any
+    stable web server of your choice can be used.<BR><BR>
+   </LI>
+   <LI>
+    <A NAME="Detailed_install_12"></A><A NAME="Configfile"></A>Tell
+    Squid to use squidGuard as the redirector by uncommenting and
+    changing the following tags in <TT>squid.conf</TT> to:
+    <DL>
+     <DD>
+      <TT>
+       redirect_program&nbsp;/<I>prefix</I>/bin/squidGuard
+      </TT>
+     </DD>
+    </DL>
+    or if squidGuard's config file is somewhere else than set at
+    compile time*):
+    <DL>
+     <DD>
+      <TT>
+       redirect_program&nbsp;/<I>prefix</I>/bin/squidGuard&nbsp;-c&nbsp;/<I>wherever</I>/squidGuard.conf
+      </TT>
+     </DD>
+    </DL>
+    where <TT><I>prefix</I></TT> is <TT>/usr/local</TT> unless you
+    changed it with
+    <TT>--prefix=/<I>some</I>/<I>where</I>/<I>else</I></TT>.
+    <BR>
+    <B>*)Note: squid-2.2.x up to STABLE2</B> are broken and ignores
+    the argument list silently without passing it to the
+    redirector. Therefor with squid-2.2.x up to STABLE2 you
+    <U>must</U> specify the correct config file location with
+    <B>--with-sg-config=...</B> at <A
+    HREF="#Defaultconfigfile">compile time</A>. Versions up to
+    2.1.PATCH2 do not have this problem.
+    <BR>
+    Also configuere the number of redirector processes you think you
+    want:
+    <DL>
+     <DD>
+      <TT>
+       redirect_children&nbsp;4
+      </TT>
+     </DD>
+    </DL>
+    I really don't know why one should have more than one squidGuard
+    process on a single CPU system cince squidGuard never blocks
+    indefinitly like the <TT><I>cache_dns_program</I></TT> and
+    optional <TT><I>authenticate_program</I></TT> are more likely to
+    do. Of course with more redirectors there is a chance a request
+    that matches the first client group, rule and destination group
+    could sneak out before a request that matches the last rule. But
+    on the other hand more redirectors also slows down the system by
+    added overhead and memory usage. Anyway 4 seems like a fine number
+    to start with. We haven't done any benchmarking to find the best
+    value and it may vary with the actual configuration.<BR><BR>
+   </LI>
+   <LI>
+    <A NAME="Detailed_install_13"></A>Send Squid a <TT>HUP</TT>
+    signal:
+    <DL>
+     <DD>
+      <TT>
+       kill&nbsp;-HUP&nbsp;`cat&nbsp;/<I>somewhere</I>/squid.pid`
+      </TT>
+     </DD>
+    </DL>
+    or
+    <DL>
+     <DD>
+      <TT>
+       squid&nbsp;-k&nbsp;reconfigure
+      </TT>
+     </DD>
+    </DL>
+    <BR>
+   </LI>
+   <LI>
+    <A NAME="Detailed_install_14"></A>Test with a browser.
+   </LI>
+  </OL>
+
+  <BR>
+  <HR WIDTH=40%>
+  <BR>
+  <TABLE ALIGN=CENTER CELLPADDING=3 CELLSPACING=0 BORDER=0>
+   <TR>
+    <TD ALIGN=CENTER>
+     <A HREF="http://www.gnu.org/"><IMG
+     SRC="http://info.tdcnorge.no/icons/gnu-logo.gif" BORDER=0
+     VALIGN=TOP></A>
+    </TD>
+    <TD ALIGN=CENTER>
+     <A HREF="http://www.perl.com/"><IMG
+     SRC="http://info.tdcnorge.no/icons/perl-logo.gif" BORDER=0
+     VALIGN=TOP></A>
+    </TD>
+   <!--
+    <TD ALIGN=CENTER>
+     <A HREF="http://www.sun.com/solaris/"><IMG
+     SRC="http://info.tdcnorge.no/icons/solaris-logo.gif" BORDER=0
+     VALIGN=BOTTOM></A>
+    </TD>
+    <TD ALIGN=CENTER>
+     <A HREF="http://www.sun.com/servers/"><IMG
+     SRC="http://info.tdcnorge.no/icons/sun-logo.gif" BORDER=0
+     VALIGN=BOTTOM></A>
+    </TD>
+    <TD ALIGN=CENTER>
+     <A HREF="http://www.tdcnorge.no/"><IMG
+      SRC="http://info.tdcnorge.no/icons/tdc-medium.gif" BORDER=0
+      VALIGN=BOTTOM></A>
+    </TD>
+   -->
+   </TR>
+  </TABLE>
+  <TABLE ALIGN=CENTER CELLPADDING=3 CELLSPACING=0 BORDER=0>
+   <TR>
+    <TD ALIGN=CENTER>
+     <A HREF="http://www.squid-cache.org/"><IMG
+     SRC="http://info.tdcnorge.no/icons/squid-logo.gif" BORDER=0
+     VALIGN=BOTTOM></A>
+    </TD>
+    <TD ALIGN=CENTER>
+     <A HREF="http://www.squidguard.org/"><IMG
+     SRC="http://www.squidguard.org/images/squidGuard.gif"
+     BORDER=0 VALIGN=BOTTOM></A>
+    </TD>
+   <!--
+    <TD ALIGN=CENTER>
+     <A HREF="http://freeware.tdcnorge.no/identd/"><IMG
+     SRC="http://freeware.tdcnorge.no/identd/identd.gif"
+     BORDER=0 VALIGN=BOTTOM></A>
+    </TD>
+   -->
+   </TR>
+  </TABLE>
+  <TABLE ALIGN=CENTER CELLPADDING=3 CELLSPACING=0 BORDER=0>
+   <TR>
+    <TD ALIGN=CENTER>
+     <A HREF="http://www.sleepycat.com/"><IMG
+     SRC="http://www.sleepycat.com/imgs/home_header.gif" BORDER=0
+     VALIGN=TOP></A>
+    </TD>
+   </TR>
+  </TABLE>
+
+
+ </BODY>
+</HTML>

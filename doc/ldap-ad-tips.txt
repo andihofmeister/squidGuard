@@ -1,0 +1,120 @@
+                                 SquidGuard
+
+   [1]HOME [2]Downloads [3]Documentation [4]Development [5]Blacklists
+   [6]Contributions [7]Contact
+
+  What to do with Active Directory Referals?
+
+   If your Active Directory Servers answers an LDAP request with referals
+   the autentication is likely to fail.
+   Below you find user responses how they got around this problem:
+    1. By Alan Walker, Sep 2008:
+
+   Just an FYI for the record in case somebody else sees the same issue in
+   the future:
+   Our squidGuard has been performing well for months now, with Squid
+   performing NTLM authentication and squidGuard performing LDAP lookups
+   to check whether a particular user is in a particular group, and so
+   block certain sites to certain users and allow them to others. However,
+   once in a while the squidGuard logs would report:
+   2008-09-03 09:18:53 [2962] (squidGuard): ldap_search_ext_s failed:
+   Operations error (params: dc=ticgroup,dc=local, 2,
+   (&(memberof=CN=InternetGeneral,OU=Groups,OU=Altona,DC=ticgroup,DC=local
+   ) (sAMAccountName=awalker)), sAMAccountName)
+   Which would result in a blocked page, and the user would have to close
+   the browser and wait a few minutes before resuming happily. Minor
+   inconvenience, but not too bad.
+   However, yesterday, for no apparent reason, this error started
+   happening on EVERY account, so nobody could access the web.
+   To cut a long story short, I think that the Windows Active Directory
+   server which was being searched by SquidGuard started generating
+   referrals to other systems (for more complete information) for any
+   searches in the active directory at the root level (although for lower
+   levels it was happy to supply the information with no referrals, I
+   really don't know why, I'm just treading water at this depth), and the
+   system did not have the credentials/trusts/whatever (Kerberos?) setup
+   required to follow the referral to wherever it needed to go (don't ask
+   me where, I still don't fully understand this).
+   The workaround/solution was to stop using a regular AD server to
+   perform the searches and go straight to the domain Controller (is there
+   really such a thing in AD?) and query the Global Catalog on port 3268
+   instead of the regular LDAP query port of 389. Apparently the Global
+   catalog does not do referrals, it just supplies all of the information
+   itself (Thank you Global Catalog). Maybe just setting up Kerberos
+   properly would be a better solution, but that's in the "too hard"
+   basket at the moment.
+   So my search line in the squidguard.conf changed from:
+
+   ldapusersearch
+   ldap://ticmelb1/dc=ticgroup,dc=local?sAMAccountName?sub?(&(memberof=CN=
+   InternetGeneral%2cOU=Groups%2cOU=Altona%2cDC=ticgroup%2cDC=local)(sAMAc
+   countName=%s))
+
+   to:
+
+   ldapusersearch
+   ldap://tic_group_dc.ticgroup.local:3268/dc=ticgroup,dc=local?sAMAccount
+   Name?sub?(&(memberof=CN=InternetGeneral%2cOU=Groups%2cOU=Altona%2cDC=ti
+   cgroup%2cDC=local)(sAMAccountName=%s))
+
+   and now the system is happy again.
+   Hope this helps somebody. (Also hope it keeps on working for me.)
+
+   [8]Documentation
+     __________________________________________________________________
+
+   [9]Installation
+     __________________________________________________________________
+
+   Configuration
+    [10]Getting started
+    Destination ACLs
+    Source ACLs
+    [11]Redirect Rule
+    [12]Time Constraints
+    [13]Authentication
+    [14]Regular Expressions
+    [15]Examples
+     __________________________________________________________________
+
+   [16]Runtime Options
+     __________________________________________________________________
+
+   [17]About blocking
+     __________________________________________________________________
+
+   [18]Troubleshooting
+     __________________________________________________________________
+
+   [19]Known Issues
+     __________________________________________________________________
+
+   [20]Other Sources
+     __________________________________________________________________
+   _______________________________________________________________________
+
+     © Powered by [21]Shalla Secure Services 2007-2008
+
+References
+
+   1. http://www.squidguard.org/index.html
+   2. http://www.squidguard.org/download.html
+   3. http://www.squidguard.org/Doc/
+   4. http://www.squidguard.org/Devel/
+   5. http://www.squidguard.org/blacklists.html
+   6. http://www.squidguard.org/Contrib/
+   7. http://www.squidguard.org/impressum.html
+   8. http://www.squidguard.org/Doc/index.html
+   9. http://www.squidguard.org/Doc/install.html
+  10. http://www.squidguard.org/Doc/configure.html
+  11. http://www.squidguard.org/Doc/redirect.html
+  12. http://www.squidguard.org/Doc/extended.html#times
+  13. http://www.squidguard.org/Doc/authentication.html
+  14. http://www.squidguard.org/Doc/expressionlist.html
+  15. http://www.squidguard.org/Doc/examples.html
+  16. http://www.squidguard.org/Doc/runtimeops.html
+  17. http://www.squidguard.org/Doc/aboutblocking.html
+  18. http://www.squidguard.org/Doc/troubleshoot.html
+  19. http://www.squidguard.org/Doc/known_issues.html
+  20. http://www.squidguard.org/Doc/other_sources.html
+  21. http://www.shalla.de/

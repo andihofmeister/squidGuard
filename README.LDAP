@@ -1,0 +1,159 @@
+(LDAP functionality provided by applying the ldap patch from Chris Frey
+ Extended for source IP address support by Denis Bonnenfant)
+
+
+LDAP User and Source IP Grouping Support:
+-----------------------------------------
+
+Squidguard now searches LDAP using specified LDAP search URLs whenever
+a username or an IP address is not found in an existing user list. The
+three new keywords in the squidguard.conf file that enable this are as
+follows:
+
+    ldapusersearch     This keyword goes in the Source {} config block, and
+                       specifies an LDAP URL to use to search for an unknown
+                       user name.
+
+                       You can specify multple LDAP URLs per Source block.
+
+                       Use '%s' to reference the username in your LDAP URL.
+
+                       If the search returns a record, the user is considered
+                       "found", otherwise the next URL in the same Source
+                       block is tried.
+
+                       Squidguard caches the "found" state of each search,
+                       even when a user name is not found.  The cache
+                       is valid for ldapcachetime seconds.
+
+
+    ldapipsearch       This keyword goes in the Source {} config block, and
+                       specifies an LDAP URL to use to search for a source ip.
+
+                       You can specify multple LDAP URLs per Source block.
+
+                       Use '%s' to reference the ip in your LDAP URL.
+
+                       If the search returns a record, the ip is considered
+                       "found", otherwise the next URL in the same Source
+                       block is tried.
+
+                       Squidguard caches the "found" state of each search,
+                       even when an ip is not found.  The cache
+                       is valid for ldapcachetime seconds.
+      
+      
+    ldapcachetime      This global keyword specifies the number of seconds
+                       to cache LDAP search results before contacting
+                       the LDAP server again.  This keyword is global and
+                       must go outside any Source/Destination/Rule blocks.
+
+                       Setting this value to a reasonably low value can
+                       allow simulation of near-realtime user groupings
+                       in LDAP without restarting squidguard.
+
+                       Recommended value: 300
+
+    ldapbinddn         This global keyword specifies the DN to bind to
+                       the LDAP server as.
+
+    ldapbindpass       Password to bind to the LDAP server.  This is a
+                       global keyword.
+
+    ldapprotover       LDAP protocol version.  This is a global keyword.
+                       Use this to force squidguard to connect to the
+                       LDAP server with a certain protocol version.  If
+                       unable to use the specified protocol version,
+                       squidguard will enter emergency mode.
+
+                       Valid values: 2 or 3
+
+
+
+Programmatic User Lists:
+------------------------
+
+Instead of putting a list of users in a file, you can now run a program
+or script to list users on stdout.  This user list behaves exactly like
+a regular userlist, loaded at start time, and stored in memory statically.
+
+    execuserlist       This keyword goes in the Source {} block, and
+                       specifies a command to run that will write a list
+                       of usernames on stdout.
+
+
+Supported LDAP URL extensions:
+------------------------------
+
+According to the available LDAP RFC's, there is only one defined extension,
+called "bindname".  This extension can be used to define a DN to bind with,
+on a per-URL basis.
+
+The format of such an URL is rather hideous, since commas are used to
+separate both the extensions in the URL and the elements of the DN.
+To handle this, commas separating the URL extensions are real commas, while
+the commas in the DN are defined with hex codes.  (Hex %2c is a comma)
+
+Example:
+
+    ldap://ldap.example.com/ou=groups,dc=example,dc=com\
+        ?homeDirectory?sub?(uid=cdfrey)\
+        ?bindname=cn=cdfrey%2cdc=example%2cdc=com,x-bindpass=password
+
+The above example shows multiple extensions specified in one URL.
+
+As it happens, both of those extensions are supported in the LDAP patch,
+and have the following meanings:
+
+    bindname           As specified in RFC2255, this extension defines
+                       the DN name to use during the bind to the LDAP
+                       server.
+
+    x-bindpass         As specified in RFC2255, extensions starting with
+                       "x-" are user defined.  This extension allows the
+                       URL to define the password required to bind to
+                       the LDAP server. 
+
+Both of these extensions override the global defaults "ldapbinddn" and
+"ldapbindpass" (see above).
+
+
+
+Example Configuration:
+----------------------
+
+
+Below is an example squidguard.conf file, showing the various user list
+options:
+
+-------------------  Example squidguard.conf snippet  ------------------------
+
+dbhome /var/lib/squidguard
+logdir /var/log/squidguard
+
+# ldap cache time in seconds
+ldapcachetime  300
+
+ldapbinddn     cn=root, dc=example, dc=com
+ldapbindpass   secret
+
+src INTERNAL_LAN {
+       ip              192.168.0.0/24 127.0.0.1
+       within          workhours
+       user            dave,chris,john, marconi
+       # uses the default binddn and bindpass above
+       ldapusersearch  ldap://ldap.example.com/cn=squidguardusers,ou=groups,dc=example,dc=com?memberUid?sub?(&(objectclass=posixGroup)(memberUid=%s))
+       ldapipsearch ldap://ldap.example.com/ou=computers,dc=example,dc=com?iphostnumber?sub?(&(objectclass=iphost)(iphostnumber=%s))
+
+       execuserlist    sed "s/:.*$//" /etc/passwd
+       log             internal_lan
+}
+
+------------------------------  End snippet  ---------------------------------
+
+By: Chris Frey
+<cdfrey@netdirect.ca>
+2004/09/29
+
+LDAPIp by ldapip : Denis Bonnenfant, 2007.
+

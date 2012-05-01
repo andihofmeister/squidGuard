@@ -1,0 +1,38 @@
+This file documents the flow of control through the new LDAP logic:
+
+
+                   UserSearch
+                       |
+                       |
+                 SourceBlock *s;
+               search in s->userDb
+                    /      \
+               ----/        \-----------
+              /                         \
+          not found                   found
+           |                          /   \
+           |                         /     \
+           |                      LDAP     user list
+           |                      user       user
+           |                      /  \        |
+           |                     /    \-------+
+           |                timeout           |
+           |                   /              |
+      search LDAP ------------/               |
+        URL list                              |
+          / \                                 |
+         /   \                                |
+       not   found                            |
+     found    |                               |
+        |     |                           return success
+        \    /
+       save both
+     states in the
+      userDb cache
+    i.e. add to userDb
+       if necessary
+           |
+           |
+       return found state as success or failure
+
+

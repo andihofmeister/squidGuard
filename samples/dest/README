@@ -1,0 +1,13 @@
+
+!!! WARNING WARNING WARNING WARNING WARNING  WARNING WARNING WARNING WARNING !!!
+!!!									     !!!
+!!! The blacklists are entierly products of a dumb robot (squidGuardRobot).  !!!
+!!! They are meant for testing purposes only. Do not use them in production. !!!
+!!! Don't blame us if there are mistakes. 				     !!!
+!!!									     !!!
+!!! WARNING WARNING WARNING WARNING WARNING  WARNING WARNING WARNING WARNING !!!
+
+To unpack the blacklists run the following command in this directory:
+
+gunzip < blacklists.tar.gz | tar xvpf -
+

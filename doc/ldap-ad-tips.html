@@ -1,0 +1,260 @@
+
+
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN" "http://www.w3.org/TR/REC-html40/loose.dtd">
+
+<html><head>
+
+<title>SquidGuard </title>
+
+<meta name="keywords" content="Squidguard, Squid, Redirector, Proxy, Download, URL, Blacklist, Patches, Source, Software">
+
+<meta name="distribution" content="global">
+
+<link rel="Shortcut Icon" href="/favicon.ico" type="image/x-icon" />
+
+</head>
+
+<body bgcolor="#F0FFFF">
+
+<table bgcolor="#001199" width=100%>
+
+<tr><td bgcolor="#8EE5EE">
+
+
+
+<center>
+
+<h2><img alt="" src="/Logos/squidGuard.gif" align=middle> SquidGuard </h2>
+
+</center>
+
+
+
+<table border=0 bgcolor="#001199" width=100%>
+
+<tr>
+
+<th><a href="/index.html" target=_top><font color=white>HOME</font></a></th>
+
+<th><a href="/download.html" target=_top><font color=white>Downloads</font></a></th>
+
+<th><a href="/Doc/" target=_top><font color=white>Documentation</font></a></th>
+
+<th><a href="/Devel/" target=_top><font color=white>Development</font></a></th>
+
+<th><a href="/blacklists.html" target=_top><font color=white>Blacklists</font></a></th>
+
+<th><a href="/Contrib/" target=_top><font color=white>Contributions</font></a></th>
+
+<th><a href="/impressum.html" target=body><font color=white>Contact</font></a></th>
+
+</tr>
+
+</table>
+
+
+
+<table border=0 width=100%>
+
+<tr><td width=85% bgcolor="#8EE5EE" valign=top>
+
+
+
+
+
+<br><br>
+<h2> &nbsp; What to do with Active Directory Referals? </h2>
+<br>
+<center>
+<table width=95%>
+<tr><td align=left>
+
+If your Active Directory Servers answers an LDAP request with
+referals the autentication is likely to fail.<br>
+Below you find user responses how they got around this problem:
+<br><br>
+<ol>
+<li>By Alan Walker, Sep 2008:<br>
+<br>
+<table width=95% cellpadding=2 cellspacing=0 style="background-color: #fff2f2; border: solid 1px #44bb33;">
+<tr>
+<td>
+
+Just an FYI for the record in case somebody else sees the same issue in the
+future: 
+<br><br>
+
+Our squidGuard has been performing well for months now, with Squid performing
+NTLM authentication and squidGuard performing LDAP lookups to check whether a
+particular user is in a particular group, and so block certain sites to
+certain users and allow them to others. However, once in a while the
+squidGuard logs would report: 
+<br><br>
+<tt><font size=-1>2008-09-03 09:18:53 [2962] (squidGuard): ldap_search_ext_s failed:
+Operations error (params: dc=ticgroup,dc=local, 2, 
+(&(memberof=CN=InternetGeneral,OU=Groups,OU=Altona,DC=ticgroup,DC=local)
+(sAMAccountName=awalker)), sAMAccountName) 
+</font></tt>
+<br><br>
+Which would result in a blocked page, and the user would have to close the
+browser and wait a few minutes before resuming happily. Minor inconvenience,
+but not too bad. 
+<br><br>
+However, yesterday, for no apparent reason, this error started happening on
+EVERY account, so nobody could access the web. 
+<br><br>
+To cut a long story short, I think that the Windows Active Directory server
+which was being searched by SquidGuard started generating referrals to other
+systems (for more complete information) for any searches in the active
+directory at the root level (although for lower levels it was happy to supply
+the information with no referrals, I really don't know why, I'm just treading
+water at this depth), and the system did not have the
+credentials/trusts/whatever (Kerberos?) setup required to follow the referral
+to wherever it needed to go (don't ask me where, I still don't fully
+understand this). 
+<br><br>
+The workaround/solution was to stop using a regular AD server to perform the
+searches and go straight to the domain Controller (is there really such a
+thing in AD?) and query the Global Catalog on port 3268 instead of the regular
+LDAP query port of 389. Apparently the Global catalog does not do referrals,
+it just supplies all of the information itself (Thank you Global Catalog).
+Maybe just setting up Kerberos properly would be a better solution, but that's
+in the "too hard" basket at the moment. 
+<br><br>
+So my search line in the squidguard.conf changed from: 
+<br><br>
+<center>
+<tt>
+<div style=width:550px;overflow:auto>
+<table width="550px" cellpadding="0" cellspacing="0" style="background-color: #f2fff0; border: solid 1px #4455bb;">
+<tr><td>
+<font size=-1>
+ldapusersearch
+ldap://ticmelb1/dc=ticgroup,dc=local?sAMAccountName?sub?(&(memberof=CN=InternetGeneral%2cOU=Groups%2cOU=Altona%2cDC=ticgroup%2cDC=local)(sAMAccountName=%s))
+</font>
+</td></tr>
+</table>
+</div>
+</tt></center>
+<br>
+to: 
+<br><br>
+<center>
+<tt>
+<div style=width:550px;overflow:auto>
+<table width="550px" cellpadding="0" cellspacing="0" style="background-color: #f2fff0; border: solid 1px #4455bb;">
+<tr><td>
+<font size=-1>
+ldapusersearch
+ldap://tic_group_dc.ticgroup.local:3268/dc=ticgroup,dc=local?sAMAccountName?sub?(&(memberof=CN=InternetGeneral%2cOU=Groups%2cOU=Altona%2cDC=ticgroup%2cDC=local)(sAMAccountName=%s)) 
+</font>
+</td></tr>
+</table>
+</div>
+</tt></center>
+<br>
+and now the system is happy again. 
+<br><br>
+Hope this helps somebody. (Also hope it keeps on working for me.) 
+</td>
+</tr>
+</table>
+</ol>
+</td></tr></table>
+
+</td>
+<td valign=top>
+<br><br><br><br>
+
+<a href="/Doc/index.html"><font color=black>Documentation</font></a>
+
+<hr color="#001199">
+
+<a href="/Doc/install.html"><font color=black>Installation</font></a>
+
+<hr color="#001199">
+
+Configuration</a>
+
+<table border=0 cellspacing=1 cellpadding=1>
+
+<tr><td>&nbsp;<a href="/Doc/configure.html"><font color=black size=-1>Getting started</font></a></td></tr>
+
+<tr><td>&nbsp;<font size=-1>Destination ACLs</font></td></tr>
+
+<tr><td>&nbsp;<font size=-1>Source ACLs</font></td></tr>
+
+<tr><td>&nbsp;<a href="/Doc/redirect.html"><font color=black size=-1>Redirect Rule</font></a></td></tr>
+
+<tr><td>&nbsp;<a href="/Doc/extended.html#times"><font color=black size=-1>Time Constraints</font></a></td></tr>
+
+<tr><td>&nbsp;<a href="/Doc/authentication.html"><font color=black size=-1>Authentication</font></a></td></tr>
+
+<tr><td>&nbsp;<a href="/Doc/expressionlist.html"><font color=black size=-1>Regular Expressions</font></a></td></tr>
+
+<tr><td>&nbsp;<a href="/Doc/examples.html"><font color=black size=-1>Examples</font></a></td></tr>
+
+</table>
+
+<hr color="#001199">
+
+<a href="runtimeops.html" target=body><font color=black>Runtime
+
+Options</font></a>
+
+<hr color="#001199">
+
+<a href="aboutblocking.html"><font color=black>About blocking</font></a>
+
+<hr color="#001199">
+
+<a href="troubleshoot.html"><font color=black>Troubleshooting </font></a>
+
+<hr color="#001199">
+
+<a href="known_issues.html"><font color=black>Known Issues</font></a>
+
+<hr color="#001199">
+
+<a href="other_sources.html"><font color=black>Other Sources</font></a>
+
+<hr color="#001199">
+
+
+
+</td></tr>
+
+
+
+</table>
+
+
+
+<br><br>
+
+<hr width=100%>
+
+<font size=-2>
+
+&nbsp; &copy; Powered by <a href="http://www.shalla.de/">Shalla Secure
+
+Services</a> 2007-2008<br><br>
+
+</font>
+
+</td>
+
+</tr>
+
+</table>
+
+
+
+</body>
+
+</html>
+
+
+

@@ -1,0 +1,2602 @@
+<HTML>
+
+ <HEAD>
+  <TITLE>squidGuard - Configuration</TITLE>
+  <META name="keywords" lang="en" content="configuring,configuration,config,squidGuard,squidguard,squid,Squid,free,redirector,filter">
+  <META name="author" content="Pål Baltzersen">
+  <META name="copyright" content="&copy; 2000 Tele Danmark InterNordia.">
+ </HEAD>
+
+ <!-- Background white, links blue (unvisited), navy (visited), red (active) -->
+ <BODY
+  BACKGROUND="/images/background.jpg"
+  BGCOLOR="#8EE5EE"
+  TEXT="#000000"
+  LINK="#0000FF"
+  VLINK="#000080"
+  ALINK="#FF0000">
+
+  
+
+  <TABLE CELLPADDING=0 CELLSPACING=0 BORDER=0 WIDTH=100%>
+   <TR>
+    <TD ALIGN=LEFT VALIGN=TOP>
+     <TABLE CELLPADDING=0 CELLSPACING=0 BORDER=0>
+      <TR>
+       <TD ALIGN=LEFT VALIGN=BOTTOM>
+	<A HREF="http://ftp.teledanmark.no/pub/www/proxy/squidGuard/"><IMG
+	SRC="/images/squidGuard.gif" BORDER=0
+	VALIGN=TOP></A>
+	<FONT SIZE=+3>
+	 <B>Configuring squidGuard</B>
+	</FONT>
+	<IMG SRC="/images/config.gif" BORDER=0 VALIGN=TOP>
+       </TD>
+      </TR>
+      <TR>
+       <TH ALIGN=LEFT VALIGN=TOP>
+	<FONT SIZE=-1>
+	 <A HREF="/">squidGuard</A> is an ultrafast and free filter,
+	 redirector and access controller for <A
+	 HREF="http://www.squid-cache.org/">Squid</A>
+	 <BR>
+	 By <A HREF="/authors/">Pål Baltzersen</A> and <A
+	 HREF="/authors/">Lars Erik Håland</A>
+	 <BR>
+	 <A HREF="/copyright/">Copyright</A> &copy; 1999-2000, <A
+	 HREF="http://www.teledanmark.no/">Tele Danmark InterNordia</A>
+	 <BR>
+	 Visitors: <IMG SRC="/cgi-bin/counter" BORDER=0 ALIGN=TOP>
+	 (Since 2002-01-08 19:54:05)
+	</FONT>
+       </TH>
+      </TR>
+     </TABLE>
+    </TD>
+    <TD ALIGN=RIGHT VALIGN=TOP>
+     <TABLE CELLPADDING=0 CELLSPACING=0 BORDER=0>
+      <TR>
+       <TH ALIGN=RIGHT>
+	<FONT SIZE=-1>
+	 <BR>
+	 This page was last modified 2002-01-08
+	</FONT>
+       </TH>
+      </TR>
+     </TABLE>
+    </TD>
+   </TR>
+  </TABLE>
+
+  <H2>
+   <A NAME="contents">Contents</A>
+  </H2>
+
+   <LI>
+    <A HREF="#Configuration_file">The configuration file</A>
+   </LI>
+   <UL>
+    <LI>
+     <A HREF="#General">In general</A>
+    </LI>
+   <UL>
+     <LI>
+      <A HREF="#Structure">The Structure</A>
+     </LI>
+     <LI>
+      <A HREF="#Reserved">Reserved words</A>
+     </LI>
+     <LI>
+      <A HREF="#Lables">Declaration names/lables</A>
+     </LI>
+     <LI>
+      <A HREF="#Breaking">Breaking long lines</A>
+     </LI>
+    </UL>
+    <LI>
+     <A HREF="#Directories">Path declarations</A>
+    </LI>
+    <LI>
+     <A HREF="#Timespace">Time space declarations</A>
+    </LI>
+    <LI>
+     <A HREF="#Sourcegroups">Source group declarations</A>
+    </LI>
+    <LI>
+     <A HREF="#Destinationgroups">Destination group declarations</A>
+    </LI>
+    <LI>
+     <A HREF="#Rewritegroups">Rewrite rule group declarations</A>
+    </LI>
+    <LI>
+     <A HREF="#Acls">Access control rule declarations</A>
+    </LI>
+   </UL>
+   <LI>
+    <A HREF="#Lists">The database</A>
+   </LI>
+   <UL>
+    <LI>
+     <A HREF="#Domainlists">Domainlists</A>
+    </LI>
+    <LI>
+     <A HREF="#URLlists">URLlists</A>
+    </LI>
+    <LI>
+     <A HREF="#Expressionlists">Expressionlists</A>
+    </LI>
+   </UL>
+   <LI>
+    <A HREF="#Tuning">Tuning hints</A>
+   </LI>
+   <LI>
+    <A HREF="#Examples">Working configuration examples</A>
+   </LI>
+   <UL>
+    <LI>
+     <A HREF="#Minimal">Example 0 - The absolutely minimal <EM>do
+     nothing</EM></A>
+    </LI>
+    <LI>
+     <A HREF="#example01">Example 1 - The recommended minimal <EM>do
+     nothing</EM></A>
+    </LI>
+    <LI>
+     <A HREF="#example02">Example 2 - Limiting the access to one
+     destination group only</A>
+    </LI>
+    <LI>
+     <A HREF="#example03">Example 3 - Blocking the access for unknown
+     or unprivileged clients</A>
+    </LI>
+    <LI>
+     <A HREF="#example04">Example 4 - Blocking inapropriate sites</A>
+    </LI>
+    <LI>
+     <A HREF="#example05">Example 5 - Blocking inapropriate sites for
+     some users and blocking unknown clients</A>
+    </LI>
+    <LI>
+     <A HREF="#example06">Example 6 - Blocking inapropriate sites
+     partially with regex</A>
+    </LI>
+    <LI>
+     <A HREF="#example07">Example 7 - Blocking inapropriate sites
+     during business hours only</A>
+    </LI>
+   </UL>
+
+  <H2>
+   <IMG SRC="/images/arrow-red.gif" BORDER=0 VALIGN=BOTTOM>
+   <A NAME="Configuration_file">The configuration file</A>
+  </H2>
+
+  <P>
+   The default path for the squidGuard configuration file is
+   "<TT>/usr/local/squidGuard/squidGuard.conf</TT>" but another
+   default can be set at <A
+   HREF="/install/#Defaultconfigfile">compile time</A>, and
+   can be changed at <A
+   HREF="/install/#Configfile">runtime</A>. From here we'll
+   use <TT>squidGuard.conf</TT> for short.
+  </P>
+
+  <P>
+   <B>Note:</B> The number of configuration options and the
+   flexibility may look overwhelming. Don't panic!  Concentrate on the
+   options that suits your needs. Start with a <A
+   HREF="#example01">simple</A> working configuration and extend as your
+   needs and experience grows. Don't try to solve everything in your
+   first attempt..
+  </P>
+
+  <H3>
+   <IMG SRC="/images/arrow-green.gif" BORDER=0 VALIGN=BOTTOM>
+   <A NAME="General">In general</A>
+  </H3>
+
+  <H4>
+   <A NAME="Structure">The Structure</A>
+  </H4>
+
+  <P>
+   The recommended structure for <TT>squidGuard.conf</TT> is:
+  </P>
+
+  <DL>
+   <DD>
+    <TABLE CELLPADDING=3 CELLSPACING=0 BORDER=0>
+     <TR ALIGN=LEFT VALIGN=TOP>
+      <TD>
+       <EM>
+	<A HREF="#Directories">Path declarations</A>
+       </EM>
+      </TD>
+      <TD>
+       &nbsp;(i.e. logdir and dbhome)
+      </TD>
+      <TD>
+       &nbsp;(optional)
+      </TD>
+     </TR>
+     <TR ALIGN=LEFT VALIGN=TOP>
+      <TD>
+       <EM>
+	<A HREF="#Timespace">Time space declarations</A>
+       </EM>
+      </TD>
+      <TD>
+       &nbsp;(i.e. time zones)
+      </TD>
+      <TD>
+       &nbsp;(optional)
+      </TD>
+     </TR>
+     <TR ALIGN=LEFT VALIGN=TOP>
+      <TD>
+       <EM>
+	<A HREF="#Sourcegroups">Source group declarations</A>
+       </EM>
+      </TD>
+      <TD>
+       &nbsp;(i.e. clients)
+      </TD>
+      <TD>
+       &nbsp;(optional)
+      </TD>
+     </TR>
+     <TR ALIGN=LEFT VALIGN=TOP>
+      <TD>
+       <EM>
+	<A HREF="#Destinationgroups">Destination group declarations</A>
+       </EM>
+      </TD>
+      <TD>
+       &nbsp;(i.e. URLs)
+      </TD>
+      <TD>
+       &nbsp;(optional)
+      </TD>
+     </TR>
+     <TR ALIGN=LEFT VALIGN=TOP>
+      <TD>
+       <EM>
+	<A HREF="#Rewritegroups">Rewrite rule group declarations</A>
+       </EM>
+      </TD>
+      <TD>
+      </TD>
+      <TD>
+       &nbsp;(optional)
+      </TD>
+     </TR>
+     <TR ALIGN=LEFT VALIGN=TOP>
+      <TD>
+       <EM>
+	<A HREF="#Acls">Access control rule declarations</A>
+       </EM>
+      </TD>
+      <TD>
+      </TD>
+      <TD>
+       &nbsp;(required)
+      </TD>
+     </TR>
+    </TABLE>
+   </DD>
+  </DL>
+
+  <P>
+   <B>Note:</B> No forward references are allowed! Within this strong
+   limitation you may actually chose any structure you prefer.
+  </P>
+
+  <H4>
+   <A NAME="Reserved">Reserved words</A>
+  </H4>
+
+  <P>
+   The following words are reserved in <TT>squidGuard.conf</TT> and
+   should be avoided in declaration names:
+  </P>
+
+  <TT>
+   <B>
+    <PRE>
+       acl             fri             outside         sun             urllist 
+       anonymous       friday          pass            sunday          user 
+       date            fridays         redirect        sundays         userlist 
+       dbhome          ip              rew             thu             wed 
+       dest            log             rewrite         thursday        wednesday 
+       destination     logdir          sat             thursdays       wednesdays 
+       domain          logfile         saturday        time            weekly 
+       domainlist      mon             saturdays       tue             within 
+       else            monday          source          tuesday         
+       expressionlist  mondays         src             tuesdays        
+    </PRE>
+   </B>
+  </TT>
+
+  <DL>
+   <DT>
+    In adition is:
+   </DT>
+    <DD>
+    <TABLE CELLPADDING=3 CELLSPACING=0 BORDER=0>
+     <TR ALIGN=LEFT VALIGN=TOP>
+      <TH ALIGN=CENTER>
+       <TT>#</TT>
+      </TH>
+      <TD>
+       used to start a comment. Everything from the <TT>#</TT> to the
+       end of line is ignored.
+      </TD>
+     </TR>
+     <TR ALIGN=LEFT VALIGN=TOP>
+      <TH ALIGN=CENTER>
+       <TT>{ }</TT>
+      </TH>
+      <TD>
+       used to delimit the start and end of a group declaration.
+      </TD>
+     </TR>
+     <TR ALIGN=LEFT VALIGN=TOP>
+      <TH ALIGN=CENTER>
+       <TT>-</TT>
+      </TH>
+      <TD>
+       often used to declare a range
+       (i.e.&nbsp;"<TT><EM>from-to</EM></TT>" or
+       "<TT><EM>from</EM>&nbsp;-&nbsp;<EM>to</EM></TT>").
+      </TD>
+     </TR>
+    </TABLE>
+    </DD>
+  </DL>
+
+  <H4>
+   <A NAME="Lables">Declaration names/lables</A>
+  </H4>
+
+  <P>
+   Declaration names/lables have the same limitations as domainnames
+   except _ is allowed too (i.e.&nbsp;<TT>[-_.a-z0-9]+</TT>). <A
+   HREF="#Reserved">Reserved words</A> should be avoided as they may
+   cause unpredictable results.
+  </P>
+
+  <H4>
+   <A NAME="Breaking">Breaking long lines</A>
+  </H4>
+
+  <P>
+   Generally you may break a (long) line by repeating the leading
+   keyword. Repeated lines of the same type within a class will bee
+   joined when the rule trees are built. So:
+  </P>
+
+  <DL>
+   <DL>
+    <DT>
+     <TT>
+      src foo {
+     </TT>
+    </DT>
+    <DD>
+     <TT>
+      ip 1.2.3.4<BR>
+      ip 2.3.4.5
+     </TT>
+    </DD>
+    <DT>
+     <TT>
+      }
+     </TT>
+    </DT>
+   </DL>
+   <BR>
+   <DT>
+    is equivalent to:<BR><BR>
+   </DT>
+   <DL>
+    <DT>
+     <TT>
+      src foo {
+     </TT>
+    </DT>
+    <DD>
+     <TT>
+      ip 1.2.3.4 2.3.4.5
+     </TT>
+    </DD>
+    <DT>
+     <TT>
+      }
+     </TT>
+    </DT>
+   </DL>
+  </DL>
+
+  <H3>
+   <IMG SRC="/images/arrow-green.gif" BORDER=0 VALIGN=BOTTOM>
+   <A NAME="Directories">Path declarations</A>
+  </H3>
+
+  <DL>
+   <DT>
+    The <A HREF="./#Logdir">default</A> for the following directories
+    may be overruled by:
+   </DT>
+   <DD>
+    <TABLE CELLPADDING=3 CELLSPACING=0 BORDER=0>
+     <TR ALIGN=LEFT VALIGN=TOP>
+      <TH>
+       <A NAME="Logdir"></A><TT>logdir</TT>
+      </TH>
+      <TD>
+       defines the diretory for the standard logfiles
+       "<TT>squidGuard.error</TT>" and "<TT>squidGuard.log</TT>", and
+       the base for relative logfilenames in <EM>log</EM> rules. The
+       default is "<TT>/usr/local/squidGuard/logs</TT>" but another
+       default can be set at <A HREF="/install/#Logdir">compile time</A>.
+      </TD>
+     </TR>
+     <TR ALIGN=LEFT VALIGN=TOP>
+      <TH>
+       <A NAME="DBhome"></A><TT>dbhome</TT>
+      </TH>
+      <TD>
+       defines the base for relative list filenames. The default is
+       "<TT>/usr/local/squidGuard/db</TT>" but another default can be
+       set at <A HREF="/install/#DBhome">compile time</A>.
+      </TD>
+     </TR>
+    </TABLE>
+   </DD>
+  </DL>
+
+  <P>
+    Although the defaults can be used silently it is recommended to
+    declare these explicitly for clarity. For instance:
+  </P>
+
+  <TT>
+   <PRE>
+     logdir /usr/local/squidGuard/logs
+     dbhome /usr/local/squidGuard/db
+   </PRE>
+  </TT>
+
+  <H3>
+   <IMG SRC="/images/arrow-green.gif" BORDER=0 VALIGN=BOTTOM>
+   <A NAME="Timespace">Time space declarations</A>
+  </H3>
+
+  <P>
+   Time spaces, or zones if you prefer, are declared by:
+  </P>
+
+  <DL>
+   <DL>
+    <DT>
+     <TT>
+      <B>time</B>&nbsp;<EM>name</EM>&nbsp;<B>{</B>
+     </TT>
+    </DT>
+    <DD>
+     <TT>
+      <EM>specification</EM><BR>
+      <EM>specification</EM><BR>
+      <EM>...</EM><BR>
+     </TT>
+    </DD>
+    <DT>
+     <TT>
+      <B>}</B>
+     </TT>
+    </DT>
+   </DL>
+  </DL>
+
+  <P>
+   where <EM>specification</EM> can be any reasonable combination of:
+  </P>
+
+  <DL>
+   <DL>
+    <DT>
+     <A NAME="Weekly"><B>Days of the week with an optional time
+     constraint for each day:</B></A>
+    </DT>
+    <DD>
+     <TT>
+      <B>weekly</B>&nbsp;{smtwhfa}&nbsp;[HH:MM-HH:MM]
+     </TT>
+    </DD>
+    <DD>
+     or
+    </DD>
+    <DD>
+     <TT>
+      <B>weekly</B>&nbsp;<EM>dayname</EM>&nbsp;[...]&nbsp;[HH:MM-HH:MM]
+     </TT>
+    </DD>
+    <DD>
+     where s=sun, m=mon, t =tue, w=wed, h=thu, f=fri, a=sat.
+    </DD>
+    <DD>
+     and <EM>dayname</EM> is one of:
+     <DL>
+      <DD>
+       "<TT>mon</TT>", "<TT>monday</TT>", "<TT>mondays</TT>", (synonymous)
+      </DD>
+      <DD>
+       "<TT>tue</TT>", "<TT>tuesday</TT>", "<TT>tuesdays</TT>", (synonymous)
+      </DD>
+      <DD>
+       "<TT>wed</TT>", etc.
+      </DD>
+     </DL>
+    </DD>
+    <BR>
+    <DD>
+     For instance for monday to friday, mornings and evenings:
+     <DL>
+      <DD>
+       <TT>
+	weekly&nbsp;mtwhf&nbsp;00:00-08:00
+	<BR>
+	weekly&nbsp;mtwhf&nbsp;17:00-24:00
+       </TT>
+      </DD>
+     </DL>
+     and for saturdays and sundays:
+     <DL>
+      <DD>
+       <TT>
+	weekly&nbsp;as
+       </TT>
+      </DD>
+      <DD>
+       or
+      </DD>
+      <DD>
+       <TT>
+	weekly&nbsp;saturday<BR>
+	weekly&nbsp;sunday
+       </TT>
+      </DD>
+     </DL>
+    </DD>
+    <BR>
+    <DT>
+     <A NAME="Daily"><B>Time of the day:</B></A>
+    </DT>
+    <DD>
+     <TT>
+      <B>weekly&nbsp;*</B>&nbsp;HH:MM-HH:MM
+     </TT>
+    </DD>
+    <DD>
+     which is just a special case of <A
+     HREF="#Weekly">weekly</A>.<BR><BR>
+    </DD>
+    <DD>
+     For instance:
+     <DL>
+      <DD>
+       <TT>
+	weekly&nbsp;*&nbsp;00:00-08:00
+	<BR>
+	weekly&nbsp;*&nbsp;17:00-24:00
+       </TT>
+      </DD>
+     </DL>
+    </DD>
+    <BR>
+    <DT>
+     <A NAME="Date"><B>Dates with an optional time
+     constraint for each date:</B></A>
+    </DT>
+    <DD>
+     <TT>
+      <B>date</B>&nbsp;YYYY-MM-DD&nbsp;[...]&nbsp;[HH:MM-HH:MM&nbsp;...]
+     </TT>
+    </DD>
+    <DD>
+     or
+    </DD>
+    <DD>
+     <TT>
+      <B>date</B>&nbsp;YYYY.MM.DD&nbsp;[...]&nbsp;[HH:MM-HH:MM&nbsp;...]
+     </TT>
+    </DD>
+    <DD>
+     where the preferred of the two dateformats is just a matter of
+     personal taste.<BR><BR>
+    </DD>
+    <DD>
+     For instance for the Ascension Day and the Whit Monday of 1999:
+     <DL>
+      <DD>
+       <TT>
+	date&nbsp;1999.05.13&nbsp;1999.05.24
+       </TT>
+      </DD>
+     </DL>
+     or for the Ash Wednesday afternoon of 1999:
+     <DL>
+      <DD>
+       <TT>
+	date&nbsp;1999.03.31&nbsp;12:00-24:00
+       </TT>
+      </DD>
+     </DL>
+    </DD>
+    <BR>
+    <DT>
+     <A NAME="Daterange"><B>Date range with an optional time
+     constraint for each day:</B></A>
+    </DT>
+    <DD>
+     <TT>
+      <B>date</B>&nbsp;YYYY-MM-DD-YYYY-MM-DD&nbsp;[HH:MM-HH:MM&nbsp;...]
+     </TT>
+    </DD>
+    <DD>
+     or
+    </DD>
+    <DD>
+     <TT>
+      <B>date</B>&nbsp;YYYY.MM.DD-YYYY.MM.DD&nbsp;[HH:MM-HH:MM&nbsp;...]<BR><BR>
+     </TT>
+    </DD>
+    <DD>
+     For instance for the Easter of 1999:
+     <DL>
+      <DD>
+       <TT>
+	date&nbsp;1999.04.01-1999.04.05
+       </TT>
+      </DD>
+     </DL>
+     <BR>
+    </DD>
+    <DT>
+     <A NAME="Datewildcard"><B>Date wildcard with an optional time
+     constraint:</B></A>
+    </DT>
+    <DD>
+     <TT>
+      <B>date</B>&nbsp;<EM>YYYY</EM>-<EM>MM</EM>-<EM>DD</EM>&nbsp;[HH:MM-HH:MM&nbsp;...]
+     </TT>
+    </DD>
+    <DD>
+     or
+    </DD>
+    <DD>
+     <TT>
+      <B>date</B>&nbsp;<EM>YYYY</EM>.<EM>MM</EM>.<EM>DD</EM>&nbsp;[HH:MM-HH:MM&nbsp;...]
+     </TT>
+    </DD>
+    <DD>
+     where <TT><EM>YYYY</EM></TT>, <TT><EM>MM</EM></TT> and
+     <TT><EM>DD</EM></TT> may be an asterisk,
+     "<TT><B>*</B></TT>".<BR><BR>
+    </DD>
+    <DD>
+     For instance for the New Year's Day:
+     <DL>
+      <DD>
+       <TT>
+	date&nbsp;*.01.01
+       </TT>
+      </DD>
+     </DL>
+    </DD>
+    <DD>
+     and for the Christmas Eve:
+     <DL>
+      <DD>
+       <TT>
+	date&nbsp;*.12.24 12:00-24:00
+       </TT>
+      </DD>
+     </DL>
+    </DD>
+   </DL>
+  </DL>
+
+  <P>
+   <B>Note1:</B> The numeric formats are strict (I.e. 08:00 not 8:00
+   for HH:MM etc).
+   <BR>
+   <B>Note2:</B> Overlaps are OK, and the result is the <EM>union</EM>.
+  </P>
+
+  <P>
+   Thus for instance a Norwegian time space definition for leisure
+   time including holidays and short days could look something like:
+  </P>
+
+  <TT>
+   <PRE>
+     time leisure-time {
+	  weekly   * 00:00-08:00  	      # night
+	  weekly   * 17:00-24:00  	      # evening
+	  weekly   fridays 16:00-17:00	      # weekend
+	  weekly   saturdays sundays	      # weekend
+	  date	   *.01.01		      # New Year's Day
+	  date	   *.05.01		      # Labour Day
+	  date	   *.05.17		      # National Day
+	  date	   *.12.24 12:00-24:00	      # Christmas Eve
+	  date	   *.12.25		      # Christmas Day
+	  date	   *.12.26		      # Boxing Day
+	  date	   1999.03.31 12:00.24:00     # Ash Wednesday
+	  date	   1999.04.01-1999.04.05      # Easter
+	  date	   1999.05.13 1999.05.24      # Ascension Day and Whitsun
+	  date	   2000.04.19 12:00.24:00     # Ash Wednesday y2000
+	  date	   2000.04.20-2000.04.24      # Easter y2000
+	  date	   2000.06.01 2000.06.12      # Ascension Day and Whitsun y2000
+     }
+   </PRE>
+  </TT>
+
+  <H3>
+   <IMG SRC="/images/arrow-green.gif" BORDER=0 VALIGN=BOTTOM>
+   <A NAME="Sourcegroups">Source group declarations</A>
+  </H3>
+
+  <P>
+   Source group, or client groups if you prefer, are declared by:
+  </P>
+
+  <DL>
+   <DL>
+    <DT>
+     <TT>
+      <B>src|source&nbsp;</B><EM>name</EM>&nbsp;[within|outside&nbsp;<EM>time_space_name</EM>]&nbsp;<B>{</B>
+     </TT>
+    </DT>
+    <DD>
+     <TT>
+      <EM>specification</EM><BR>
+      <EM>specification</EM><BR>
+      <EM>...</EM><BR>
+     </TT>
+    </DD>
+    <DT>
+     <TT>
+      <B>}</B>
+     </TT>
+    </DT>
+   </DL>
+   or
+   <DL>
+    <DT>
+     <TT>
+      <B>src|source&nbsp;</B><EM>name</EM><B>&nbsp;within|outside&nbsp;</B><EM>time_space_name</EM><B>&nbsp;{</B>
+     </TT>
+    </DT>
+    <DD>
+     <TT>
+      <EM>specification</EM><BR>
+      <EM>specification</EM><BR>
+      <EM>...</EM><BR>
+     </TT>
+    </DD>
+    <DT>
+     <TT>
+      <B>}&nbsp;else&nbsp;{</B>
+     </TT>
+    </DT>
+    <DD>
+     <TT>
+      <EM>specification</EM><BR>
+      <EM>specification</EM><BR>
+      <EM>...</EM><BR>
+     </TT>
+    </DD>
+    <DT>
+     <TT>
+      <B>}</B>
+     </TT>
+    </DT>
+   </DL>
+  </DL>
+
+  <P>
+   where:
+  </P>
+
+  <UL>
+   <LI>
+    <TT><B>src</B></TT> and <TT><B>source</B></TT> are synonymous; use
+    the one you prefer.
+   </LI>
+   <LI>
+    <TT><B>within</B></TT> and <TT><B>outside</B></TT> sets an
+    optional time constraint to the definition.
+   </LI>
+   <LI>
+    the <TT><B>else</B></TT> part refers to the time constraint.
+   </LI>
+  </UL>
+
+  <P>
+   Time constraints on clientgroups can be used to make these clients
+   unknown (i.e. use the default rule) within or outside a given time
+   space. Or it can be used to define a usergroup that is expected to
+   move between two locations at given times (like office/home)
+  </P>
+
+  <P>
+   <EM>Specification</EM> can be any reasonable combination of:
+  </P>
+
+  <DL>
+   <DL>
+    <DT>
+     <A NAME="IP"></A><B>IP addresses and/or ranges (multiple):</B>
+    </DT>
+    <DD>
+     <TT>
+      <B>ip</B>&nbsp;xxx.xxx.xxx.xxx&nbsp;[...]
+     </TT>
+    </DD>
+    <DD>
+     or
+    </DD>
+    <DD>
+     <TT>
+      <B>ip</B>&nbsp;xxx.xxx.xxx.xxx/nn&nbsp;[...]
+     </TT>
+    </DD>
+    <DD>
+     or
+    </DD>
+    <DD>
+     <TT>
+      <B>ip</B>&nbsp;xxx.xxx.xxx.xxx/mmm.mmm.mmm.mmm&nbsp;[...]
+     </TT>
+    </DD>
+    <DD>
+     or
+    </DD>
+    <DD>
+     <TT>
+      <B>ip</B>&nbsp;xxx.xxx.xxx.xxx-yyy.yyy.yyy.yyy&nbsp;[...]
+     </TT>
+    </DD>
+    <DD>
+     where:
+     <DL>
+      <DD>
+       <TT>xxx.xxx.xxx.xxx</TT> is an IP address (host or net,
+       i.e. <TT>10.11.12.13</TT> or <TT>10.11.12.0</TT>),<BR>
+       <TT>/nn</TT> a net prefix (i.e. <TT>/23</TT>),<BR>
+       <TT>mmm.mmm.mmm.mmm</TT> is a netmask
+       (i.e. <TT>255.255.254.0</TT>) and<BR> <TT>yyy.yyy.yyy.yyy</TT>
+       is a host address (must be <TT>&gt;= xxx.xxx.xxx.xxx</TT>)
+      </DD>
+     </DL>
+    </DD>
+   </DL>
+   <BR>
+   <DL>
+    <DT>
+     <A NAME="IPlist"></A><B>IP address/range list (single):</B>
+    </DT>
+    <DD>
+     <TT>
+      <B>iplist</B>&nbsp;<A HREF="#IPlists">filename</A>
+     </TT>
+    </DD>
+    <DD>
+     where:
+     <DL>
+      <DD>
+       <TT>filename</TT> is either a path relative to <A
+       HREF="#DBhome"><TT>dbhome</TT></A> or an absolute path
+       (i.e.&nbsp;<TT>/full/path</TT>) to a <A
+       HREF="#IPlists">database file</A>.
+      </DD>
+      <DD>
+       <A NAME="IPlists">the iplist file format</A> is simply
+       addresses and/or networks separated by a newline as above but
+       without the ip keyword. Thus an iplist for all the private
+       addresses could look something like (Though the preferred use
+       of "<TT>iplist</TT>" over "<TT>ip</TT>" is for long lists of
+       WS/PC addresses primarily to reduce the size of the
+       configuration file):
+       <DL>
+        <DD>
+         <TT>
+	  10.0.0.0/8<BR>
+	  172.16.0.0/12<BR>
+	  192.168.0.0/16<BR>
+	 </TT>
+	</DD>
+       </DL>
+      </DD>
+     </DL>
+    </DD>
+   </DL>
+   <BR>
+   <DL>
+    <DT>
+     <A NAME="Domain"><B>Domains (multiple):</B></A>
+    </DT>
+    <DD>
+     <TT>
+      <B>domain</B>&nbsp;foo.bar&nbsp;[...]&nbsp;&nbsp;*)
+     </TT>
+    </DD>
+    <DD>
+     where:
+     <DL>
+      <DD>
+       <TT>foo.bar</TT> is a domain (zone) the domain name (from a
+       reverse lookup on the client addresses) belongs to (directly or
+       as a subdomain).
+      </DD>
+     </DL>
+    </DD>
+   </DL>
+   <BR>
+   <DL>
+    <DT>
+     <A NAME="User"><B>Users (multiple):</B></A>
+    </DT>
+    <DD>
+     <TT>
+      <B>user</B>&nbsp;foo&nbsp;[...]&nbsp;&nbsp;**)
+     </TT>
+    </DD>
+    <DD>
+     where:
+     <DL>
+      <DD>
+       <TT>foo</TT> is a username (from a ident/RFC-931 lookup to the
+       client.
+      </DD>
+     </DL>
+    </DD>
+   </DL>
+   <BR>
+   <DL>
+    <DT>
+     <A NAME="Userlist"></A><B>User list (single):</B>
+    </DT>
+    <DD>
+     <TT>
+      <B>userlist</B>&nbsp;<A HREF="#Userlists">filename</A>&nbsp;**)
+     </TT>
+    </DD>
+    <DD>
+     where:
+     <DL>
+      <DD>
+       <TT>filename</TT> is either a path relative to <A
+       HREF="#DBhome"><TT>dbhome</TT></A> or an absolute path
+       (i.e.&nbsp;<TT>/full/path</TT>) to a <A
+       HREF="#Userlists">database file</A>.
+      </DD>
+      <DD>
+       <A NAME="Userlists">the userlist file format</A> is simply
+       RFC-931 usernames, optionally followed by a `:' and a comment
+       (i.e. /etc/passwd or a .htpasswd file may be used) separated by
+       a newline as in the <A HREF="#User">user declaration</A> but
+       without the user keyword. Thus a userlist could look something
+       like:
+       <DL>
+        <DD>
+         <TT>
+	  root<BR>
+	  administrator<BR>
+	  foo<BR>
+	  bar<BR>
+	 </TT>
+	</DD>
+       </DL>
+      </DD>
+     </DL>
+    </DD>
+   </DL>
+   <BR>
+   <DL>
+    <DT>
+     <A NAME="Clientgroup log"></A><B>Special clientgroup translation
+     log (single):</B>
+    </DT>
+    <DD>
+     <TT>
+      <B>log|logfile</B>&nbsp;[anonymous]&nbsp;<EM>filename</EM>
+     </TT>
+    </DD>
+   </DL>
+   <DD>
+    where:
+    <DL>
+     <DD>
+      <TT>filename</TT> is either a path relative to <A
+      HREF="#Logdir"><TT>logdir</TT></A> or an absolute path
+      (i.e.&nbsp;<TT>/full/path</TT>) to a logfile where translation
+      for this group should be logged. If the <TT>anonymous</TT>
+      option is specified the logged info is somewhat anonymized to
+      protect the individual.
+     </DD>
+    </DL>
+   </DD>
+  </DL>
+
+  <P>
+   <FONT SIZE=-1>
+    <B>
+     *)&nbsp;The use of domain match for clientsgroups requires Squid
+     is set up to do revese lookups on clients.<BR> **)&nbsp;The use
+     of username match for clientsgroups requires Squid is set up to
+     do ident/RFC-931 lookups.<BR>
+    </B>
+   </FONT>
+  </P>
+
+  <P>
+   <B>Note1:</B> Overlaps are OK, and the groups are matched in the
+   order they are defined.<BR> <B>Note2:</B> The logical operator
+   between different types within a group (ip/domain/user) is AND. The
+   default is <EM>any</EM>. Thus one of each defined type
+   <EM>must</EM> match but undefined types are ignored.
+  </P>
+
+  <P>
+   Thus an administrator client group could look something like:
+  </P>
+
+  <TT>
+   <PRE>
+     src admin within leisure-time {
+	  ip	   10.11.12.13 10.11.12.26    # The administrators home WS/PCs
+	  domain   ras.teledanmark.no	      # The RAS domain
+	  user	   root administrator foo bar # The administrators login names
+     } else {
+	  ip	   10.1.1.15 10.1.2.17        # The administrators office WS/PCs
+	  domain   lan.teledanmark.no	      # The LAN domain
+	  user	   root administrator foo bar # The administrators login names
+     }
+   </PRE>
+  </TT>
+
+  <H3>
+   <IMG SRC="/images/arrow-green.gif" BORDER=0 VALIGN=BOTTOM>
+   <A NAME="Destinationgroups">Destination group declarations</A>
+  </H3>
+
+  <P>
+   Destination group, or target groups if you prefer, are declared by:
+  </P>
+
+  <DL>
+   <DL>
+    <DT>
+     <TT>
+      <B>dest|destination&nbsp;</B><EM>name</EM>&nbsp;[within|outside&nbsp;<EM>time_space_name</EM>]&nbsp;<B>{</B>
+     </TT>
+    </DT>
+    <DD>
+     <TT>
+      <EM>specification</EM><BR>
+      <EM>specification</EM><BR>
+      <EM>...</EM><BR>
+     </TT>
+    </DD>
+    <DT>
+     <TT>
+      <B>}</B>
+     </TT>
+    </DT>
+   </DL>
+   or
+   <DL>
+    <DT>
+     <TT>
+      <B>dest|destination&nbsp;</B><EM>name</EM><B>&nbsp;within|outside&nbsp;</B><EM>time_space_name</EM><B>&nbsp;{</B>
+     </TT>
+    </DT>
+    <DD>
+     <TT>
+      <EM>specification</EM><BR>
+      <EM>specification</EM><BR>
+      <EM>...</EM><BR>
+     </TT>
+    </DD>
+    <DT>
+     <TT>
+      <B>}&nbsp;else&nbsp;{</B>
+     </TT>
+    </DT>
+    <DD>
+     <TT>
+      <EM>specification</EM><BR>
+      <EM>specification</EM><BR>
+      <EM>...</EM><BR>
+     </TT>
+    </DD>
+    <DT>
+     <TT>
+      <B>}</B>
+     </TT>
+    </DT>
+   </DL>
+  </DL>
+
+  <P>
+   where:
+  </P>
+
+  <UL>
+   <LI>
+    <TT><B>dest</B></TT> and <TT><B>destination</B></TT> are synonymous.
+   </LI>
+   <LI>
+    <TT><B>within</B></TT> and <TT><B>outside</B></TT> sets an
+    optional time constraint to the definition.
+   </LI>
+   <LI>
+    the <TT><B>else</B></TT> part refers to the time constraint.
+   </LI>
+  </UL>
+
+  <P>
+   Time constraints on destinationgroups can be used to make these
+   groups void (i.e. ignored) within or outside a given time space.
+  </P>
+
+  <P>
+   <EM>Specification</EM> can be any combination of zero or one of
+   each of:
+  </P>
+
+  <DL>
+   <DL>
+    <DT>
+     <A NAME="Domainlist"></A><B>Domainlist (single):</B>
+    </DT>
+    <DD>
+     <TT>
+      <B>domainlist</B>&nbsp;<A HREF="#Domainlists">filename</A>
+     </TT>
+    </DD>
+   </DL>
+   <BR>
+   <DL>
+    <DT>
+     <A NAME="URLlist"></A><B>URL list (single):</B>
+    </DT>
+    <DD>
+     <TT>
+      <B>urllist</B>&nbsp;<A HREF="#URLlists">filename</A>
+     </TT>
+    </DD>
+   </DL>
+   <BR>
+   <DL>
+    <DT>
+     <A NAME="Expressionlist"></A><B>Expressionlist (single):</B>
+    </DT>
+    <DD>
+     <TT>
+      <B>expressionlist</B>&nbsp;<A HREF="#Expressionlists">filename</A>
+     </TT>
+    </DD>
+   </DL>
+   <BR>
+   <DD>
+    where:
+    <DL>
+     <DD>
+      <TT>filename</TT> is either a path relative to <A
+      HREF="#DBhome"><TT>dbhome</TT></A> or an absolute path
+      (i.e.&nbsp;<TT>/full/path</TT>) to a <A HREF="#Lists">database
+      file</A>.
+     </DD>
+    </DL>
+   </DD>
+   <BR>
+   <DL>
+    <DT>
+     <A NAME="Destinationgroup redirect"></A><B>Special
+     destinationgroup redirect URL (single):</B>
+    </DT>
+    <DD>
+     <TT>
+      <B>redirect</B>&nbsp;[302:]<EM>url</EM>
+     </TT>
+    </DD>
+   </DL>
+   <BR>
+   <DL>
+    <DT>
+     <A NAME="Destinationgroup log"></A><B>Special destinationgroup redirect log (single):</B>
+    </DT>
+    <DD>
+     <TT>
+      <B>log|logfile</B>&nbsp;[anonymous]&nbsp;<EM>filename</EM>
+     </TT>
+    </DD>
+   </DL>
+   <DD>
+    where:
+    <DL>
+     <DD>
+      <TT>filename</TT> is either a path relative to <A
+      HREF="#Logdir"><TT>logdir</TT></A> or an absolute path
+      (i.e.&nbsp;<TT>/full/path</TT>) to a logfile where redirects
+      caused by match of this group should be logged. If the
+      <TT>anonymous</TT> option is specified the logged info is
+      somewhat anonymized to protect the individual.
+     </DD>
+    </DL>
+   </DD>
+  </DL>
+
+  <P>
+   <B>Note1:</B> Overlaps are OK, and the groups are matched in the
+   order they are listed in the <EM>pass</EM> declaration in for the
+   actual clientgroup.<BR> <B>Note2:</B> The logical operator between
+   different types (domainlist/urllist/expressionlist) is OR. The
+   default is <EM>void</EM>. Thus the destinationgroup is matched if
+   <EM>one</EM> of the defined types match. Within a destination group
+   the test order is domainlist, urllist, and expressionlist.
+  </P>
+
+  <P>
+   Thus an entertainment destination group declaration could look
+   something like:
+  </P>
+
+  <TT>
+   <PRE>
+     dest not-business-related outside leisure-time {
+	  domainlist	 entertainment/domains
+	  urllist	 entertainment/urls
+	  expressionlist entertainment/expressions
+     }
+   </PRE>
+  </TT>
+
+  <H3>
+   <IMG SRC="/images/arrow-green.gif" BORDER=0 VALIGN=BOTTOM>
+   <A NAME="Rewritegroups">Rewrite rule group declarations</A>
+  </H3>
+
+  <P>
+   Rewrite rule groups, or rewrite rule sets if you prefer, are
+   declared by:
+  </P>
+
+  <DL>
+   <DL>
+    <DT>
+     <TT>
+      <B>rew|rewrite&nbsp;</B><EM>name</EM>&nbsp;[within|outside&nbsp;<EM>time_space_name</EM>]&nbsp;<B>{</B>
+     </TT>
+    </DT>
+    <DD>
+     <TT>
+      <EM>substitution</EM><BR>
+      <EM>substitution</EM><BR>
+      <EM>...</EM><BR>
+      <EM>[logging]</EM><BR>
+     </TT>
+    </DD>
+    <DT>
+     <TT>
+      <B>}</B>
+     </TT>
+    </DT>
+   </DL>
+   or
+   <DL>
+    <DT>
+     <TT>
+      <B>rew|rewrite&nbsp</B><EM>name</EM><B>&nbsp;within|outside&nbsp;</B><EM>time_space_name</EM><B>&nbsp;{</B>
+     </TT>
+    </DT>
+    <DD>
+     <TT>
+      <EM>substitution</EM><BR>
+      <EM>substitution</EM><BR>
+      <EM>...</EM><BR>
+      <EM>[logging]</EM><BR>
+     </TT>
+    </DD>
+    <DT>
+     <TT>
+      <B>}&nbsp;else&nbsp;{</B>
+     </TT>
+    </DT>
+    <DD>
+     <TT>
+      <EM>substitution</EM><BR>
+      <EM>substitution</EM><BR>
+      <EM>...</EM><BR>
+      <EM>[logging]</EM><BR>
+     </TT>
+    </DD>
+    <DT>
+     <TT>
+      <B>}</B>
+     </TT>
+    </DT>
+   </DL>
+  </DL>
+
+  <P>
+   where:
+  </P>
+
+  <UL>
+   <LI>
+    <TT><B>rew</B></TT> and <TT><B>rewrite</B></TT> are synonymous.
+   </LI>
+   <LI>
+    <TT><B>within</B></TT> and <TT><B>outside</B></TT> sets an
+    optional time constraint to the definition.
+   </LI>
+   <LI>
+    the <TT><B>else</B></TT> part refers to the time constraint.
+   </LI>
+  </UL>
+
+  <P>
+   Time constraints on rewritegroups can be used to make these groups
+   functional within or outside a given time space only; Like redirect
+   to local copies within peek business hours.
+  </P>
+
+  <P>
+   <EM>Substitution</EM> is <B><TT>sed</TT></B> style (multiple):
+  </P>
+
+  <DL>
+   <DD>
+    <TT>
+     <B>s@<EM>from</EM>@<EM>to</EM>@[irR]</B>
+    </TT>
+   </DD>
+   <DT>
+    where:
+   </DT>
+   <DD>
+    <TT>from</TT> is a <A HREF="#Regular expressions">regular
+    expression</A> that will be replaced with the string
+    <EM><TT>to</TT></EM>.
+   </DD>
+   <DD>
+    the <TT>i</TT> option makes the <TT>from</TT> part match case
+    insensitive.
+   </DD>
+   <DD>
+    the <TT>r</TT> option makes the redirection visible to the user
+    with a <A
+    HREF="http://ftp.teledanmark.no/pub/networking/rfc/rfc1945.txt">HTTP
+    code <EM>302 - Moved Temporarily</EM></A> (The default is to make
+    Squid silently fetch the alternate URL).
+   </DD>
+   <DD>
+    the <TT>R</TT> option makes the redirection visible to the user
+    with a <A
+    HREF="http://ftp.teledanmark.no/pub/networking/rfc/rfc1945.txt">HTTP
+    code <EM>301 - Moved Permanently</EM></A>.
+   </DD>
+  </DL>
+  <DL>
+   <DT>
+    <A NAME="Rewrite log"></A>and <EM>logging</EM> is (single):
+   </DT>
+   <DD>
+    <TT>
+     <B>log|logfile</B>&nbsp;[anonymous]&nbsp;<EM>filename</EM>
+    </TT>
+   </DD>
+   <DD>
+    where:
+    <DL>
+     <DD>
+      <TT>filename</TT> is either a path relative to <A
+      HREF="#Logdir"><TT>logdir</TT></A> or an absolute path
+      (i.e.&nbsp;<TT>/full/path</TT>) to a logfile where succeded
+      rewrites should be logged. If the <TT>anonymous</TT> option is
+      specified the logged info is somewhat anonymized to protect the
+      individual.
+     </DD>
+    </DL>
+   </DD>
+  </DL>
+
+  <P>
+   <B>Note1:</B> Sed style substitutions uses regular expressions and
+   thus slows down squidGuard more than B-tree lookups.<BR>
+   <B>Note2:</B> Suport for visible redirects (i.e. <TT>302:</TT> URL
+   prefix) is broken in some versions of Squid.
+  </P>
+
+  <P>
+   A rewrite rule set declaration could look something like:
+  </P>
+
+  <TT>
+   <PRE>
+     rew get-local {
+	  s@.*/cb32e46.exe$@http://ftp/pub/www/client/windows/cb32e46.exe@r
+	  s@.*/cc32e46.exe$@http://ftp/pub/www/client/windows/cc32e46.exe@r
+	  s@.*/cp32e46.exe$@http://ftp/pub/www/client/windows/cp32e46.exe@r
+     }
+   </PRE>
+  </TT>
+
+  <H3>
+   <IMG SRC="/images/arrow-green.gif" BORDER=0 VALIGN=BOTTOM>
+   <A NAME="Acls">Access Control Lists</A>
+  </H3>
+
+  <P>
+   The Access Control List, <EM>ACL</EM>, combies the previous
+   definitions into distinct rulesets for each clientgroup:
+  </P>
+
+  <DL>
+   <DL>
+    <DT>
+     <TT>
+      <B>acl&nbsp;{</B>
+     </TT>
+    </DT>
+    <DD>
+     <TT>
+      <EM>sourcegroupname</EM>&nbsp;[within|outside&nbsp;<EM>timespacename</EM>]<B>&nbsp;{</B>
+     </TT>
+    </DD>
+    <DL>
+     <DD>
+      <A HREF="#Pass">pass</A>&nbsp;[!]<EM>destgroupname</EM>&nbsp;[...]
+     </DD>
+     <DD>
+      [<A HREF="#Rewrite">rew|rewrite</A>&nbsp;<EM>rewritegroupname</EM>&nbsp;[...]
+     </DD>
+     <DD>
+      [<A HREF="#Redirect">redirect</A>&nbsp;[301:|302:]<EM>new_url</EM>]
+     </DD>
+    </DL>
+    <DD>
+     <TT>
+      <B>}</B><BR><BR>
+     </TT>
+    </DD>
+    <DD>
+     <TT>
+      <EM>sourcegroupname</EM><B>&nbsp;within|outside&nbsp;</B><EM>timespacename</EM><B>&nbsp;{</B>
+     </TT>
+    </DD>
+    <DL>
+     <DD>
+      <A HREF="#Pass">pass</A>&nbsp;[!]<EM>destgroupname</EM>&nbsp;[...]
+     </DD>
+     <DD>
+      [<A HREF="#Rewrite">rew|rewrite</A>&nbsp;<EM>rewritegroupname</EM>&nbsp;[...]
+     </DD>
+     <DD>
+      [<A HREF="#Redirect">redirect</A>&nbsp;[301:|302:]<EM>new_url</EM>]
+     </DD>
+    </DL>
+    <DD>
+     <TT>
+      <B>}&nbsp;else&nbsp;{</B>
+     </TT>
+    </DD>
+    <DL>
+     <DD>
+      <A HREF="#Pass">pass</A>&nbsp;[!]<EM>destgroupname</EM>&nbsp;[...]
+     </DD>
+     <DD>
+      [<A HREF="#Rewrite">rew|rewrite</A>&nbsp;<EM>rewritegroupname</EM>&nbsp;[...]
+     </DD>
+     <DD>
+      [<A HREF="#Redirect">redirect</A>&nbsp;[301:|302:]<EM>new_url</EM>]
+     </DD>
+    </DL>
+    <DD>
+     <TT>
+      <B>}</B><BR><BR>
+     </TT>
+    </DD>
+    <DD>
+     <TT>
+      ...<BR><BR>
+     </TT>
+    </DD>
+    <DD>
+     <TT>
+      <B><A HREF="#Default">default</A></B>&nbsp;[within|outside&nbsp;<EM>timespacename</EM>]&nbsp;<B>{</B>
+     </TT>
+    </DD>
+    <DL>
+     <DD>
+      <B><A HREF="#Pass">pass</A></B>&nbsp;[!]<EM>destgroupname</EM>&nbsp;[...]
+     </DD>
+     <DD>
+      [<A HREF="#Rewrite">rew|rewrite</A>&nbsp;<EM>rewritegroupname</EM>&nbsp;[...]
+     </DD>
+     <DD>
+      <B><A HREF="#Redirect">redirect</A></B>&nbsp;[301:|302:]<EM>new_url</EM>
+     </DD>
+    </DL>
+    <DD>
+     <TT>
+      <B>}</B>[&nbsp;else&nbsp;{
+     </TT>
+    </DD>
+    <DL>
+     <DD>
+      <B><A HREF="#Pass">pass</A></B>&nbsp;[!]<EM>destgroupname</EM>&nbsp;[...]
+     </DD>
+     <DD>
+      [<A HREF="#Rewrite">rew|rewrite</A>&nbsp;<EM>rewritegroupname</EM>&nbsp;[...]
+     </DD>
+     <DD>
+      <B><A HREF="#Redirect">redirect</A></B>&nbsp;[301:|302:]<EM>new_url</EM>
+     </DD>
+    </DL>
+    <DD>
+     <TT>
+      ]
+     </TT>
+    </DD>
+    <DT>
+     <TT>
+      <B>}</B>
+     </TT>
+    </DT>
+   </DL>
+  </DL>
+
+  <P>
+   <B>Note:</B> There may be no more than <U>one</U> acl block.
+  </P>
+
+  <P>
+   <B>
+    <A NAME="Default">The <EM>default</EM> rule set</A>:
+   </B>
+  </P>
+
+  <P>
+   The <EM>default</EM> section defines fallbacks for all acl
+   rulesets. Thus if you define a rewrite rule here it will be used in
+   acls where there are no rewrite rules defined. (i.e. the other acls
+   inherits the definitions in the default acl optionally overruled by
+   own definitions). The default rule set is used for all clients that
+   match no clientgroup and for clientgroups with no acls declared.
+  </P>
+
+  <P>
+   <B>
+    <A NAME="Pass">The <EM>pass</EM> rule</A>:
+   </B>
+  </P>
+
+  <P>
+   The <EM>pass</EM> rules declares destination groups that should
+   pass for the actual client group. "<B><TT>!</TT></B>" is the
+   <EM>NOT</EM> operator and indicates a destination group that should
+   not pass (i.e. be redirected to the actual <A
+   HREF="#Redirect">redirect</A> URL).
+   <BR>
+   <B>Note:</B> Pass rules ends with an implicit "all". It is good
+   practice to allways en the pass rules with either "all" or "none"
+   to make them clear. Ie. use:
+   <BR>
+   &nbsp;&nbsp;<TT>pass good none</TT>
+   <BR>
+   or
+   <BR>
+   &nbsp;&nbsp;<TT>pass good !bad all</TT>
+   <BR>
+   <B>Note:</B> If there is a <EM>!group</EM> there <U>must</U> also
+   be a redirect definition for eiter that destination group, the
+   actual acl or the default acl. If you want some rules for unknown
+   clients that should not apply to the other acls you should define a
+   last clientgroup named "unknown" and with an IP range 0.0.0.0/0
+   (i.e. <EM>any</EM>), and put those rules in the "unknown" acl.
+  </P>
+
+  <P>
+   <B><A NAME="Builtin">Built in <EM>wildcard groups</EM></A>:</B>
+  </P>
+
+  <DL>
+   <DT>
+    The following are built in <EM>wildcard destination groups</EM>:
+   </DT>
+   <DL>
+    <DT>
+     <B>in-addr</B>
+    </DT>
+    <DD>
+     <B>!in-addr</B> can be used to enforce the use of domainnames
+     over IP addresses in the host part of URLs. in-addr is a fast
+     equivalent to a group with the expressionlist
+     "<B><TT>^[^:/]+://[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}($|[:/])</TT></B>".
+    </DD>
+    <DT>
+     <B>any</B>
+    </DT>
+    <DD>
+     matches any URL and is a fast equivalent to the expression
+     "<B><TT>.*</TT></B>".
+    </DD>
+    <DT>
+     <B>all</B>
+    </DT>
+    <DD>
+     is a synonym to <B>any</B>. Use the one you prefer.
+    </DD>
+    <DT>
+     <B>none</B>
+    </DT>
+    <DD>
+     is a fast equivalent to <B>!any</B> and should be used to
+     terminate pass rules where only the listed destination groups
+     should pass.
+    </DD>
+   </DL>
+  </DL>
+
+  <P>
+   <B>
+    <A NAME="Rewrite">The <EM>rewrite</EM> rule</A>:
+   </B>
+  </P>
+
+  <P>
+    The <EM>rewrite</EM> rules declares the substitution rulsets that
+    applies to the actual acl.
+  </P>
+
+  <P>
+   <B>
+    <A NAME="Redirect">The <EM>redirect</EM> rule</A>:
+   </B>
+  </P>
+
+  <P>
+   The <EM>redirect</EM> rules declares the altenative URL to be used
+   for blocked destination groups (<EM>!groups</EM>) for the actual
+   acl.<BR> <B>Note:</B> Inside an acl, this is a fallback used when
+   there is no special redirect declared for the actual destination
+   group, and the default redirect is the last resort.
+  </P>
+
+  <P>
+   squidGuard can do runtime string substitutions in the
+   redirectors. Therefor the character "<TT>%</TT>" has special
+   meaning in the redirector URLs:
+  </P>
+
+  <TABLE CELLPADDING=1 CELLSPACING=0 BORDER=0>
+   <TR>
+    <TH VALIGN=TOP>
+     <TT><B>%a</B></TT>
+    </TH>
+    <TD VALIGN=TOP>
+     is replaced with IP address of the client.
+    </TD>
+   </TR>
+   <TR>
+    <TH VALIGN=TOP>
+     <TT><B>%n</B></TT>
+    </TH>
+    <TD VALIGN=TOP>
+     is replaced with the domainname of the client or
+     "<TT>unknown</TT>" if not available.
+    </TD>
+   </TR>
+   <TR>
+    <TH VALIGN=TOP>
+     <TT><B>%i</B></TT>
+    </TH>
+    <TD VALIGN=TOP>
+     is replaced with the user ID (RFC931) or "<TT>unknown</TT>"
+     if not available.
+    </TD>
+   </TR>
+   <TR>
+    <TH VALIGN=TOP>
+     <TT><B>%s</B></TT>
+    </TH>
+    <TD VALIGN=TOP>
+     is replaced with the matched source group (client group) or
+     "<TT>unknown</TT>" if no groups were matched.
+    </TD>
+   </TR>
+   <TR>
+    <TH VALIGN=TOP>
+     <TT><B>%t</B></TT>
+    </TH>
+    <TD VALIGN=TOP>
+     is replaced with the matched destination group (target group)
+     or "<TT>unknown</TT>" if no groups were matched.
+    </TD>
+   </TR>
+   <TR>
+    <TH VALIGN=TOP>
+     <TT><B>%u</B></TT>
+    </TH>
+    <TD VALIGN=TOP>
+     is replaced with the requested URL.
+    </TD>
+   </TR>
+   <TR>
+    <TH VALIGN=TOP>
+     <TT><B>%p</B></TT>
+    </TH>
+    <TD VALIGN=TOP>
+     is replaced with the REQUEST_URI, i.e. the path and the optional
+     query string of <TT><B>%u</B></TT>, but <B>note</B> for
+     convenience without the leading "<TT><B>/</B></TT>".
+    </TD>
+   </TR>
+   <TR>
+    <TH VALIGN=TOP>
+     <TT><B>%%</B></TT>
+    </TH>
+    <TD VALIGN=TOP>
+     is replaced with a single "<TT>%</TT>".
+    </TD>
+   </TR>
+  </TABLE>
+
+  <P>
+   Thus you can pass usefull information to a more or less intelligent
+   CGI page:
+  </P>
+
+  <TT>
+   <PRE>
+     http://proxy/cgi/squidGuard?clientaddr=%a&clientname=%n&clientident=%i&clientgroup=%s&destinationgroup=%t&url=%u
+   </PRE>
+  </TT>
+
+  <P>
+   For a start, there is a sample of such a script in
+   <TT>samples/squidGuard.cgi</TT> in the source tree.
+  </P>
+
+  <H2>
+   <IMG SRC="/images/arrow-red.gif" BORDER=0 VALIGN=BOTTOM>
+   <A NAME="Lists">The database</A>
+  </H2>
+
+  <P>
+   squidGuard uses a database that can be devided into an unlimited
+   number of distinct categories like "local", "customers", "vendors",
+   "banners", "banned" etc. Each category may consist of separate
+   unlimited lists of <A HREF="#Domainlists">domains</A>, <A
+   HREF="#URLlists">URLs</A> and/or <A HREF="#Expressionlists">regular
+   expressions</A>. For easy revision the lists are stored in separate
+   plain text files that. The lists are for efficiency stored in
+   in-memory-only <EM>B-trees</EM> at startup.
+  </P>
+
+  <P>
+   <B>Note:</B> All URLs are converted to lowercase before match
+   search. So the lists should not contain uppercase leters.
+  </P>
+
+  <H3>
+   <IMG SRC="/images/arrow-green.gif" BORDER=0 VALIGN=BOTTOM>
+   <A NAME="Domainlists">Domainlists</A>
+  </H3>
+
+  <P>
+   The domainlist file format is simply domainnames/zonenames
+   separated by a newline. The length of these lists have neglectable
+   influence on the performance.
+  </P>
+
+  <P>
+   For instance a start for a financial category:
+  </P>
+
+  <TT>
+   <PRE>
+     amex.com
+     asx.com.au
+     bourse-de-paris.fr
+     exchange.de
+     londonstockex.co.uk
+     nasdaq.com
+     nyse.com
+     ose.no
+     tse.or.jp
+     xsse.se
+   </PRE>
+  </TT>
+
+  <P>
+   <B>Note:</B> squidGuard will match any URL with the domainname
+   itself an any subdomains and hosts (i.e.&nbsp;<TT>amex.com</TT>,
+   <TT>www.amex.com</TT>, <TT>whatever.amex.com</TT> and
+   <TT>www.what.ever.amex.com</TT> but <U>not</U>
+   <TT>.*[^.]amex.com</TT> (i.e.&nbsp;<TT>aamex.com</TT> etc.)).
+  </P>
+
+  <H3>
+   <IMG SRC="/images/arrow-green.gif" BORDER=0 VALIGN=BOTTOM>
+   <A NAME="URLlists">URLlists</A>
+  </H3>
+
+  <P>
+   The urllist file format is simply URLs separated by newline but
+   with the "<TT><I>proto</I>://((www|web|ftp)[0-9]*)?</TT>" and
+   "<TT>(:<I>port</I>)?</TT>" parts and normally also the ending
+   "<TT>(/|/[^/]+\.[^/]+)$</TT>" part (i.e. ending "<TT>/</TT>" or
+   "<TT>/<EM>filename</EM></TT>") choped off. (i.e.&nbsp;"<TT><FONT
+   COLOR="#808080"><S>http://www3.</S></FONT><B>foo.bar.com</B><FONT
+   COLOR="#808080"><S>:8080</S></FONT><B>/what/ever</B><FONT
+   COLOR="#808080"><S>/index.html</S></FONT></TT>" =>
+   "<TT><B>foo.bar.com/what/ever</B></TT>")
+  </P>
+
+  <P>
+   For instance a category for banned sites:
+  </P>
+
+  <TT>
+   <PRE>
+     foo.com/~badguy
+     bar.com/whatever/suspect
+   </PRE>
+  </TT>
+
+  <P>
+   <B>Note:</B> The removed parts above are ignored by squidGuard in
+   URL matching. Thus all these URLs will match the above urllist:
+  </P>
+
+  <TT>
+   <PRE>
+     http://foo.com/~badguy
+     http://foo.com/~badguy/whatever
+     ftp://foo.com/~badguy/whatever
+     wais://foo.com/~badguy/whatever
+     http://www2.foo.com/~badguy/whatever
+     http://web56.foo.com/~badguy/whatever
+   </PRE>
+  </TT>
+
+  <P>
+   but <U>not</U>:
+  </P>
+
+  <TT>
+   <PRE>
+     http://barfoo.com/~badguy
+     http://bar.foo.com/~badguy
+     http://foo.com/~goodguy
+   </PRE>
+  </TT>
+
+  <P>
+   <A NAME="URL redirect"></A><B>New in 1.0.0</B> is the ability to do
+   1-1 redirects on url basis with
+   "<TT><EM>key<B>&nbsp;new_url</B></EM></TT>". Thus as an alternative
+   to using rewrites to redirect to local distributions you can have a
+   destination group with an urllist like:
+  </P>
+
+  <TT>
+   <PRE>
+     netscape.com/pub/communicator/4.51/english/windows/windows95_or_nt/complete_install/cc32e451.exe http://ftp.teledanmark.no/pub/www/client/windows/cc32e451.exe
+     netscape.com/pub/communicator/4.51/english/windows/windows95_or_nt/base_install/cb32e451.exe http://ftp.teledanmark.no/pub/www/client/windows/cb32e451.exe
+   </PRE>
+  </TT>
+
+  <P>
+   and an <EM>acl</EM> with
+   <TT>pass&nbsp;...&nbsp;!download&nbsp;...</TT>. This may be a
+   faster alternative than using lots of <TT>s@from@to@</TT> rewrites
+   for 1-1 mapping since it will be faster to search the B-tree than
+   perform a bunch of string edits.
+  </P>
+
+  <H3>
+   <IMG SRC="/images/arrow-green.gif" BORDER=0 VALIGN=BOTTOM>
+   <A NAME="Expressionlists">Expressionlists</A>
+  </H3>
+
+  <P>
+   The expressionlist file format is lines with regular expressions as
+   described in regex(5). Of most interrest is:
+  </P>
+
+  <TABLE CELLPADDING=1 CELLSPACING=0 BORDER=0>
+   <TR>
+    <TH VALIGN=TOP>
+     <A NAME="Regular expressions"></A> <TT><B>.</B></TT>
+    </TH>
+    <TD VALIGN=TOP>
+     Matches any single character (use "<TT>\.</TT>" to match a
+     "<TT>.</TT>").
+    </TD>
+   </TR>
+   <TR>
+    <TH VALIGN=TOP>
+     <TT><B>[abc]</B></TT>
+    </TH>
+    <TD VALIGN=TOP>
+     Matches one of the characters ("<TT>[abc]</TT>" matches a
+     single "<TT>a</TT>" <U>or</U> "<TT>b</TT>" <U>or</U>
+     "<TT>c</TT>").
+    </TD>
+   </TR>
+   <TR>
+    <TH VALIGN=TOP>
+     <TT><B>[c-g]</B></TT>
+    </TH>
+    <TD VALIGN=TOP>
+     Matches one of the characters in the range ("<TT>[c-g]</TT>"
+     matches a single "<TT>c</TT>" <U>or</U> "<TT>d</TT>" <U>or</U>
+     "<TT>e</TT>" <U>or</U> "<TT>f</TT>" <U>or</U> "<TT>g</TT>".<BR>
+     "<TT>[a-z0-9]</TT>" matches any single letter or digit.<BR>
+     "<TT>[-/.:?]</TT>" matches any single "<TT>-</TT>" <U>or</U>
+     "<TT>/</TT>" <U>or</U> "<TT>.</TT>" <U>or</U> "<TT>:</TT>"
+     <U>or</U> "<TT>?</TT>".).
+    </TD>
+   </TR>
+   <TR>
+    <TH VALIGN=TOP>
+     <TT><B>?</B></TT>
+    </TH>
+    <TD VALIGN=TOP>
+     None or one of the preceding ("<TT>words?</TT>" will match
+     "<TT>word</TT>" and "<TT>words</TT>".<BR> "<TT>[abc]?</TT>"
+     matches a single "<TT>a</TT>" <U>or</U> "<TT>b</TT>" <U>or</U>
+     "<TT>c</TT>" <U>or</U> nothing (i.e.&nbsp;"")).
+    </TD>
+   </TR>
+   <TR>
+    <TH VALIGN=TOP>
+     <TT><B>*</B></TT>
+    </TH>
+    <TD VALIGN=TOP>
+     None or more of the preceding ("<TT>words*</TT>" will match
+     "<TT>word</TT>", "<TT>words</TT>" and
+     "<TT>wordsssssss</TT>". "<TT>.*</TT>" will match anything
+     including nothing).
+    </TD>
+   </TR>
+   <TR>
+    <TH VALIGN=TOP>
+     <TT><B>+</B></TT>
+    </TH>
+    <TD VALIGN=TOP>
+     One or more of the preceding ("<TT>xxx+</TT>" will match a
+     sequence of 3 or more "<TT>x</TT>").
+    </TD>
+   </TR>
+   <TR>
+    <TH VALIGN=TOP>
+     <TT><B>(expr1|expr2)</B></TT>
+    </TH>
+    <TD VALIGN=TOP>
+     One of the expressions, which in turn may contain a similar
+     construction ("<TT>(foo|bar)</TT>" will match "<TT>foo</TT>"
+     <U>or</U> "<TT>bar</TT>".<BR> "<TT>(foo|bar)?</TT> will match
+     "<TT>foo</TT>" <U>or</U> "<TT>bar</TT>" <U>or</U> nothing
+     (i.e.&nbsp;"")).
+    </TD>
+   </TR>
+   <TR>
+    <TH VALIGN=TOP>
+     <TT><B>$</B></TT>
+    </TH>
+    <TD VALIGN=TOP>
+     The end of the line ("<TT>(foo|bar)$</TT>" will match
+     "<TT>foo</TT>" <U>or</U> "<TT>bar</TT>"only at the end of a
+     line).
+    </TD>
+   </TR>
+   <TR>
+    <TH VALIGN=TOP>
+     <TT><B>\<I>x</I></B></TT>
+    </TH>
+    <TD VALIGN=TOP>
+     Disable the special meaning of <TT><B><I>x</I></B></TT> where
+     <TT><B><I>x</I></B></TT> is one of the special regex characters
+     "<TT><B>.?*+()^$[]{}\</B></TT>"&nbsp; ("<TT>\.</TT>" will match a
+     single "<TT>.</TT>", "<TT>\\</TT>" a single "<TT>\</TT>" etc.)
+    </TD>
+   </TR>
+  </TABLE>
+
+  <P>
+   Thus a start to block possible sexual material by expression match
+   could look like:
+  </P>
+
+  <DL>
+   <DD>
+    <TT>
+     (^|[-\?+=/_])(bondage|boobs?|busty?|hardcore|porno?|sex|xxx+)([-\?+=/_]|$)
+    </TT>
+   </DD>
+  </DL><BR>
+
+ <B>Notes:</B>
+  <UL>
+   <LI>
+    Unless you build your expressions very very carefully there is a
+    high risk you will have annoyed users on your neck. Typically
+    you might accidentally block "Essex", "Sussex", "breastcancer",
+    "www.x.org" etc. in your eagerness for blocking pornographic
+    material. In practice you would probably replace some of the
+    words in the example above with some more clearly pornographic
+    related words that I don't find appropriate to list
+    here.<BR><BR>
+   </LI>
+   <LI>
+    While the size of the domain and urllists only has marginal
+    influence on the performance, too many large or complex
+    expressions will quickly degrade the performance of
+    squidGuard. Though it may depend heavily on the performance of
+    the regex library you link with.<BR><BR>
+   </LI>
+   <LI>
+    <A NAME="Sample adultdb"></A>There is a rich set of sample files
+    for a group of supposedly pornographic sites under
+    <TT>samples/dest/adult</TT> in the source tree that you can use as
+    a start if porn blocking is one of your tasks. <B>Please note:</B>
+    We recommend that you review these lists before using them. Those
+    domains and urls have been collected <EM>automagically</EM> by a
+    robot. No manual evaluation of the corresponding contents has been
+    performed. Therefor there is a chance some nonpornographic sites
+    have sliped in. Please <A
+    HREF="mailto:squidguard@squidguard.org?subject=squidGuard%20blacklist%20error">report</A>
+    such errors but don't blame us if your fine site is on the
+    list. (Blame those who have pointers to appropriate sites mixed in
+    on their heavy porn link pages!)<BR><BR>
+   </LI>
+   <LI>
+    To avoid publishing to your users a complete guide to banned
+    sites, you probably want to have some or all of these files
+    protected by for instance:
+    <DL>
+     <DD>
+      <TT>
+       chmod&nbsp;640&nbsp;/<I>wherever</I>/filter/db/dest/adult/*<BR>
+       chown&nbsp;<I>cache_effective_user</I>&nbsp;/<I>wherever</I>/filter/db/dest/adult/*<BR>
+       chgrp&nbsp;<I>cache_effective_group</I>&nbsp;/<I>wherever</I>/filter/db/dest/adult/*
+      </TT>
+     </DD>
+    </DL>
+    where <TT>cache_effective_user</TT> and
+    <TT>cache_effective_group</TT> are the values for the
+    corresponding tags as defined in <TT>squid.conf</TT>.<BR><BR>
+   </LI>
+  </UL>
+
+  <H3>
+   <IMG SRC="/images/arrow-green.gif" BORDER=0 VALIGN=BOTTOM>
+   <A NAME="Prebuilt">Prebuilt databases</A>
+  </H3>
+
+  <H4>
+   <A NAME="Create">Creating a prebuilt database</A>
+  </H4>
+
+  <P>
+   To convert a domainlist or urllist from plain text file to a
+   prebuilt database use:
+   <DL>
+    <DD>
+     <TT>
+      squidGuard -C <I>listfile</I>
+     </TT>
+    </DD>
+   </DL>
+   and send Squid a <TT>HUP</TT> signal to respawn squidGuard.  Note:
+   <TT><I>listfile</I></TT> is the absolute plain text filename or
+   relative to <TT>dbhome</TT>.
+  </P>
+
+  <H4>
+   <A NAME="Update">Updating a prebuilt database</A>
+  </H4>
+
+  <P>
+   To add and remove entries from a prebuilt database in runtime put
+   the changes in a diff file (<TT><I>file</I>.diff</TT> for
+   <TT><I>file</I>.db</TT>) with the following simple format:
+   <DL>
+    <DD>
+     <TT>
+      +new
+      <BR>
+      -old
+      <BR>
+      ...
+     </TT>
+    </DD>
+   </DL>
+   Then use:
+   <DL>
+    <DD>
+     <TT>
+      squidGuard -u
+     </TT>
+    </DD>
+   </DL>
+   and remove the diff files. The changes should take effect
+   immediately.
+  </P>
+
+  <H2>
+   <IMG SRC="/images/arrow-red.gif" BORDER=0 VALIGN=BOTTOM>
+   <A NAME="Tuning">Tuning hints</A>
+  </H2>
+
+  <P>
+   For optimal performance try:
+  </P>
+
+  <UL>
+   <LI>
+    limiting both the number of regular expressions and their
+    complexity. Use domainlists and/or urllists where possible.
+   </LI>
+   <LI>
+    limiting the number of rewrite rules. Use redirectors where
+    possible.
+   </LI>
+   <LI>
+    limiting the number of useless url list entries. Move the
+    domainnames to the domainlist and remove redundant urllist entries
+    where aplicable.
+   </LI>
+   <LI>
+    using ip addressranges rather than long lists of single ip
+    addresses. If possible try grouping different usergroups into
+    different ranges or subnets (virtual or physical).
+   </LI>
+  </UL>
+
+
+  <H2>
+   <IMG SRC="/images/arrow-red.gif" BORDER=0 VALIGN=BOTTOM>
+   <A NAME="Examples">Working configuration examples</A>
+  </H2>
+
+  <H3>
+   <IMG SRC="/images/arrow-green.gif" BORDER=0 VALIGN=BOTTOM>
+   <A NAME="example00" HREF="examples/00.conf">Example 0</A> - The
+   absolutely minimal <EM>do nothing</EM> config:
+  </H3>
+
+  <P>
+   The absolutely minimal config file is an emty but existing file
+   (i.e. <B><TT>squidGuard -c /dev/null</TT></B>) which is equivalent
+   to:
+  </P>
+
+  <TT>
+   <PRE>
+     acl {
+	  default {
+	       pass all
+	  }
+     }
+   </PRE>
+  </TT>
+
+  <H3>
+   <IMG SRC="/images/arrow-green.gif" BORDER=0 VALIGN=BOTTOM>
+   <A NAME="example01" HREF="examples/01.conf">Example 1</A><A
+   NAME="Minimal"></A> - The recommended minimal <EM>do nothing</EM>
+   config:
+  </H3>
+
+  <P>
+   We do recommend, for clarity, to say explicitly what squidGuard is
+   expected to do (makes things less magic for a new operator):
+  </P>
+
+  <TT>
+   <PRE>
+     logdir /usr/local/squidGuard/log
+
+     acl {
+	 default {
+	     pass all
+	 }
+     }
+   </PRE>
+  </TT>
+
+  <H3>
+   <IMG SRC="/images/arrow-green.gif" BORDER=0 VALIGN=BOTTOM>
+   <A NAME="example02" HREF="examples/02.conf">Example 2</A> -
+   Limiting the access to one destination group only:
+  </H3>
+
+  <TT>
+   <PRE>
+     logdir /usr/local/squidGuard/log
+     dbhome /usr/local/squidGuard/db
+
+     dest local {
+	 domainlist local/domains
+     }
+
+     acl {
+	 default {
+	     pass local none
+	     redirect http://localhost/cgi/blocked?clientaddr=%a&clientname=%n&clientuser=%i&clientgroup=%s&url=%u
+	 }
+     }
+   </PRE>
+  </TT>
+
+  <P>
+   This implies there must be a domain list file "<A
+   HREF="examples/02.domains"><TT>/usr/local/squidGuard/db/local/domains</TT></A>"
+   that may simply look like:
+  </P>
+
+  <TT>
+   <PRE>
+     teledanmark.no
+   </PRE>
+  </TT>
+
+  <H3>
+   <IMG SRC="/images/arrow-green.gif" BORDER=0 VALIGN=BOTTOM>
+   <A NAME="example03" HREF="examples/03.conf">Example 3</A> -
+   Blocking the access for unknown or unprivileged clients:
+  </H3>
+
+  <TT>
+   <PRE>
+     logdir /usr/local/squidGuard/log
+     dbhome /usr/local/squidGuard/db
+
+     src privileged {
+	 ip	10.0.0.1 10.0.0.73 10.0.0.233	# ONE OF single clients
+	 ip	10.0.0.10-10.0.0.20		# OR WITHIN range 10.0.0.10 - 10.0.0.20
+	 ip	10.0.1.32/27			# OR WITHIN range 10.0.1.32 - 10.0.1.63
+	 ip	10.0.2.0/255.255.255.0		# OR WITHIN range 10.0.2.0  - 10.0.2.255
+						# AND
+	 domain foo.bar				# MATCH foo.bar. OR *.foo.bar.
+     }
+
+     acl {
+	 privileged {
+	     pass all
+	 }
+
+	 default {
+	     pass none
+	     redirect http://info.foo.bar/cgi/blocked?clientaddr=%a&clientname=%n&clientuser=%i&clientgroup=%s&url=%u
+	 }
+     }
+   </PRE>
+  </TT>
+
+  <P>
+   Using client domainname match implies reverse lookup is enabled
+   (<EM>log_fqdn on</EM>) in <TT>squid.conf</TT>.
+  </P>
+
+  <TT>
+   <PRE>
+     teledanmark.no
+   </PRE>
+  </TT>
+
+  <H3>
+   <IMG SRC="/images/arrow-green.gif" BORDER=0 VALIGN=BOTTOM>
+   <A NAME="example04" HREF="examples/04.conf">Example 4</A> -
+   Blocking inappropriate sites:
+  </H3>
+
+  <TT>
+   <PRE>
+     logdir /usr/local/squidGuard/log
+     dbhome /usr/local/squidGuard/db
+
+     dest porn {
+	 domainlist porn/domains
+	 urllist    porn/urls
+     }
+
+     acl {
+	 default {
+	     pass !porn all
+	     redirect http://localhost/cgi/blocked?clientaddr=%a&clientname=%n&clientuser=%i&clientgroup=%s&url=%u
+	 }
+     }
+   </PRE>
+  </TT>
+
+  <P>
+   This implies there must be a domain list file "<A
+   HREF="examples/04.domains"><TT>/usr/local/squidGuard/db/porn/domains</TT></A>"
+   and a domain list file "<A
+   HREF="examples/04.urls"><TT>/usr/local/squidGuard/db/porn/urls</TT></A>". The
+   <A HREF="examples/04.domains">domain list file</A> may have a
+   zillion lines like:
+  </P>
+
+  <TT>
+   <PRE>
+     porn.com
+     sex.com
+   </PRE>
+  </TT>
+
+  <P>
+   The "<A HREF="examples/04.urls">url list file</A> may have an other
+   zillion lines like:
+  </P>
+
+  <TT>
+   <PRE>
+     foo.com/~porn
+     bar.com/img/sex
+   </PRE>
+  </TT>
+
+  <H3>
+   <IMG SRC="/images/arrow-green.gif" BORDER=0 VALIGN=BOTTOM>
+   <A NAME="example05" HREF="examples/05.conf">Example 5</A> -
+   Blocking inappropriate sites for some users and blocking unknown
+   clients:
+  </H3>
+
+  <TT>
+   <PRE>
+     logdir /usr/local/squidGuard/log
+     dbhome /usr/local/squidGuard/db
+
+     src grownups {
+	 ip	   10.0.0.0/24	  # range 10.0.0.0  - 10.0.0.255
+			       # AND
+	 user   foo bar	  # ident foo or bar
+     }
+
+     src kids {
+	 ip	   10.0.0.0/22	  # range 10.0.0.0 - 10.0.3.255
+     }
+
+     dest porn {
+	 domainlist porn/domains
+	 urllist    porn/urls
+     }
+
+     acl {
+	 grownups {
+	     pass all
+	 }
+
+	 kids {
+	     pass !porn all
+	 }
+
+	 default {
+	     pass none
+	     redirect http://info.foo.bar/cgi/blocked?clientaddr=%a&clientname=%n&clientuser=%i&clientgroup=%s&targetgroup=%t&url=%u
+	 }
+     }
+   </PRE>
+  </TT>
+
+  <P>
+   Using userident match implies RFC931/ident lookup is enabled in
+   <TT>squid.conf</TT>, optionally only for the actual client groups,
+   and that foo and bar's workstations must <A
+   HREF="/links/#Identd">support RFC931</A>.
+  </P>
+
+  <H3>
+   <IMG SRC="/images/arrow-green.gif" BORDER=0 VALIGN=BOTTOM>
+   <A NAME="example06" HREF="examples/06.conf">Example 6</A> -
+   Blocking inappropriate sites partially with regex:
+  </H3>
+
+  <P>
+   &nbsp;<TT><B>+</B></TT> ensuring local and good sites are passed
+   even if they would match a blocking regex:
+   <BR>
+   &nbsp;<TT><B>+</B></TT> limiting the usage of IP-address URLs:
+  </P>
+
+  <TT>
+   <PRE>
+     logdir /usr/local/squidGuard/log
+     dbhome /usr/local/squidGuard/db
+
+     dest local {
+	 domainlist     local/domains
+     }
+
+     dest good {
+	 domainlist     local/domains
+     }
+
+     dest porn {
+	 domainlist     porn/domains
+	 urllist        porn/urls
+	 expressionlist porn/expressions
+     }
+
+     acl {
+	 default {
+	     pass local good !in-addr !porn all
+	     redirect http://localhost/cgi/blocked?clientaddr=%a&clientname=%n&clientuser=%i&clientgroup=%s&url=%u
+	 }
+     }
+   </PRE>
+  </TT>
+
+  <H3>
+   <IMG SRC="/images/arrow-green.gif" BORDER=0 VALIGN=BOTTOM>
+   <A NAME="example07" HREF="examples/07.conf">Example 7</A> -
+   Blocking inappropriate sites within business hours only:
+  </H3>
+
+  <UL>
+    Lets extend <A HREF="#example05">example 5</A> with:
+   <LI>
+     a time constraint on censorship
+   </LI>
+   <LI>
+    logging redirections of inappropriate sites anonymized
+   </LI>
+   <LI>
+    redirecting inappropriate sites specially.
+   </LI>
+   <LI>
+    and still protecting the kids 24h.
+   </LI>
+  </UL>
+
+  <TT>
+   <PRE>
+     logdir /usr/local/squidGuard/log
+     dbhome /usr/local/squidGuard/db
+
+     time leisure-time {
+	 weekly * 00:00-08:00 17:00-24:00	# night and evening
+	 weekly fridays 16:00-17:00		# weekend
+	 weekly saturdays sundays		# weekend
+	 date	*.01.01				# New Year's Day
+	 date	*.05.01				# Labour Day
+	 date	*.05.17				# National Day
+	 date	*.12.24 12:00-24:00		# Christmas Eve
+	 date	*.12.25				# Christmas Day
+	 date	*.12.26				# Boxing Day
+	 date	1999.03.31 12:00.24:00		# Ash Wednesday
+	 date	1999.04.01-1999.04.05		# Easter
+	 date	1999.05.13 1999.05.24		# Ascension Day and Whitsun
+	 date	2000.04.19 12:00.24:00		# Ash Wednesday y2000
+	 date	2000.04.20-2000.04.24		# Easter y2000
+	 date	2000.06.01 2000.06.12		# Ascension Day and Whitsun y2000
+     }
+
+     src grownups {
+	 ip	10.0.0.0/24			# range 10.0.0.0  - 10.0.0.255
+						# AND
+	 user	foo bar				# ident foo or bar
+     }
+
+     src kids {
+	 ip	10.0.0.0/22			# range 10.0.0.0 - 10.0.3.255
+     }
+
+     dest porn {
+	 domainlist	porn/domains		# file listing domains	(clear text)
+	 urllist	porn/urls		# file listing URLs	(clear text)
+	 expressionlist porn/expressions	# file with expressions (clear text regex)
+	 redirect       302:http://info.foo.bar/images/blocked.gif
+						# redirect matches to this URL
+	 log anonymous  porn.log		# log redirects anonymized to logdir/porn.log
+     }
+
+     acl {
+	 grownups within leisure-time {
+	     pass all				# don't censor peoples leisure-time
+	 } else {
+	     pass !in-addr !porn all		# restrict access during business hours
+	 }
+
+	 kids {
+	     pass !porn all			# protect the kids 24h anyway
+	 }
+
+	 default {
+	     pass none				# reject unknown clients
+	     redirect http://info.foo.bar/cgi/blocked?clientaddr=%a&clientname=%n&clientuser=%i&clientgroup=%s&targetgroup=%t&url=%u
+	 }
+     }
+   </PRE>
+  </TT>
+
+  <BR>
+  <HR WIDTH=40%>
+  <BR>
+  <TABLE ALIGN=CENTER CELLPADDING=3 CELLSPACING=0 BORDER=0>
+   <TR>
+    <TD ALIGN=CENTER>
+     <A HREF="http://www.gnu.org/"><IMG
+     SRC="http://info.tdcnorge.no/icons/gnu-logo.gif" BORDER=0
+     VALIGN=TOP></A>
+    </TD>
+    <TD ALIGN=CENTER>
+     <A HREF="http://www.perl.com/"><IMG
+     SRC="http://info.tdcnorge.no/icons/perl-logo.gif" BORDER=0
+     VALIGN=TOP></A>
+    </TD>
+   <!--
+    <TD ALIGN=CENTER>
+     <A HREF="http://www.sun.com/solaris/"><IMG
+     SRC="http://info.tdcnorge.no/icons/solaris-logo.gif" BORDER=0
+     VALIGN=BOTTOM></A>
+    </TD>
+    <TD ALIGN=CENTER>
+     <A HREF="http://www.sun.com/servers/"><IMG
+     SRC="http://info.tdcnorge.no/icons/sun-logo.gif" BORDER=0
+     VALIGN=BOTTOM></A>
+    </TD>
+    <TD ALIGN=CENTER>
+     <A HREF="http://www.tdcnorge.no/"><IMG
+      SRC="http://info.tdcnorge.no/icons/tdc-medium.gif" BORDER=0
+      VALIGN=BOTTOM></A>
+    </TD>
+   -->
+   </TR>
+  </TABLE>
+  <TABLE ALIGN=CENTER CELLPADDING=3 CELLSPACING=0 BORDER=0>
+   <TR>
+    <TD ALIGN=CENTER>
+     <A HREF="http://www.squid-cache.org/"><IMG
+     SRC="http://info.tdcnorge.no/icons/squid-logo.gif" BORDER=0
+     VALIGN=BOTTOM></A>
+    </TD>
+    <TD ALIGN=CENTER>
+     <A HREF="http://www.squidguard.org/"><IMG
+     SRC="http://www.squidguard.org/images/squidGuard.gif"
+     BORDER=0 VALIGN=BOTTOM></A>
+    </TD>
+   <!--
+    <TD ALIGN=CENTER>
+     <A HREF="http://freeware.tdcnorge.no/identd/"><IMG
+     SRC="http://freeware.tdcnorge.no/identd/identd.gif"
+     BORDER=0 VALIGN=BOTTOM></A>
+    </TD>
+   -->
+   </TR>
+  </TABLE>
+  <TABLE ALIGN=CENTER CELLPADDING=3 CELLSPACING=0 BORDER=0>
+   <TR>
+    <TD ALIGN=CENTER>
+     <A HREF="http://www.sleepycat.com/"><IMG
+     SRC="http://www.sleepycat.com/imgs/home_header.gif" BORDER=0
+     VALIGN=TOP></A>
+    </TD>
+   </TR>
+  </TABLE>
+
+
+ </BODY>
+</HTML>

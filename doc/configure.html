@@ -1,0 +1,199 @@
+<html><head>
+<title>Another squidguard website</title>
+<meta name="keywords" content="Squidguard, Squid, Redirector, Proxy, Download">
+<meta name="distribution" content="global">
+</head>
+<body link=white alink=white vlink=white bgcolor="#ddffcc">
+<center>
+<h2>Another squidguard website</h2>
+</center>
+<br>
+<table width=100% border=0 bgcolor="#116633">
+<tr>
+<th width=20% bgcolor="#116633"><font color=white ><a href="/index.html">Home</a></font>
+</th>
+<th width=20% bgcolor="#119944"><font color=white><a href="/Doc/index.html">Documentation</a></font></th>
+<th width=20% bgcolor="#116633"><font color=white><a href="/download.html">Download</A></font></th>
+<th width=20% bgcolor="#116633"><font color=white><a href="/blacklists.html">Blacklists</a></font></th>
+<th width=20% bgcolor="#116633"><font color=white><a href="/addsoft.html">Useful stuff</font></a></th>
+</tr>
+<tr>
+<th width=20% bgcolor="#119944"><font color=white size=-1><a href="/Doc/install.html">Installation</a></font></th>
+<th width=20% bgcolor="#119944"><font color=white size=-1><a href="/Doc/configure.html">Basic Configuration</a></font></th>
+<th width=20% bgcolor="#119944"><font color=white size=-1><a href="/Doc/extended.html">Extended Configuration</a></font></th>
+<th width=20% bgcolor="#119944"><font color=white size=-1><a href="/Doc/known_issues.html">Known Issues</a></font></th>
+<th width=20% bgcolor="#119944"><font color=white size=-1>&nbsp;</font></th>
+</tr>
+</table>
+
+<h3>Basic Configuration of SquidGuard</h3>
+
+Once SquidGuard is successfully installed, you want to configure the software
+according to your needs. A sample configuration has been installed in the 
+default directory &nbsp;<tt>/usr/local/squidGuard</tt> (or whatever directory you
+pointed you intallation to).<br>
+Below you find three examples for the basic configuration of SquidGuard.<br><br>
+<ol>
+<li> Most simple configuration<br><br>
+<table width="75%" cellpadding="0" cellspacing="0" style="background-color: #f2fff0; border: solid 1px #2299bf;">
+<tr>
+<td style="background-color: #77afaf; border-bottom: 1px solid #888;"> <font size="-1" color=white>Most simple configuration: one category, one rule for all</font>
+</td></tr>
+<tr>
+<td>
+<pre>#
+# CONFIG FILE FOR SQUIDGUARD
+#
+
+dbhome /usr/local/squidGuard/db
+logdir /usr/local/squidGuard/logs
+
+dest porn {
+        domainlist porn/domains
+        urllist porn/urls
+        }
+
+acl {
+        default {
+                pass !porn all
+                redirect http://localhost/block.html
+        }
+ }
+</pre>
+</td></tr>
+</table>
+<br><br>
+Make always sure that the very first line of your squidGuard.conf is
+not empty!<br>
+The entries have the following meaning:<br><br>
+<table width=80% border=1>
+<tr><td width=15%><tt>dbhome</tt></td><td>Location of the blacklists</td></tr>
+<tr><td><tt>logdir</tt></td><td>Location of the logfiles</td></tr> 
+<tr><td><tt>dest</tt></td><td>Definition of a category to block. You can
+	enter the domain and url file along with a regular expression list
+	(talk about regular expressions later on).</td></tr>
+<tr><td><tt>acl</tt></td><td>The actual blocking defintion. In our example only
+	the default is displayed. You can have more than one <tt>acl</tt>
+	in place. The category porn you defined in <tt>dest</tt> is 
+	blocked by the expression <tt>!porn</tt>. You have to add the
+	identifier <tt>all</tt> after the blocklist or your users will
+	not be able to surf anyway.<br>
+	The <tt>redirect</tt> directive is madatory! You must tell
+	SquidGuard which page to display instead of the blocked one.</td></tr>
+</table>
+<br><br>
+<li>  Choosing more than one category to block <br><br>
+First you define your categories. Just like you did above for porn.
+For example: <br><br>
+<table width="75%" cellpadding="0" cellspacing="0" style="background-color: #f2fff0; border: solid 1px #2299bf;">
+<tr>
+<td style="background-color: #77afaf; border-bottom: 1px solid #888;"> <font size="-1" color=white>Defining three categories for blocking</font>
+</td></tr>
+<tr>
+<td>
+<pre>
+dest adv {
+        domainlist      adv/domains
+        urllist         adv/urls
+}
+dest porn {
+        domainlist      porn/domains
+        urllist         porn/urls
+}
+dest warez {
+        domainlist      warez/domains
+        urllist         warez/urls
+}
+</pre>
+</td></tr></table>
+<br><br>
+Now your <tt>acl</tt> looks like that:<br><br>
+<table width="75%" cellpadding="0" cellspacing="0" style="background-color: #f2fff0; border: solid 1px #2299bf;">
+<tr>
+<td>
+<pre>acl {
+	default {
+       		pass	!adv !porn !warez all
+       		redirect http://localhost/block.html
+        	}
+}
+</pre>
+</td></tr>
+</table>
+<br><br>
+<li>Whitelisting<br><br>
+Sometimes there is a demand to allow specific URLs and domains although
+they are part of the blocklists for a good reason. In this case you 
+want to whitelist these domains and URLs.<br><br>
+<table width="75%" cellpadding="0" cellspacing="0" style="background-color: #f2fff0; border: solid 1px #2299bf;">
+<tr>
+<td style="background-color: #77afaf; border-bottom: 1px solid #888;"> <font size="-1" color=white>Defining a whitelist</font>
+</td></tr>
+<tr>
+<td>
+<pre>dest white {
+	domainlist	white/domains
+	urllist		white/urls
+}
+
+acl {
+        default {
+                pass    white !adv !porn !warez all
+                redirect http://localhost/block.html
+                }
+}
+</pre>
+</td></tr></table>
+<br><br>
+In this example we assumed that your whitelists are located in a
+directory called <tt>white</tt> whithin the blacklist directory
+you specified with <tt>dbhome</tt>.<br>
+Make sure that your <tt>white</tt> identifier is the first in the
+row of the <tt>pass</tt> directive. It must not have an exclamation
+mark in front (otherwise all entries belonging to <tt>white</tt>
+will be blocked, too).
+
+<br><br>
+<li>Initializing the blacklists<br><br>
+Before you start up your squidGuard you should initialize the blacklists
+i.e. convert them from the textfiles to db files. Using the db format
+will speed up the checking and blocking.<br>
+The initialization is performed by the following command:
+<br><br>
+<table width="75%" cellpadding="0" cellspacing="0" style="background-color: #f2fff0; border: solid 1px #2299bf;">
+<tr>
+<td style="background-color: #77afaf; border-bottom: 1px solid #888;"> <font size="-1" color=white>Initializing the blacklists</font>
+</td></tr>
+<tr>
+<td>
+<pre>squidGuard -C all
+</pre>
+</td></tr></table>
+<br><br>
+Depending on the size of your blacklists and the power of your computer
+this may take a while. If anything is running fine you should see something
+like the following output:
+<br><br>
+<table width="75%" cellpadding="0" cellspacing="0" style="background-color: #f2fff0; border: solid 1px #2299bf;">
+<tr>
+<td>
+<pre>2006-01-29 12:16:14 [31977] squidGuard 1.2.0p2 started (1138533256.959)
+2006-01-29 12:16:14 [31977] db update done
+2006-01-29 12:16:14 [31977] squidGuard stopped (1138533374.571)
+</pre>
+</td></tr></table>
+<br><br>
+If you look into the directories holding the files <tt>domains</tt> and
+<tt>urls</tt> you see that additional files have been created: <tt>domains.db</tt>
+and <tt>urls.db</tt>. These new files must not be empty!<br>
+Only those files are converted you specified to block or whitelist
+in your <tt>squidGuard.conf</tt> file.<br><br>
+Proceed with:&nbsp;&nbsp;&nbsp;&nbsp;<a href="extended.html"><font color=blue>Extended Configuration of SquidGuard</font></a>
+
+<br><br>
+<hr>
+<font size=-1>
+<em>Mirko Lorenz - mirko at shalla.de<br>
+29.01.2006</em></font>
+</body></html>
+

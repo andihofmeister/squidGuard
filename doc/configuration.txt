@@ -1,0 +1,1270 @@
+   [1][squidGuard.gif] Configuring squidGuard [config.gif]
+   [2]squidGuard is an ultrafast and free filter, redirector and access
+   controller for [3]Squid
+   By [4]Pål Baltzersen and [5]Lars Erik Håland
+   [6]Copyright © 1999-2000, [7]Tele Danmark InterNordia
+   Visitors: [counter] (Since 2002-01-08 19:54:05)
+   This page was last modified 2002-01-08
+
+Contents
+
+     [8]The configuration file
+     * [9]In general
+
+     * [10]The Structure
+     * [11]Reserved words
+     * [12]Declaration names/lables
+     * [13]Breaking long lines
+
+     [14]Path declarations
+
+     [15]Time space declarations
+
+     [16]Source group declarations
+
+     [17]Destination group declarations
+
+     [18]Rewrite rule group declarations
+
+     [19]Access control rule declarations
+
+     [20]The database
+     * [21]Domainlists
+     * [22]URLlists
+     * [23]Expressionlists
+
+     [24]Tuning hints
+
+     [25]Working configuration examples
+     * [26]Example 0 - The absolutely minimal do nothing
+     * [27]Example 1 - The recommended minimal do nothing
+     * [28]Example 2 - Limiting the access to one destination group only
+     * [29]Example 3 - Blocking the access for unknown or unprivileged
+       clients
+     * [30]Example 4 - Blocking inapropriate sites
+     * [31]Example 5 - Blocking inapropriate sites for some users and
+       blocking unknown clients
+     * [32]Example 6 - Blocking inapropriate sites partially with regex
+     * [33]Example 7 - Blocking inapropriate sites during business hours
+       only
+
+[arrow-red.gif] The configuration file
+
+   The default path for the squidGuard configuration file is
+   "/usr/local/squidGuard/squidGuard.conf" but another default can be set
+   at [34]compile time, and can be changed at [35]runtime. From here
+   we'll use squidGuard.conf for short.
+
+   Note: The number of configuration options and the flexibility may look
+   overwhelming. Don't panic! Concentrate on the options that suits your
+   needs. Start with a [36]simple working configuration and extend as
+   your needs and experience grows. Don't try to solve everything in your
+   first attempt..
+
+  [arrow-green.gif] In general
+
+    The Structure
+
+   The recommended structure for squidGuard.conf is:
+
+     [37]Path declarations                 (i.e. logdir and dbhome)  (optional)
+     [38]Time space declarations           (i.e. time zones)         (optional)
+     [39]Source group declarations         (i.e. clients)            (optional)
+     [40]Destination group declarations    (i.e. URLs)               (optional)
+     [41]Rewrite rule group declarations                             (optional)
+     [42]Access control rule declarations                            (required)
+
+   Note: No forward references are allowed! Within this strong limitation
+   you may actually chose any structure you prefer.
+
+    Reserved words
+
+   The following words are reserved in squidGuard.conf and should be
+   avoided in declaration names:
+       acl             fri             outside         sun             urllist
+       anonymous       friday          pass            sunday          user
+       date            fridays         redirect        sundays         userlist
+
+       dbhome          ip              rew             thu             wed
+       dest            log             rewrite         thursday        wednesda
+y
+       destination     logdir          sat             thursdays       wednesda
+ys
+       domain          logfile         saturday        time            weekly
+       domainlist      mon             saturdays       tue             within
+       else            monday          source          tuesday
+       expressionlist  mondays         src             tuesdays
+
+
+   In adition is:
+
+   # used to start a comment. Everything from the # to the end of line is
+   ignored.
+   { } used to delimit the start and end of a group declaration.
+   - often used to declare a range (i.e. "from-to" or "from - to").
+
+    Declaration names/lables
+
+   Declaration names/lables have the same limitations as domainnames
+   except _ is allowed too (i.e. [-_.a-z0-9]+). [43]Reserved words should
+   be avoided as they may cause unpredictable results.
+
+    Breaking long lines
+
+   Generally you may break a (long) line by repeating the leading
+   keyword. Repeated lines of the same type within a class will bee
+   joined when the rule trees are built. So:
+
+        src foo {
+                ip 1.2.3.4
+                ip 2.3.4.5
+
+        }
+
+   is equivalent to:
+
+        src foo {
+                ip 1.2.3.4 2.3.4.5
+
+        }
+
+  [arrow-green.gif] Path declarations
+
+   The [44]default for the following directories may be overruled by:
+
+   logdir defines the diretory for the standard logfiles
+   "squidGuard.error" and "squidGuard.log", and the base for relative
+   logfilenames in log rules. The default is "/usr/local/squidGuard/logs"
+   but another default can be set at [45]compile time.
+   dbhome defines the base for relative list filenames. The default is
+   "/usr/local/squidGuard/db" but another default can be set at
+   [46]compile time.
+
+   Although the defaults can be used silently it is recommended to
+   declare these explicitly for clarity. For instance:
+     logdir /usr/local/squidGuard/logs
+     dbhome /usr/local/squidGuard/db
+
+
+  [arrow-green.gif] Time space declarations
+
+   Time spaces, or zones if you prefer, are declared by:
+
+        time name {
+                specification
+                specification
+                ...
+
+        }
+
+   where specification can be any reasonable combination of:
+
+        Days of the week with an optional time constraint for each day:
+                weekly {smtwhfa} [HH:MM-HH:MM]
+                or
+                weekly dayname [...] [HH:MM-HH:MM]
+                where s=sun, m=mon, t =tue, w=wed, h=thu, f=fri, a=sat.
+                and dayname is one of:
+
+                      "mon", "monday", "mondays", (synonymous)
+                      "tue", "tuesday", "tuesdays", (synonymous)
+                      "wed", etc.
+
+                For instance for monday to friday, mornings and evenings:
+
+                      weekly mtwhf 00:00-08:00
+                      weekly mtwhf 17:00-24:00
+
+                and for saturdays and sundays:
+
+                      weekly as
+                      or
+                      weekly saturday
+                      weekly sunday
+
+        Time of the day:
+                weekly * HH:MM-HH:MM
+                which is just a special case of [47]weekly.
+                For instance:
+
+                      weekly * 00:00-08:00
+                      weekly * 17:00-24:00
+
+        Dates with an optional time constraint for each date:
+                date YYYY-MM-DD [...] [HH:MM-HH:MM ...]
+                or
+                date YYYY.MM.DD [...] [HH:MM-HH:MM ...]
+                where the preferred of the two dateformats is just a
+                matter of personal taste.
+                For instance for the Ascension Day and the Whit Monday of
+                1999:
+
+                      date 1999.05.13 1999.05.24
+
+                or for the Ash Wednesday afternoon of 1999:
+
+                      date 1999.03.31 12:00-24:00
+
+        Date range with an optional time constraint for each day:
+                date YYYY-MM-DD-YYYY-MM-DD [HH:MM-HH:MM ...]
+                or
+                date YYYY.MM.DD-YYYY.MM.DD [HH:MM-HH:MM ...]
+                For instance for the Easter of 1999:
+
+                      date 1999.04.01-1999.04.05
+
+        Date wildcard with an optional time constraint:
+                date YYYY-MM-DD [HH:MM-HH:MM ...]
+                or
+                date YYYY.MM.DD [HH:MM-HH:MM ...]
+                where YYYY, MM and DD may be an asterisk, "*".
+                For instance for the New Year's Day:
+
+                      date *.01.01
+
+                and for the Christmas Eve:
+
+                      date *.12.24 12:00-24:00
+
+   Note1: The numeric formats are strict (I.e. 08:00 not 8:00 for HH:MM
+   etc).
+   Note2: Overlaps are OK, and the result is the union.
+
+   Thus for instance a Norwegian time space definition for leisure time
+   including holidays and short days could look something like:
+     time leisure-time {
+          weekly   * 00:00-08:00              # night
+          weekly   * 17:00-24:00              # evening
+          weekly   fridays 16:00-17:00        # weekend
+          weekly   saturdays sundays          # weekend
+          date     *.01.01                    # New Year's Day
+          date     *.05.01                    # Labour Day
+          date     *.05.17                    # National Day
+          date     *.12.24 12:00-24:00        # Christmas Eve
+          date     *.12.25                    # Christmas Day
+          date     *.12.26                    # Boxing Day
+          date     1999.03.31 12:00.24:00     # Ash Wednesday
+          date     1999.04.01-1999.04.05      # Easter
+          date     1999.05.13 1999.05.24      # Ascension Day and Whitsun
+          date     2000.04.19 12:00.24:00     # Ash Wednesday y2000
+          date     2000.04.20-2000.04.24      # Easter y2000
+          date     2000.06.01 2000.06.12      # Ascension Day and Whitsun y2000
+     }
+
+
+  [arrow-green.gif] Source group declarations
+
+   Source group, or client groups if you prefer, are declared by:
+
+        src|source name [within|outside time_space_name] {
+                specification
+                specification
+                ...
+
+        }
+
+          or
+
+        src|source name within|outside time_space_name {
+                specification
+                specification
+                ...
+
+        } else {
+                specification
+                specification
+                ...
+
+        }
+
+   where:
+     * src and source are synonymous; use the one you prefer.
+     * within and outside sets an optional time constraint to the
+       definition.
+     * the else part refers to the time constraint.
+
+   Time constraints on clientgroups can be used to make these clients
+   unknown (i.e. use the default rule) within or outside a given time
+   space. Or it can be used to define a usergroup that is expected to
+   move between two locations at given times (like office/home)
+
+   Specification can be any reasonable combination of:
+
+        IP addresses and/or ranges (multiple):
+                ip xxx.xxx.xxx.xxx [...]
+                or
+                ip xxx.xxx.xxx.xxx/nn [...]
+                or
+                ip xxx.xxx.xxx.xxx/mmm.mmm.mmm.mmm [...]
+                or
+                ip xxx.xxx.xxx.xxx-yyy.yyy.yyy.yyy [...]
+                where:
+
+                      xxx.xxx.xxx.xxx is an IP address (host or net, i.e.
+                      10.11.12.13 or 10.11.12.0),
+                      /nn a net prefix (i.e. /23),
+                      mmm.mmm.mmm.mmm is a netmask (i.e. 255.255.254.0)
+                      and
+                      yyy.yyy.yyy.yyy is a host address (must be >=
+                      xxx.xxx.xxx.xxx)
+
+        IP address/range list (single):
+                iplist [48]filename
+                where:
+
+                      filename is either a path relative to [49]dbhome or
+                      an absolute path (i.e. /full/path) to a
+                      [50]database file.
+                      the iplist file format is simply addresses and/or
+                      networks separated by a newline as above but
+                      without the ip keyword. Thus an iplist for all the
+                      private addresses could look something like (Though
+                      the preferred use of "iplist" over "ip" is for long
+                      lists of WS/PC addresses primarily to reduce the
+                      size of the configuration file):
+
+                            10.0.0.0/8
+                            172.16.0.0/12
+                            192.168.0.0/16
+
+        Domains (multiple):
+                domain foo.bar [...]  *)
+                where:
+
+                      foo.bar is a domain (zone) the domain name (from a
+                      reverse lookup on the client addresses) belongs to
+                      (directly or as a subdomain).
+
+        Users (multiple):
+                user foo [...]  **)
+                where:
+
+                      foo is a username (from a ident/RFC-931 lookup to
+                      the client.
+
+        User list (single):
+                userlist [51]filename **)
+                where:
+
+                      filename is either a path relative to [52]dbhome or
+                      an absolute path (i.e. /full/path) to a
+                      [53]database file.
+                      the userlist file format is simply RFC-931
+                      usernames, optionally followed by a `:' and a
+                      comment (i.e. /etc/passwd or a .htpasswd file may
+                      be used) separated by a newline as in the [54]user
+                      declaration but without the user keyword. Thus a
+                      userlist could look something like:
+
+                            root
+                            administrator
+                            foo
+                            bar
+
+        Special clientgroup translation log (single):
+                log|logfile [anonymous] filename
+
+          where:
+
+                filename is either a path relative to [55]logdir or an
+                absolute path (i.e. /full/path) to a logfile where
+                translation for this group should be logged. If the
+                anonymous option is specified the logged info is somewhat
+                anonymized to protect the individual.
+
+   *) The use of domain match for clientsgroups requires Squid is set up
+   to do revese lookups on clients.
+   **) The use of username match for clientsgroups requires Squid is set
+   up to do ident/RFC-931 lookups.
+
+   Note1: Overlaps are OK, and the groups are matched in the order they
+   are defined.
+   Note2: The logical operator between different types within a group
+   (ip/domain/user) is AND. The default is any. Thus one of each defined
+   type must match but undefined types are ignored.
+
+   Thus an administrator client group could look something like:
+     src admin within leisure-time {
+          ip       10.11.12.13 10.11.12.26    # The administrators home WS/PCs
+          domain   ras.teledanmark.no         # The RAS domain
+          user     root administrator foo bar # The administrators login names
+     } else {
+          ip       10.1.1.15 10.1.2.17        # The administrators office WS/PC
+s
+          domain   lan.teledanmark.no         # The LAN domain
+          user     root administrator foo bar # The administrators login names
+     }
+
+
+  [arrow-green.gif] Destination group declarations
+
+   Destination group, or target groups if you prefer, are declared by:
+
+        dest|destination name [within|outside time_space_name] {
+                specification
+                specification
+                ...
+
+        }
+
+          or
+
+        dest|destination name within|outside time_space_name {
+                specification
+                specification
+                ...
+
+        } else {
+                specification
+                specification
+                ...
+
+        }
+
+   where:
+     * dest and destination are synonymous.
+     * within and outside sets an optional time constraint to the
+       definition.
+     * the else part refers to the time constraint.
+
+   Time constraints on destinationgroups can be used to make these groups
+   void (i.e. ignored) within or outside a given time space.
+
+   Specification can be any combination of zero or one of each of:
+
+        Domainlist (single):
+                domainlist [56]filename
+
+        URL list (single):
+                urllist [57]filename
+
+        Expressionlist (single):
+                expressionlist [58]filename
+
+          where:
+
+                filename is either a path relative to [59]dbhome or an
+                absolute path (i.e. /full/path) to a [60]database file.
+
+        Special destinationgroup redirect URL (single):
+                redirect [302:]url
+
+        Special destinationgroup redirect log (single):
+                log|logfile [anonymous] filename
+
+          where:
+
+                filename is either a path relative to [61]logdir or an
+                absolute path (i.e. /full/path) to a logfile where
+                redirects caused by match of this group should be logged.
+                If the anonymous option is specified the logged info is
+                somewhat anonymized to protect the individual.
+
+   Note1: Overlaps are OK, and the groups are matched in the order they
+   are listed in the pass declaration in for the actual clientgroup.
+   Note2: The logical operator between different types
+   (domainlist/urllist/expressionlist) is OR. The default is void. Thus
+   the destinationgroup is matched if one of the defined types match.
+   Within a destination group the test order is domainlist, urllist, and
+   expressionlist.
+
+   Thus an entertainment destination group declaration could look
+   something like:
+     dest not-business-related outside leisure-time {
+          domainlist     entertainment/domains
+          urllist        entertainment/urls
+          expressionlist entertainment/expressions
+     }
+
+
+  [arrow-green.gif] Rewrite rule group declarations
+
+   Rewrite rule groups, or rewrite rule sets if you prefer, are declared
+   by:
+
+        rew|rewrite name [within|outside time_space_name] {
+                substitution
+                substitution
+                ...
+                [logging]
+
+        }
+
+          or
+
+        rew|rewrite name within|outside time_space_name {
+                substitution
+                substitution
+                ...
+                [logging]
+
+        } else {
+                substitution
+                substitution
+                ...
+                [logging]
+
+        }
+
+   where:
+     * rew and rewrite are synonymous.
+     * within and outside sets an optional time constraint to the
+       definition.
+     * the else part refers to the time constraint.
+
+   Time constraints on rewritegroups can be used to make these groups
+   functional within or outside a given time space only; Like redirect to
+   local copies within peek business hours.
+
+   Substitution is sed style (multiple):
+
+          s@from@to@[irR]
+
+   where:
+          from is a [62]regular expression that will be replaced with the
+          string to.
+          the i option makes the from part match case insensitive.
+          the r option makes the redirection visible to the user with a
+          [63]HTTP code 302 - Moved Temporarily (The default is to make
+          Squid silently fetch the alternate URL).
+          the R option makes the redirection visible to the user with a
+          [64]HTTP code 301 - Moved Permanently.
+
+   and logging is (single):
+          log|logfile [anonymous] filename
+          where:
+
+                filename is either a path relative to [65]logdir or an
+                absolute path (i.e. /full/path) to a logfile where
+                succeded rewrites should be logged. If the anonymous
+                option is specified the logged info is somewhat
+                anonymized to protect the individual.
+
+   Note1: Sed style substitutions uses regular expressions and thus slows
+   down squidGuard more than B-tree lookups.
+   Note2: Suport for visible redirects (i.e. 302: URL prefix) is broken
+   in some versions of Squid.
+
+   A rewrite rule set declaration could look something like:
+     rew get-local {
+          s@.*/cb32e46.exe$@http://ftp/pub/www/client/windows/cb32e46.exe@r
+          s@.*/cc32e46.exe$@http://ftp/pub/www/client/windows/cc32e46.exe@r
+          s@.*/cp32e46.exe$@http://ftp/pub/www/client/windows/cp32e46.exe@r
+     }
+
+
+  [arrow-green.gif] Access Control Lists
+
+   The Access Control List, ACL, combies the previous definitions into
+   distinct rulesets for each clientgroup:
+
+        acl {
+                sourcegroupname [within|outside timespacename] {
+
+                      [66]pass [!]destgroupname [...]
+                      [[67]rew|rewrite rewritegroupname [...]
+                      [[68]redirect [301:|302:]new_url]
+
+                }
+                sourcegroupname within|outside timespacename {
+
+                      [69]pass [!]destgroupname [...]
+                      [[70]rew|rewrite rewritegroupname [...]
+                      [[71]redirect [301:|302:]new_url]
+
+                } else {
+
+                      [72]pass [!]destgroupname [...]
+                      [[73]rew|rewrite rewritegroupname [...]
+                      [[74]redirect [301:|302:]new_url]
+
+                }
+                ...
+                [75]default [within|outside timespacename] {
+
+                      [76]pass [!]destgroupname [...]
+                      [[77]rew|rewrite rewritegroupname [...]
+                      [78]redirect [301:|302:]new_url
+
+                }[ else {
+
+                      [79]pass [!]destgroupname [...]
+                      [[80]rew|rewrite rewritegroupname [...]
+                      [81]redirect [301:|302:]new_url
+
+                ]
+
+        }
+
+   Note: There may be no more than one acl block.
+
+   The default rule set:
+
+   The default section defines fallbacks for all acl rulesets. Thus if
+   you define a rewrite rule here it will be used in acls where there are
+   no rewrite rules defined. (i.e. the other acls inherits the
+   definitions in the default acl optionally overruled by own
+   definitions). The default rule set is used for all clients that match
+   no clientgroup and for clientgroups with no acls declared.
+
+   The pass rule:
+
+   The pass rules declares destination groups that should pass for the
+   actual client group. "!" is the NOT operator and indicates a
+   destination group that should not pass (i.e. be redirected to the
+   actual [82]redirect URL).
+   Note: Pass rules ends with an implicit "all". It is good practice to
+   allways en the pass rules with either "all" or "none" to make them
+   clear. Ie. use:
+     pass good none
+   or
+     pass good !bad all
+   Note: If there is a !group there must also be a redirect definition
+   for eiter that destination group, the actual acl or the default acl.
+   If you want some rules for unknown clients that should not apply to
+   the other acls you should define a last clientgroup named "unknown"
+   and with an IP range 0.0.0.0/0 (i.e. any), and put those rules in the
+   "unknown" acl.
+
+   Built in wildcard groups:
+
+   The following are built in wildcard destination groups:
+
+        in-addr
+                !in-addr can be used to enforce the use of domainnames
+                over IP addresses in the host part of URLs. in-addr is a
+                fast equivalent to a group with the expressionlist
+                "^[^:/]+://[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9
+                ]\{1,3\}($|[:/])".
+
+        any
+                matches any URL and is a fast equivalent to the
+                expression ".*".
+
+        all
+                is a synonym to any. Use the one you prefer.
+
+        none
+                is a fast equivalent to !any and should be used to
+                terminate pass rules where only the listed destination
+                groups should pass.
+
+   The rewrite rule:
+
+   The rewrite rules declares the substitution rulsets that applies to
+   the actual acl.
+
+   The redirect rule:
+
+   The redirect rules declares the altenative URL to be used for blocked
+   destination groups (!groups) for the actual acl.
+   Note: Inside an acl, this is a fallback used when there is no special
+   redirect declared for the actual destination group, and the default
+   redirect is the last resort.
+
+   squidGuard can do runtime string substitutions in the redirectors.
+   Therefor the character "%" has special meaning in the redirector URLs:
+
+   %a is replaced with IP address of the client.
+   %n is replaced with the domainname of the client or "unknown" if not
+   available.
+   %i is replaced with the user ID (RFC931) or "unknown" if not
+   available.
+   %s is replaced with the matched source group (client group) or
+   "unknown" if no groups were matched.
+   %t is replaced with the matched destination group (target group) or
+   "unknown" if no groups were matched.
+   %u is replaced with the requested URL.
+   %p is replaced with the REQUEST_URI, i.e. the path and the optional
+   query string of %u, but note for convenience without the leading "/".
+   %% is replaced with a single "%".
+
+   Thus you can pass usefull information to a more or less intelligent
+   CGI page:
+     http://proxy/cgi/squidGuard?clientaddr=%a&clientname=%n&clientident=%i&cli
+entgroup=%s&destinationgroup=%t&url=%u
+
+
+   For a start, there is a sample of such a script in
+   samples/squidGuard.cgi in the source tree.
+
+[arrow-red.gif] The database
+
+   squidGuard uses a database that can be devided into an unlimited
+   number of distinct categories like "local", "customers", "vendors",
+   "banners", "banned" etc. Each category may consist of separate
+   unlimited lists of [83]domains, [84]URLs and/or [85]regular
+   expressions. For easy revision the lists are stored in separate plain
+   text files that. The lists are for efficiency stored in in-memory-only
+   B-trees at startup.
+
+   Note: All URLs are converted to lowercase before match search. So the
+   lists should not contain uppercase leters.
+
+  [arrow-green.gif] Domainlists
+
+   The domainlist file format is simply domainnames/zonenames separated
+   by a newline. The length of these lists have neglectable influence on
+   the performance.
+
+   For instance a start for a financial category:
+     amex.com
+     asx.com.au
+     bourse-de-paris.fr
+     exchange.de
+     londonstockex.co.uk
+     nasdaq.com
+     nyse.com
+     ose.no
+     tse.or.jp
+     xsse.se
+
+
+   Note: squidGuard will match any URL with the domainname itself an any
+   subdomains and hosts (i.e. amex.com, www.amex.com, whatever.amex.com
+   and www.what.ever.amex.com but not .*[^.]amex.com (i.e. aamex.com
+   etc.)).
+
+  [arrow-green.gif] URLlists
+
+   The urllist file format is simply URLs separated by newline but with
+   the "proto://((www|web|ftp)[0-9]*)?" and "(:port)?" parts and normally
+   also the ending "(/|/[^/]+\.[^/]+)$" part (i.e. ending "/" or
+   "/filename") choped off. (i.e. "[DEL: http://www3. :DEL]
+   foo.bar.com[DEL: :8080 :DEL] /what/ever[DEL: /index.html :DEL] " =>
+   "foo.bar.com/what/ever")
+
+   For instance a category for banned sites:
+     foo.com/~badguy
+     bar.com/whatever/suspect
+
+
+   Note: The removed parts above are ignored by squidGuard in URL
+   matching. Thus all these URLs will match the above urllist:
+     http://foo.com/~badguy
+     http://foo.com/~badguy/whatever
+     ftp://foo.com/~badguy/whatever
+     wais://foo.com/~badguy/whatever
+     http://www2.foo.com/~badguy/whatever
+     http://web56.foo.com/~badguy/whatever
+
+
+   but not:
+     http://barfoo.com/~badguy
+     http://bar.foo.com/~badguy
+     http://foo.com/~goodguy
+
+
+   New in 1.0.0 is the ability to do 1-1 redirects on url basis with
+   "key new_url". Thus as an alternative to using rewrites to redirect to
+   local distributions you can have a destination group with an urllist
+   like:
+     netscape.com/pub/communicator/4.51/english/windows/windows95_or_nt/complet
+e_install/cc32e451.exe http://ftp.teledanmark.no/pub/www/client/windows/cc32e45
+1.exe
+     netscape.com/pub/communicator/4.51/english/windows/windows95_or_nt/base_in
+stall/cb32e451.exe http://ftp.teledanmark.no/pub/www/client/windows/cb32e451.ex
+e
+
+
+   and an acl with pass ... !download .... This may be a faster
+   alternative than using lots of s@from@to@ rewrites for 1-1 mapping
+   since it will be faster to search the B-tree than perform a bunch of
+   string edits.
+
+  [arrow-green.gif] Expressionlists
+
+   The expressionlist file format is lines with regular expressions as
+   described in regex(5). Of most interrest is:
+
+   . Matches any single character (use "\." to match a ".").
+   [abc] Matches one of the characters ("[abc]" matches a single "a" or
+   "b" or "c").
+   [c-g] Matches one of the characters in the range ("[c-g]" matches a
+   single "c" or "d" or "e" or "f" or "g".
+   "[a-z0-9]" matches any single letter or digit.
+   "[-/.:?]" matches any single "-" or "/" or "." or ":" or "?".).
+   ? None or one of the preceding ("words?" will match "word" and
+   "words".
+   "[abc]?" matches a single "a" or "b" or "c" or nothing (i.e. "")).
+   * None or more of the preceding ("words*" will match "word", "words"
+   and "wordsssssss". ".*" will match anything including nothing).
+   + One or more of the preceding ("xxx+" will match a sequence of 3 or
+   more "x").
+   (expr1|expr2) One of the expressions, which in turn may contain a
+   similar construction ("(foo|bar)" will match "foo" or "bar".
+   "(foo|bar)? will match "foo" or "bar" or nothing (i.e. "")).
+   $ The end of the line ("(foo|bar)$" will match "foo" or "bar"only at
+   the end of a line).
+   \x Disable the special meaning of x where x is one of the special
+   regex characters ".?*+()^$[]{}\"  ("\." will match a single ".", "\\"
+   a single "\" etc.)
+
+   Thus a start to block possible sexual material by expression match
+   could look like:
+
+          (^|[-\?+=/_])(bondage|boobs?|busty?|hardcore|porno?|sex|xxx+)([
+          -\?+=/_]|$)
+
+   Notes:
+     * Unless you build your expressions very very carefully there is a
+       high risk you will have annoyed users on your neck. Typically you
+       might accidentally block "Essex", "Sussex", "breastcancer",
+       "www.x.org" etc. in your eagerness for blocking pornographic
+       material. In practice you would probably replace some of the words
+       in the example above with some more clearly pornographic related
+       words that I don't find appropriate to list here.
+     * While the size of the domain and urllists only has marginal
+       influence on the performance, too many large or complex
+       expressions will quickly degrade the performance of squidGuard.
+       Though it may depend heavily on the performance of the regex
+       library you link with.
+     * There is a rich set of sample files for a group of supposedly
+       pornographic sites under samples/dest/adult in the source tree
+       that you can use as a start if porn blocking is one of your tasks.
+       Please note: We recommend that you review these lists before using
+       them. Those domains and urls have been collected automagically by
+       a robot. No manual evaluation of the corresponding contents has
+       been performed. Therefor there is a chance some nonpornographic
+       sites have sliped in. Please [86]report such errors but don't
+       blame us if your fine site is on the list. (Blame those who have
+       pointers to appropriate sites mixed in on their heavy porn link
+       pages!)
+     * To avoid publishing to your users a complete guide to banned
+       sites, you probably want to have some or all of these files
+       protected by for instance:
+
+                chmod 640 /wherever/filter/db/dest/adult/*
+                chown cache_effective_user /wherever/filter/db/dest/adult
+                /*
+                chgrp cache_effective_group /wherever/filter/db/dest/adul
+                t/*
+
+       where cache_effective_user and cache_effective_group are the
+       values for the corresponding tags as defined in squid.conf.
+
+  [arrow-green.gif] Prebuilt databases
+
+    Creating a prebuilt database
+
+   To convert a domainlist or urllist from plain text file to a prebuilt
+   database use:
+
+          squidGuard -C listfile
+
+   and send Squid a HUP signal to respawn squidGuard. Note: listfile is
+   the absolute plain text filename or relative to dbhome.
+
+    Updating a prebuilt database
+
+   To add and remove entries from a prebuilt database in runtime put the
+   changes in a diff file (file.diff for file.db) with the following
+   simple format:
+
+          +new
+          -old
+          ...
+
+   Then use:
+
+          squidGuard -u
+
+   and remove the diff files. The changes should take effect immediately.
+
+[arrow-red.gif] Tuning hints
+
+   For optimal performance try:
+     * limiting both the number of regular expressions and their
+       complexity. Use domainlists and/or urllists where possible.
+     * limiting the number of rewrite rules. Use redirectors where
+       possible.
+     * limiting the number of useless url list entries. Move the
+       domainnames to the domainlist and remove redundant urllist entries
+       where aplicable.
+     * using ip addressranges rather than long lists of single ip
+       addresses. If possible try grouping different usergroups into
+       different ranges or subnets (virtual or physical).
+
+[arrow-red.gif] Working configuration examples
+
+  [arrow-green.gif] [87]Example 0 - The absolutely minimal do nothing config:
+
+   The absolutely minimal config file is an emty but existing file (i.e.
+   squidGuard -c /dev/null) which is equivalent to:
+     acl {
+          default {
+               pass all
+          }
+     }
+
+
+  [arrow-green.gif] [88]Example 1 - The recommended minimal do nothing config:
+
+   We do recommend, for clarity, to say explicitly what squidGuard is
+   expected to do (makes things less magic for a new operator):
+     logdir /usr/local/squidGuard/log
+
+     acl {
+         default {
+             pass all
+         }
+     }
+
+
+  [arrow-green.gif] [89]Example 2 - Limiting the access to one destination
+  group only:
+
+     logdir /usr/local/squidGuard/log
+     dbhome /usr/local/squidGuard/db
+
+     dest local {
+         domainlist local/domains
+     }
+
+     acl {
+         default {
+             pass local none
+             redirect http://localhost/cgi/blocked?clientaddr=%a&clientname=%n&
+clientuser=%i&clientgroup=%s&url=%u
+         }
+     }
+
+
+   This implies there must be a domain list file
+   "[90]/usr/local/squidGuard/db/local/domains" that may simply look
+   like:
+     teledanmark.no
+
+
+  [arrow-green.gif] [91]Example 3 - Blocking the access for unknown or
+  unprivileged clients:
+
+     logdir /usr/local/squidGuard/log
+     dbhome /usr/local/squidGuard/db
+
+     src privileged {
+         ip     10.0.0.1 10.0.0.73 10.0.0.233   # ONE OF single clients
+         ip     10.0.0.10-10.0.0.20             # OR WITHIN range 10.0.0.10 - 1
+0.0.0.20
+         ip     10.0.1.32/27                    # OR WITHIN range 10.0.1.32 - 1
+0.0.1.63
+         ip     10.0.2.0/255.255.255.0          # OR WITHIN range 10.0.2.0  - 1
+0.0.2.255
+                                                # AND
+         domain foo.bar                         # MATCH foo.bar. OR *.foo.bar.
+     }
+
+     acl {
+         privileged {
+             pass all
+         }
+
+         default {
+             pass none
+             redirect http://info.foo.bar/cgi/blocked?clientaddr=%a&clientname=
+%n&clientuser=%i&clientgroup=%s&url=%u
+         }
+     }
+
+
+   Using client domainname match implies reverse lookup is enabled
+   (log_fqdn on) in squid.conf.
+     teledanmark.no
+
+
+  [arrow-green.gif] [92]Example 4 - Blocking inappropriate sites:
+
+     logdir /usr/local/squidGuard/log
+     dbhome /usr/local/squidGuard/db
+
+     dest porn {
+         domainlist porn/domains
+         urllist    porn/urls
+     }
+
+     acl {
+         default {
+             pass !porn all
+             redirect http://localhost/cgi/blocked?clientaddr=%a&clientname=%n&
+clientuser=%i&clientgroup=%s&url=%u
+         }
+     }
+
+
+   This implies there must be a domain list file
+   "[93]/usr/local/squidGuard/db/porn/domains" and a domain list file
+   "[94]/usr/local/squidGuard/db/porn/urls". The [95]domain list file may
+   have a zillion lines like:
+     porn.com
+     sex.com
+
+
+   The "[96]url list file may have an other zillion lines like:
+     foo.com/~porn
+     bar.com/img/sex
+
+
+  [arrow-green.gif] [97]Example 5 - Blocking inappropriate sites for some users
+  and blocking unknown clients:
+
+     logdir /usr/local/squidGuard/log
+     dbhome /usr/local/squidGuard/db
+
+     src grownups {
+         ip        10.0.0.0/24    # range 10.0.0.0  - 10.0.0.255
+                               # AND
+         user   foo bar   # ident foo or bar
+     }
+
+     src kids {
+         ip        10.0.0.0/22    # range 10.0.0.0 - 10.0.3.255
+     }
+
+     dest porn {
+         domainlist porn/domains
+         urllist    porn/urls
+     }
+
+     acl {
+         grownups {
+             pass all
+         }
+
+         kids {
+             pass !porn all
+         }
+
+         default {
+             pass none
+             redirect http://info.foo.bar/cgi/blocked?clientaddr=%a&clientname=
+%n&clientuser=%i&clientgroup=%s&targetgroup=%t&url=%u
+         }
+     }
+
+
+   Using userident match implies RFC931/ident lookup is enabled in
+   squid.conf, optionally only for the actual client groups, and that foo
+   and bar's workstations must [98]support RFC931.
+
+  [arrow-green.gif] [99]Example 6 - Blocking inappropriate sites partially with
+  regex:
+
+    + ensuring local and good sites are passed even if they would match a
+   blocking regex:
+    + limiting the usage of IP-address URLs:
+     logdir /usr/local/squidGuard/log
+     dbhome /usr/local/squidGuard/db
+
+     dest local {
+         domainlist     local/domains
+     }
+
+     dest good {
+         domainlist     local/domains
+     }
+
+     dest porn {
+         domainlist     porn/domains
+         urllist        porn/urls
+         expressionlist porn/expressions
+     }
+
+     acl {
+         default {
+             pass local good !in-addr !porn all
+             redirect http://localhost/cgi/blocked?clientaddr=%a&clientname=%n&
+clientuser=%i&clientgroup=%s&url=%u
+         }
+     }
+
+
+  [arrow-green.gif] [100]Example 7 - Blocking inappropriate sites within
+  business hours only:
+
+   Lets extend [101]example 5 with:
+     * a time constraint on censorship
+     * logging redirections of inappropriate sites anonymized
+     * redirecting inappropriate sites specially.
+     * and still protecting the kids 24h.
+
+     logdir /usr/local/squidGuard/log
+     dbhome /usr/local/squidGuard/db
+
+     time leisure-time {
+         weekly * 00:00-08:00 17:00-24:00       # night and evening
+         weekly fridays 16:00-17:00             # weekend
+         weekly saturdays sundays               # weekend
+         date   *.01.01                         # New Year's Day
+         date   *.05.01                         # Labour Day
+         date   *.05.17                         # National Day
+         date   *.12.24 12:00-24:00             # Christmas Eve
+         date   *.12.25                         # Christmas Day
+         date   *.12.26                         # Boxing Day
+         date   1999.03.31 12:00.24:00          # Ash Wednesday
+         date   1999.04.01-1999.04.05           # Easter
+         date   1999.05.13 1999.05.24           # Ascension Day and Whitsun
+         date   2000.04.19 12:00.24:00          # Ash Wednesday y2000
+         date   2000.04.20-2000.04.24           # Easter y2000
+         date   2000.06.01 2000.06.12           # Ascension Day and Whitsun y20
+00
+     }
+
+     src grownups {
+         ip     10.0.0.0/24                     # range 10.0.0.0  - 10.0.0.255
+                                                # AND
+         user   foo bar                         # ident foo or bar
+     }
+
+     src kids {
+         ip     10.0.0.0/22                     # range 10.0.0.0 - 10.0.3.255
+     }
+
+     dest porn {
+         domainlist     porn/domains            # file listing domains  (clear
+text)
+         urllist        porn/urls               # file listing URLs     (clear
+text)
+         expressionlist porn/expressions        # file with expressions (clear
+text regex)
+         redirect       302:http://info.foo.bar/images/blocked.gif
+                                                # redirect matches to this URL
+         log anonymous  porn.log                # log redirects anonymized to l
+ogdir/porn.log
+     }
+
+     acl {
+         grownups within leisure-time {
+             pass all                           # don't censor peoples leisure-
+time
+         } else {
+             pass !in-addr !porn all            # restrict access during busine
+ss hours
+         }
+
+         kids {
+             pass !porn all                     # protect the kids 24h anyway
+         }
+
+         default {
+             pass none                          # reject unknown clients
+             redirect http://info.foo.bar/cgi/blocked?clientaddr=%a&clientname=
+%n&clientuser=%i&clientgroup=%s&targetgroup=%t&url=%u
+         }
+     }
+
+                        ____________________________
+
+                  [102][gnu-logo.gif] [103][perl-logo.gif]
+
+                [104][squid-logo.gif] [105][squidGuard.gif]
+
+                           [106][home_header.gif]
+
+References
+
+   1. http://ftp.teledanmark.no/pub/www/proxy/squidGuard/
+   2. http://www.squidguard.org/
+   3. http://www.squid-cache.org/
+   4. http://www.squidguard.org/authors/
+   5. http://www.squidguard.org/authors/
+   6. http://www.squidguard.org/copyright/
+   7. http://www.teledanmark.no/
+   8. http://www.squidguard.org/config/#Configuration_file
+   9. http://www.squidguard.org/config/#General
+  10. http://www.squidguard.org/config/#Structure
+  11. http://www.squidguard.org/config/#Reserved
+  12. http://www.squidguard.org/config/#Lables
+  13. http://www.squidguard.org/config/#Breaking
+  14. http://www.squidguard.org/config/#Directories
+  15. http://www.squidguard.org/config/#Timespace
+  16. http://www.squidguard.org/config/#Sourcegroups
+  17. http://www.squidguard.org/config/#Destinationgroups
+  18. http://www.squidguard.org/config/#Rewritegroups
+  19. http://www.squidguard.org/config/#Acls
+  20. http://www.squidguard.org/config/#Lists
+  21. http://www.squidguard.org/config/#Domainlists
+  22. http://www.squidguard.org/config/#URLlists
+  23. http://www.squidguard.org/config/#Expressionlists
+  24. http://www.squidguard.org/config/#Tuning
+  25. http://www.squidguard.org/config/#Examples
+  26. http://www.squidguard.org/config/#Minimal
+  27. http://www.squidguard.org/config/#example01
+  28. http://www.squidguard.org/config/#example02
+  29. http://www.squidguard.org/config/#example03
+  30. http://www.squidguard.org/config/#example04
+  31. http://www.squidguard.org/config/#example05
+  32. http://www.squidguard.org/config/#example06
+  33. http://www.squidguard.org/config/#example07
+  34. http://www.squidguard.org/install/#Defaultconfigfile
+  35. http://www.squidguard.org/install/#Configfile
+  36. http://www.squidguard.org/config/#example01
+  37. http://www.squidguard.org/config/#Directories
+  38. http://www.squidguard.org/config/#Timespace
+  39. http://www.squidguard.org/config/#Sourcegroups
+  40. http://www.squidguard.org/config/#Destinationgroups
+  41. http://www.squidguard.org/config/#Rewritegroups
+  42. http://www.squidguard.org/config/#Acls
+  43. http://www.squidguard.org/config/#Reserved
+  44. http://www.squidguard.org/config/#Logdir
+  45. http://www.squidguard.org/install/#Logdir
+  46. http://www.squidguard.org/install/#DBhome
+  47. http://www.squidguard.org/config/#Weekly
+  48. http://www.squidguard.org/config/#IPlists
+  49. http://www.squidguard.org/config/#DBhome
+  50. http://www.squidguard.org/config/#IPlists
+  51. http://www.squidguard.org/config/#Userlists
+  52. http://www.squidguard.org/config/#DBhome
+  53. http://www.squidguard.org/config/#Userlists
+  54. http://www.squidguard.org/config/#User
+  55. http://www.squidguard.org/config/#Logdir
+  56. http://www.squidguard.org/config/#Domainlists
+  57. http://www.squidguard.org/config/#URLlists
+  58. http://www.squidguard.org/config/#Expressionlists
+  59. http://www.squidguard.org/config/#DBhome
+  60. http://www.squidguard.org/config/#Lists
+  61. http://www.squidguard.org/config/#Logdir
+  62. http://www.squidguard.org/config/#Regular expressions
+  63. http://ftp.teledanmark.no/pub/networking/rfc/rfc1945.txt
+  64. http://ftp.teledanmark.no/pub/networking/rfc/rfc1945.txt
+  65. http://www.squidguard.org/config/#Logdir
+  66. http://www.squidguard.org/config/#Pass
+  67. http://www.squidguard.org/config/#Rewrite
+  68. http://www.squidguard.org/config/#Redirect
+  69. http://www.squidguard.org/config/#Pass
+  70. http://www.squidguard.org/config/#Rewrite
+  71. http://www.squidguard.org/config/#Redirect
+  72. http://www.squidguard.org/config/#Pass
+  73. http://www.squidguard.org/config/#Rewrite
+  74. http://www.squidguard.org/config/#Redirect
+  75. http://www.squidguard.org/config/#Default
+  76. http://www.squidguard.org/config/#Pass
+  77. http://www.squidguard.org/config/#Rewrite
+  78. http://www.squidguard.org/config/#Redirect
+  79. http://www.squidguard.org/config/#Pass
+  80. http://www.squidguard.org/config/#Rewrite
+  81. http://www.squidguard.org/config/#Redirect
+  82. http://www.squidguard.org/config/#Redirect
+  83. http://www.squidguard.org/config/#Domainlists
+  84. http://www.squidguard.org/config/#URLlists
+  85. http://www.squidguard.org/config/#Expressionlists
+  86. mailto:squidguard@squidguard.org?subject=squidGuard%20blacklist%20error
+  87. http://www.squidguard.org/config/examples/00.conf
+  88. http://www.squidguard.org/config/examples/01.conf
+  89. http://www.squidguard.org/config/examples/02.conf
+  90. http://www.squidguard.org/config/examples/02.domains
+  91. http://www.squidguard.org/config/examples/03.conf
+  92. http://www.squidguard.org/config/examples/04.conf
+  93. http://www.squidguard.org/config/examples/04.domains
+  94. http://www.squidguard.org/config/examples/04.urls
+  95. http://www.squidguard.org/config/examples/04.domains
+  96. http://www.squidguard.org/config/examples/04.urls
+  97. http://www.squidguard.org/config/examples/05.conf
+  98. http://www.squidguard.org/links/#Identd
+  99. http://www.squidguard.org/config/examples/06.conf
+ 100. http://www.squidguard.org/config/examples/07.conf
+ 101. http://www.squidguard.org/config/#example05
+ 102. http://www.gnu.org/
+ 103. http://www.perl.com/
+ 104. http://www.squid-cache.org/
+ 105. http://www.squidguard.org/
+ 106. http://www.sleepycat.com/

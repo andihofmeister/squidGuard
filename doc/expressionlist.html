@@ -1,0 +1,398 @@
+
+
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN" "http://www.w3.org/TR/REC-html40/loose.dtd">
+
+<html><head>
+
+<title>SquidGuard </title>
+
+<meta name="keywords" content="Squidguard, Squid, Redirector, Proxy, Download, URL, Blacklist, Patches, Source, Software">
+
+<meta name="distribution" content="global">
+
+<link rel="Shortcut Icon" href="/favicon.ico" type="image/x-icon" />
+
+</head>
+
+<body bgcolor="#F0FFFF">
+
+<table bgcolor="#001199" width=100%>
+
+<tr><td bgcolor="#8EE5EE">
+
+
+
+<center>
+
+<h2><img alt="" src="/Logos/squidGuard.gif" align=middle> SquidGuard </h2>
+
+</center>
+
+
+
+<table border=0 bgcolor="#001199" width=100%>
+
+<tr>
+
+<th><a href="/index.html" target=_top><font color=white>HOME</font></a></th>
+
+<th><a href="/download.html" target=_top><font color=white>Downloads</font></a></th>
+
+<th><a href="/Doc/" target=_top><font color=white>Documentation</font></a></th>
+
+<th><a href="/Devel/" target=_top><font color=white>Development</font></a></th>
+
+<th><a href="/blacklists.html" target=_top><font color=white>Blacklists</font></a></th>
+
+<th><a href="/Contrib/" target=_top><font color=white>Contributions</font></a></th>
+
+<th><a href="/impressum.html" target=body><font color=white>Contact</font></a></th>
+
+</tr>
+
+</table>
+
+
+
+<table border=0 width=100%>
+
+<tr><td width=85% bgcolor="#8EE5EE" valign=top>
+
+
+
+
+
+<br><br>
+<h2> &nbsp; Using Expressionlists in SquidGuard</h2>
+<br>
+<center>
+<table width=97%>
+<tr><td align=left>
+
+You will never be able to add a possible "bad" pages to your
+domains and urls files. To achieve additional blocking
+expressionlists can be used.<br>
+In an expressionlist you enter words that are mostly likely
+part of unwanted domains and urls. Each domains and url
+will be matched against the entries found in the configured
+expression lists.<br>
+<b>Attention:</b> Only use expressionlists if you are sure
+you do not block away innocent sites. Additionally keep in
+mind that using these lists can result in a noticable
+performance impact.
+<br><br>
+
+<ol>
+<li> <b>Adding expression lists to the configuration</b><br><br>
+
+Expression lists are included in the <em>dest</em> tag.
+The example below shows the relevant part of the squidGuard
+configuration file:
+<br><br>
+<table width="75%" cellpadding="0" cellspacing="0" style="background-color: #f2fff0; border: solid 1px #4455bb;">
+<tr>
+<td style="background-color: #223499; border-bottom: 1px solid #888;"> 
+<font size="-1" color=white>Using expression lists to block porn </font>
+</td></tr>
+<tr>
+<td>
+<pre> dest porn {
+      domainlist       porn/domains
+      urllist          porn/urls
+      expressionlist   porn/expressions
+ }
+</pre>
+</td></tr>
+</table>
+<br><br>
+You can add an expression list to each defined destination if
+you find this necessary (reminder: performance!). SquidGuard
+expects the expression file relative to the defined dbhome just
+as the domains and urls files.<br>
+<br>
+
+<li> <b>Syntax of expression lists</b><br><br>
+
+The expressionlist file format is lines with regular expressions as described
+in regex(5). Of most interrest is:<br><br>
+
+<TABLE CELLPADDING=4 BORDER=0>
+<TR>
+    <TH width=20% VALIGN=TOP>
+     <A NAME="Regular expressions"></A> <TT><B>.</B></TT>
+    </TH>
+    <TD VALIGN=TOP>
+     Matches any single character (use "<TT>\.</TT>" to match a
+     "<TT>.</TT>").
+    </TD>
+</TR>
+<TR>
+    <TH VALIGN=TOP>
+     <TT><B>[abc]</B></TT>
+    </TH>
+    <TD VALIGN=TOP>
+     Matches one of the characters ("<TT>[abc]</TT>" matches a
+     single "<TT>a</TT>" <U>or</U> "<TT>b</TT>" <U>or</U>
+     "<TT>c</TT>").
+    </TD>
+</TR>
+<TR>
+    <TH VALIGN=TOP>
+     <TT><B>[c-g]</B></TT>
+    </TH>
+    <TD VALIGN=TOP>
+     Matches one of the characters in the range ("<TT>[c-g]</TT>"
+     matches a single "<TT>c</TT>" <U>or</U> "<TT>d</TT>" <U>or</U>
+     "<TT>e</TT>" <U>or</U> "<TT>f</TT>" <U>or</U> "<TT>g</TT>".<BR>
+     "<TT>[a-z0-9]</TT>" matches any single letter or digit.<BR>
+     "<TT>[-/.:?]</TT>" matches any single "<TT>-</TT>" <U>or</U>
+     "<TT>/</TT>" <U>or</U> "<TT>.</TT>" <U>or</U> "<TT>:</TT>"
+     <U>or</U> "<TT>?</TT>".).
+    </TD>
+</TR>
+<TR>
+    <TH VALIGN=TOP>
+     <TT><B>?</B></TT>
+    </TH>
+    <TD VALIGN=TOP>
+     None or one of the preceding ("<TT>words?</TT>" will match
+     "<TT>word</TT>" and "<TT>words</TT>".<BR> "<TT>[abc]?</TT>"
+     matches a single "<TT>a</TT>" <U>or</U> "<TT>b</TT>" <U>or</U>
+     "<TT>c</TT>" <U>or</U> nothing (i.e.&nbsp;"")).
+    </TD>
+</TR>
+<TR>
+    <TH VALIGN=TOP>
+     <TT><B>*</B></TT>
+    </TH>
+    <TD VALIGN=TOP>
+     None or more of the preceding ("<TT>words*</TT>" will match
+     "<TT>word</TT>", "<TT>words</TT>" and
+     "<TT>wordsssssss</TT>". "<TT>.*</TT>" will match anything
+     including nothing).
+    </TD>
+</TR>
+<TR>
+    <TH VALIGN=TOP>
+     <TT><B>+</B></TT>
+    </TH>
+    <TD VALIGN=TOP>
+     One or more of the preceding ("<TT>xxx+</TT>" will match a
+     sequence of 3 or more "<TT>x</TT>").
+    </TD>
+</TR>
+<TR>
+    <TH VALIGN=TOP>
+     <TT><B>(expr1|expr2)</B></TT>
+    </TH>
+    <TD VALIGN=TOP>
+     One of the expressions, which in turn may contain a similar
+     construction ("<TT>(foo|bar)</TT>" will match "<TT>foo</TT>"
+     <U>or</U> "<TT>bar</TT>".<BR> "<TT>(foo|bar)?</TT> will match
+     "<TT>foo</TT>" <U>or</U> "<TT>bar</TT>" <U>or</U> nothing
+     (i.e.&nbsp;"")).
+    </TD>
+</TR>
+<TR>
+    <TH VALIGN=TOP>
+     <TT><B>$</B></TT>
+    </TH>
+    <TD VALIGN=TOP>
+     The end of the line ("<TT>(foo|bar)$</TT>" will match
+     "<TT>foo</TT>" <U>or</U> "<TT>bar</TT>"only at the end of a
+     line).
+    </TD>
+</TR>
+<TR>
+    <TH VALIGN=TOP>
+     <TT><B>\<I>x</I></B></TT>
+    </TH>
+    <TD VALIGN=TOP>
+     Disable the special meaning of <TT><B><I>x</I></B></TT> where
+     <TT><B><I>x</I></B></TT> is one of the special regex characters
+     "<TT><B>.?*+()^$[]{}\</B></TT>"&nbsp; ("<TT>\.</TT>" will match a
+     single "<TT>.</TT>", "<TT>\\</TT>" a single "<TT>\</TT>" etc.)
+    </TD>
+</TR>
+</TABLE>
+<br><br>
+
+The entries to the expression lists are cleartext. Thus a start to block
+possible sexual material by expression match could look like: 
+<br><br>
+<table width="75%" cellpadding="0" cellspacing="0" style="background-color:
+#f2fff0; border: solid 1px #4455bb;">
+<tr>
+<td>
+<pre>
+(^|[-\?+=/_])(bondage|boobs?|busty?|hardcore|porno?|sex|xxx+)([-\?+=/_]|$)
+</pre>
+</td></tr></table>
+<br>
+<br>
+If everything is set up to your liking make the changes active by 
+issuing the command:<br><br>
+<table width="75%" cellpadding="0" cellspacing="0" style="background-color:
+#f2fff0; border: solid 1px #4455bb;">
+<tr>
+<td>
+<pre>
+squid -k reconfigure
+</pre>
+</td></tr></table>
+<br>
+<br>
+
+
+<li><b>Some notes and hints</b>
+<br><br>
+<UL>
+<LI>
+    Unless you build your expressions very very carefully there is a
+    high risk you will have annoyed users on your neck. Typically
+    you might accidentally block "Essex", "Sussex", "breastcancer",
+    "www.x.org" etc. in your eagerness for blocking pornographic
+    material. In practice you would probably replace some of the
+    words in the example above with some more clearly pornographic
+    related words that I don't find appropriate to list
+    here.<BR><BR>
+</LI>
+<LI>
+    While the size of the domain and urllists only has marginal
+    influence on the performance, too many large or complex
+    expressions will quickly degrade the performance of
+    squidGuard. Though it may depend heavily on the performance of
+    the regex library you link with.<BR><BR>
+</LI>
+<LI>
+    <A NAME="Sample adultdb"></A>There is a set of sample files
+    for a group of supposedly pornographic sites under
+    <TT>samples/dest/adult</TT> in the source tree that you can use as
+    a start if porn blocking is one of your tasks. <B>Please note:</B>
+    These lists are very, very old and not intended for production
+    systems. Use them to test your squidGuard. For an initial setup
+    the lists will work, but we recommend that you review these lists
+    before using them. Those
+    domains and urls have been collected <EM>automagically</EM> by a
+    robot. No manual evaluation of the corresponding contents has been
+    performed. Therefor there is a chance some nonpornographic sites
+    have sliped in. <br><br>
+</LI>
+<LI>
+    To avoid publishing to your users a complete guide to banned
+    sites, you probably want to have some or all of these files
+    protected by for instance:
+    <DL>
+     <DD>
+      <TT>
+       chmod&nbsp;640&nbsp;/<I>wherever</I>/filter/db/dest/adult/*<BR>
+       chown&nbsp;<I>cache_effective_user</I>&nbsp;/<I>wherever</I>/filter/db/dest/adult/*<BR>
+       chgrp&nbsp;<I>cache_effective_group</I>&nbsp;/<I>wherever</I>/filter/db/dest/adult/*
+      </TT>
+     </DD>
+    </DL>
+    where <TT>cache_effective_user</TT> and
+    <TT>cache_effective_group</TT> are the values for the
+    corresponding tags as defined in <TT>squid.conf</TT>.<BR>
+</LI>
+</UL>
+
+
+</td></tr></table>
+
+</td>
+<td valign=top>
+<br><br><br><br>
+
+<a href="/Doc/index.html"><font color=black>Documentation</font></a>
+
+<hr color="#001199">
+
+<a href="/Doc/install.html"><font color=black>Installation</font></a>
+
+<hr color="#001199">
+
+Configuration</a>
+
+<table border=0 cellspacing=1 cellpadding=1>
+
+<tr><td>&nbsp;<a href="/Doc/configure.html"><font color=black size=-1>Getting started</font></a></td></tr>
+
+<tr><td>&nbsp;<font size=-1>Destination ACLs</font></td></tr>
+
+<tr><td>&nbsp;<font size=-1>Source ACLs</font></td></tr>
+
+<tr><td>&nbsp;<a href="/Doc/redirect.html"><font color=black size=-1>Redirect Rule</font></a></td></tr>
+
+<tr><td>&nbsp;<a href="/Doc/extended.html#times"><font color=black size=-1>Time Constraints</font></a></td></tr>
+
+<tr><td>&nbsp;<a href="/Doc/authentication.html"><font color=black size=-1>Authentication</font></a></td></tr>
+
+<tr><td>&nbsp;<a href="/Doc/expressionlist.html"><font color=black size=-1>Regular Expressions</font></a></td></tr>
+
+<tr><td>&nbsp;<a href="/Doc/examples.html"><font color=black size=-1>Examples</font></a></td></tr>
+
+</table>
+
+<hr color="#001199">
+
+<a href="runtimeops.html" target=body><font color=black>Runtime
+
+Options</font></a>
+
+<hr color="#001199">
+
+<a href="aboutblocking.html"><font color=black>About blocking</font></a>
+
+<hr color="#001199">
+
+<a href="troubleshoot.html"><font color=black>Troubleshooting </font></a>
+
+<hr color="#001199">
+
+<a href="known_issues.html"><font color=black>Known Issues</font></a>
+
+<hr color="#001199">
+
+<a href="other_sources.html"><font color=black>Other Sources</font></a>
+
+<hr color="#001199">
+
+
+
+</td></tr>
+
+
+
+</table>
+
+
+
+<br><br>
+
+<hr width=100%>
+
+<font size=-2>
+
+&nbsp; &copy; Powered by <a href="http://www.shalla.de/">Shalla Secure
+
+Services</a> 2007-2008<br><br>
+
+</font>
+
+</td>
+
+</tr>
+
+</table>
+
+
+
+</body>
+
+</html>
+
+
+

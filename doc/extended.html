@@ -1,0 +1,200 @@
+<html><head>
+<title>Another squidguard website</title>
+<meta name="keywords" content="Squidguard, Squid, Redirector, Proxy, Download">
+<meta name="distribution" content="global">
+</head>
+<body link=white alink=white vlink=white bgcolor="#ddffcc">
+<center>
+<h2>Another squidguard website</h2>
+</center>
+<br>
+<table width=100% border=0 bgcolor="#116633">
+<tr>
+<th width=20% bgcolor="#116633"><font color=white ><a href="/index.html">Home</a></font>
+</th>
+<th width=20% bgcolor="#119944"><font color=white><a href="/Doc/index.html">Documentation</a></font></th>
+<th width=20% bgcolor="#116633"><font color=white><a href="/download.html">Download</A></font></th>
+<th width=20% bgcolor="#116633"><font color=white><a href="/blacklists.html">Blacklists</a></font></th>
+<th width=20% bgcolor="#116633"><font color=white><a href="/addsoft.html">Useful stuff</font></a></th>
+</tr>
+<tr>
+<th width=20% bgcolor="#119944"><font color=white size=-1><a href="/Doc/install.html">Installation</a></font></th>
+<th width=20% bgcolor="#119944"><font color=white size=-1><a href="/Doc/configure.html">Basic Configuration</a></font></th>
+<th width=20% bgcolor="#119944"><font color=white size=-1><a href="/Doc/extended.html">Extended Configuration</a></font></th>
+<th width=20% bgcolor="#119944"><font color=white size=-1><a href="/Doc/known_issues.html">Known Issues</a></font></th>
+<th width=20% bgcolor="#119944"><font color=white size=-1>&nbsp;</font></th>
+</tr>
+</table>
+
+<h3>Extended Configuration of SquidGuard</h3>
+
+There are several more options to configure SquidGuard according to your 
+needs.<br><br>
+
+<center>
+<table width=80% cellpadding="0" cellspacing="0" border=0>
+<tr>
+<td><a href="#notIP"><font color=blue>Not allowing IP adresses</font></a></td>
+<td><a href="#times"><font color=blue>Times</font></a></td>
+</tr>
+<tr>
+<td><a href="#sourceIP"><font color=blue>Rules based on source IP adresses</font></a> </td>
+<td><a href="#blocklog"><font color=blue>Logging blocked access tries</font></a></td>
+</tr>
+</table>
+</center>
+
+<br><br>
+<li> <a name=notIP> <b>Not allowing IP adresses</b></a><br><br>
+To make sure that people don't bypass the URL filter by simply using the 
+IP addresses instead of the fully qualified domain names, you can add the &nbsp;
+<tt>!in-addr</tt>  &nbsp; following to your acl:
+<br><br>
+<table width="75%" cellpadding="0" cellspacing="0" style="background-color: #f2fff0; border: solid 1px #2299bf;">
+<tr>
+<td style="background-color: #77afaf; border-bottom: 1px solid #888;"> <font size="-1" color=white>Disallowing access to IP addresses</font>
+</td></tr>
+<tr>
+<td>
+<pre> acl {
+        default {
+                pass !in-addr all
+                redirect http://localhost/block.html
+        }
+ }
+</pre>
+</td></tr>
+</table>
+<br><br>
+<li> <a name=times><b>Blocking based on times</b></a><br><br>
+There are two ways to define times and dates where access to websites are allowed or disallowed.
+The &nbsp;<tt>weekly</tt>&nbsp; directive is used for reoccuring access time, f.e. allowing 
+web access to blocked sites after work.<br>
+Using the &nbsp;<tt>date</tt>&nbsp; directive you can additionally define special days where access may
+be granted. Wildcards can be used.<br><br>
+<table width="75%" cellpadding="0" cellspacing="0" style="background-color: #f2fff0; border: solid 1px #2299bf;">
+<tr>
+<td style="background-color: #77afaf; border-bottom: 1px solid #888;"> <font size="-1" color=white>Defining access times </font>
+</td></tr>
+<tr>
+<td>
+<pre>
+time afterwork {
+  weekly   * 17:00-24:00            # After work
+  weekly   fridays 16:00-17:00      # On friday we close earlier
+  weekly   saturdays sundays        # Weekend
+  date   *.01.01                    # New Year's Day
+  date   *.12.24 12:00-24:00        # Christmas Eve
+  date   2006.04.14-2006.04.17      # Easter 2006
+  date   2006.05.01                 # Maifeiertag
+}
+</pre>
+</td></tr></table>
+<br><br>
+To apply the defined times you can use the qualifiers &nbsp;<tt>within</tt>&nbsp;
+ and &nbsp;<tt>outside</tt>&nbsp;, respectively.
+Now your <tt>acl</tt> looks like that:<br><br>
+<table width="75%" cellpadding="0" cellspacing="0" style="background-color: #f2fff0; border: solid 1px #2299bf;">
+<tr>
+<td>
+<pre>acl {
+	all within afterwork {
+		pass all
+	}
+	else {
+		pass	!adv !porn !warez all
+	}
+	default {
+       		pass	none
+       		redirect http://localhost/block.html
+        	}
+}
+</pre>
+</td></tr>
+</table>
+<br>
+This means that for everyone free access to web sites is possible
+during the times defines in <tt>afterwork</tt>. Outsite these times
+people cannot access whatever is defined in adv, porn and warez.
+<br><br>
+
+<li><a name=sourceIP><b>Rules based on source IP adresses</b></a><br><br>
+
+If you have policies in place granting some people access to more sites
+than others you have different options how to implement this policy. 
+One way is to define source IP acls. This can only work if your user groups
+are well separated within your network.<br>
+Assuming that this is the case you can now define the source IP ranges
+in your <tt>squidGuard.conf</tt> the following way:<br><br>
+<table width="75%" cellpadding="0" cellspacing="0" style="background-color: #f2fff0; border: solid 1px #2299bf;">
+<tr>
+<td style="background-color: #77afaf; border-bottom: 1px solid #888;"> <font size="-1" color=white>Defining source IP addresses</font>
+</td></tr>
+<tr>
+<td>
+<pre>src admins {
+	ip	192.168.2.0-192.168.2.255
+	ip	172.16.12.0/255.255.255.0
+	ip	10.5.3.1/28
+}
+</pre>
+</td></tr></table>
+<br>
+You can secify IP addresses directly as well as defining IP ranges using 
+a from-to notation, defining the netmask or use the netmask prefix abbreviation.<br>
+<underline>Annotation:</underline> If you have many network definitions for a
+user group you can put that info into a separate file and just tell your 
+<tt>squidGuard.conf</tt> about the location of the file. In this case you
+write in your <tt>squidGuard.conf</tt>:<br><br>
+<table width="75%" cellpadding="0" cellspacing="0" style="background-color: #f2fff0; border: solid 1px #2299bf;">
+<tr>
+<td>
+<pre>src admins {
+        iplist      adminlist
+}
+</pre>
+</td></tr></table>
+<br>SquidGuard will look for a file called <tt>adminlist</tt> located wherever
+you pointed your <tt>dbhome</tt> directive to. Alternatively you can specify 
+an absolute path with your filename. The file itself holds the information
+in the following style:
+<br><br>
+<table width="75%" cellpadding="0" cellspacing="0" style="background-color: #f2fff0; border: solid 1px #2299bf;">
+<tr>
+<td>
+<pre>192.168.2.0-192.168.2.255
+172.16.12.0/255.255.255.0
+10.5.3.1/28
+</pre>
+</td></tr></table>
+<br><br>
+<li><a name=blocklog><b>Logging blocked access tries</b></a>
+<br><br>
+It may be of interest who is accessing blocked sites. To track that
+down you can add a <tt>log</tt> directive to your <tt>src</tt> or
+<tt>dest</tt> definitions in your <tt>squidGuard.conf</tt>. If only
+a file name is given, the file is search in the directory specified
+in the <tt>logdir</tt> directive. Alternatively you can specify 
+an absolute path with your logfilename.<br><br>
+<table width="75%" cellpadding="0" cellspacing="0" style="background-color: #f2fff0; border: solid 1px #2299bf;">
+<tr>
+<td style="background-color: #77afaf; border-bottom: 1px solid #888;"> <font size="-1" color=white>Logging blocked access tries</font>
+</td></tr>
+<tr>
+<td>
+<pre>dest porn {
+	domainlist porn/domains
+	urllist porn/urls
+	log pornaccesses
+}
+</pre>
+</td></tr></table>
+
+
+<br><br>
+<hr>
+<font size=-1>
+<em>Mirko Lorenz - mirko at shalla.de<br>
+26.03.2006</em></font>
+</body></html>
+

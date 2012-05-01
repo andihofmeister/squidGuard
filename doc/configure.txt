@@ -1,0 +1,143 @@
+                         Another squidguard website
+
+   [1]Home [2]Documentation [3]Download [4]Blacklists [5]Useful stuff
+   [6]Installation [7]Basic Configuration [8]Extended Configuration
+   [9]Known Issues
+
+  Basic Configuration of SquidGuard
+
+   Once SquidGuard is successfully installed, you want to configure the
+   software according to your needs. A sample configuration has been
+   installed in the default directory  /usr/local/squidGuard (or whatever
+   directory you pointed you intallation to).
+   Below you find three examples for the basic configuration of
+   SquidGuard.
+    1. Most simple configuration
+
+       Most simple configuration: one category, one rule for all
+#
+# CONFIG FILE FOR SQUIDGUARD
+#
+
+dbhome /usr/local/squidGuard/db
+logdir /usr/local/squidGuard/logs
+
+dest porn {
+        domainlist porn/domains
+        urllist porn/urls
+        }
+
+acl {
+        default {
+                pass !porn all
+                redirect http://localhost/block.html
+        }
+ }
+
+       Make always sure that the very first line of your squidGuard.conf
+       is not empty!
+       The entries have the following meaning:
+
+   dbhome Location of the blacklists
+   logdir Location of the logfiles
+   dest Definition of a category to block. You can enter the domain and
+   url file along with a regular expression list (talk about regular
+   expressions later on).
+   acl The actual blocking defintion. In our example only the default is
+   displayed. You can have more than one acl in place. The category porn
+   you defined in dest is blocked by the expression !porn. You have to add
+   the identifier all after the blocklist or your users will not be able
+   to surf anyway.
+   The redirect directive is madatory! You must tell SquidGuard which page
+   to display instead of the blocked one.
+    2. Choosing more than one category to block
+       First you define your categories. Just like you did above for porn.
+       For example:
+
+       Defining three categories for blocking
+dest adv {
+        domainlist      adv/domains
+        urllist         adv/urls
+}
+dest porn {
+        domainlist      porn/domains
+        urllist         porn/urls
+}
+dest warez {
+        domainlist      warez/domains
+        urllist         warez/urls
+}
+
+       Now your acl looks like that:
+
+acl {
+        default {
+                pass    !adv !porn !warez all
+                redirect http://localhost/block.html
+                }
+}
+
+    3. Whitelisting
+       Sometimes there is a demand to allow specific URLs and domains
+       although they are part of the blocklists for a good reason. In this
+       case you want to whitelist these domains and URLs.
+
+       Defining a whitelist
+dest white {
+        domainlist      white/domains
+        urllist         white/urls
+}
+
+acl {
+        default {
+                pass    white !adv !porn !warez all
+                redirect http://localhost/block.html
+                }
+}
+
+       In this example we assumed that your whitelists are located in a
+       directory called white whithin the blacklist directory you
+       specified with dbhome.
+       Make sure that your white identifier is the first in the row of the
+       pass directive. It must not have an exclamation mark in front
+       (otherwise all entries belonging to white will be blocked, too).
+    4. Initializing the blacklists
+       Before you start up your squidGuard you should initialize the
+       blacklists i.e. convert them from the textfiles to db files. Using
+       the db format will speed up the checking and blocking.
+       The initialization is performed by the following command:
+
+   Initializing the blacklists
+squidGuard -C all
+
+       Depending on the size of your blacklists and the power of your
+       computer this may take a while. If anything is running fine you
+       should see something like the following output:
+
+2006-01-29 12:16:14 [31977] squidGuard 1.2.0p2 started (1138533256.959)
+2006-01-29 12:16:14 [31977] db update done
+2006-01-29 12:16:14 [31977] squidGuard stopped (1138533374.571)
+
+       If you look into the directories holding the files domains and urls
+       you see that additional files have been created: domains.db and
+       urls.db. These new files must not be empty!
+       Only those files are converted you specified to block or whitelist
+       in your squidGuard.conf file.
+       Proceed with:    [10]Extended Configuration of SquidGuard
+         ______________________________________________________________
+
+       Mirko Lorenz - mirko at shalla.de
+       29.01.2006
+
+References
+
+   1. http://squidguard.shalla.de/index.html
+   2. http://squidguard.shalla.de/Doc/index.html
+   3. http://squidguard.shalla.de/download.html
+   4. http://squidguard.shalla.de/blacklists.html
+   5. http://squidguard.shalla.de/addsoft.html
+   6. http://squidguard.shalla.de/Doc/install.html
+   7. http://squidguard.shalla.de/Doc/configure.html
+   8. http://squidguard.shalla.de/Doc/extended.html
+   9. http://squidguard.shalla.de/Doc/known_issues.html
+  10. http://squidguard.shalla.de/Doc/extended.html

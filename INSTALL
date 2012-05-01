@@ -1,0 +1,81 @@
+                         SquidGuard 
+
+   [1]Home [2]Documentation [3]Download [4]Blacklists [5]Useful stuff
+   [6]Installation [7]Basic Configuration [8]Extended Configuration
+   [9]Known Issues
+
+  Installing SquidGuard
+
+    1. Unpack the source
+
+ tar xvzf squidGuard-1.2.0.tar.gz
+
+    2. Compiling
+       Let's assume it is squidGuard-1.2.0 we are trying to install:
+
+ cd squidGuard-1.2.0
+ ./configure
+ make
+
+       If no errors occurred squidGuard is now installed in /usr/local/.
+       There are a couple of option you can use when running .configure.
+       For example:
+
+   Installing in a different location
+ ./configure --prefix=/some/other/directory
+
+   BerkeleyDB not in /usr/local/BerkeleyDB installed
+ ./configure  --with-db=/directory/of/BerkeleyDB/installation
+
+       Annotation: Make sure that the shared library of your BerkeleyDB
+       installation is known by your system (check /etc/ld.so.conf).
+
+   See all .configure options
+ ./configure --help
+
+    3. Installing
+
+ su -
+ make install
+
+    4. Installing the blacklists
+       Copy your blacklists into the desired blacklist directory (default:
+       /usr/local/squidGuard/db) and unpack them. In the table below we
+       assume that the default location is used. Make sure that you have
+       the proper permissions to write to that directory.
+
+ cp /path/to/your/blacklist.tar.gz /usr/local/squidGuard/db
+ cd /usr/local/squidGuard/db
+ gzip -d blacklist.tar.gz
+ tar xfv blacklist.tar
+
+       Now the blacklists should be ready to use.
+
+   Congratulation. You have just completed the installation of squidGuard.
+   The next step is to configure the software according to your needs.
+   First start configuring SquidGuard. After you verified that SquidGuard
+   is working fine, make the required modification to your Squid by adding
+   the following line:
+
+ redirect_program /usr/local/bin/squidGuard -c /usr/local/squidGuard/squidGuard.
+conf
+
+   The other way round will make you unhappy.
+   Proceed with:    [10]Basic Configuration of SquidGuard
+     __________________________________________________________________
+
+   Mirko Lorenz - mirko at shalla.de
+   30.11.2006
+
+References
+
+   1. http://www.squidguard.org/index.html
+   2. http://www.squidguard.org/Doc/index.html
+   3. http://www.squidguard.org/download.html
+   4. http://www.squidguard.org/blacklists.html
+   5. http://www.squidguard.org/addsoft.html
+   6. http://www.squidguard.org/Doc/install.html
+   7. http://www.squidguard.org/Doc/configure.html
+   8. http://www.squidguard.org/Doc/extended.html
+   9. http://www.squidguard.org/Doc/known_issues.html
+  10. http://www.squidguard.org/Doc/configure.html

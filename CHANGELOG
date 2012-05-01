@@ -1,0 +1,670 @@
+Release 1.5
+2010-09-09	Fixed inconsistent blocking (bug 59).  Replaced defined routine
+		in sgDB.c
+2010-09-08	Added Russian translation from Vladimir Ipatov to squidGuard.cgi.in.
+2009-10-19	Fixed two bypass problems with URLs which length is close to 
+		the limit defined by MAX_BUF. The resulting proxy line exceeds
+		this limit and causes either squid or squidGuard to properly
+		block a site.
+2009-10-15	Fixed a problem with very long URLs. SquidGuard will go into 
+		emergency mode when a overlong URLs are encountered. The
+		emergency mode causes an entire stop of blocking. This is not
+		appropriate in this situation.
+2009-09-30	Added patch by beber and gentoo (thank you!) to fix a 
+		problem when cross compiling (bug 56).
+2009-09-27	Added patch by gentoo to fix alocal warnings (bug 57).
+2009-09-15	Added a feature to send log messages to syslog based on the
+		patch from Jun Jiang (thank you). (bug 42)  In order to use
+		syslog you have to run configure with the new option
+		"--with-syslog". In the configuration file you need to add
+		a line "syslog enable". If any other value but "enable" is
+		used syslog is disabled and logging to squidGuard.log takes
+		place as usual.
+		The following log level are used: DEBUG, NOTICE, WARN, ERROR
+		and EMERG. The local4 syslog facility is used by default.
+		If you want to change this, use the configure option
+		"--with-syslog-facility=<facility>".
+2009-09-12	Anonymized passwords (for connecting to the ldap or mysql 
+		server) written to logfiles when squidGuard is starting.
+		Added two configure options for choosing different location
+		for the LDAP include and library files.
+2009-08-25	Added patch to check IP addresses against LDAP. Patch by
+		Denis Bonnenfant (bug 41) - thank you.
+2009-08-23	Added patch to allow quoted strings in the configuration
+		file (bug 53). For more information see README.QuotedStrings.
+		Thanks to Iain Fothergill for providing the patch.
+		Removed the fix for usernames starting with a number because
+		it breaks the time declarations.
+2009-05-08	Added patch by INL to enable blocking against DNS based
+		blacklists (bug 55).
+		Fixed re-opened bug 12: a problem with regular expressions.
+		An entry like "www\.google\.de" did not block www.google.de
+		which it was supposed to do. Solving this issue solved
+		bug 46 as well.
+2009-03-08	Fixed bug 52: Sometimes squidGuard crashes with an overflow
+		error message for vsprintf. Thanks to Dirk Schoebel for 
+		suggesting the proper fix.
+		Fixed bug 49: Using numeric username made squidGuard goes
+		into emergency mode. This has been fixed. Usernames can
+		now start with a number, be numeric and can additionally
+		contain the following characters: @,à,é,è,ñ,á,ì,í,ò,ó,ù,ú.
+
+
+Release 1.4
+2008-12-23	Included last fixes for 1.4 final.
+2008-07-23	Some cleanup and fine work: added information about "-b"
+		parameter to the help output. Added "!" to the list of
+		allowed characters in urls.
+2008-07-14	Fixed bug40: When an url ended in "://" squidGuard crashed.
+		This has been fixed (the end of the url is now tested).
+		Fixed bug39: squid was complaining about stdout messages from 
+		squidGuard during the db update as a result of the progress
+		bar output. The output has been moved to stderr.
+2008-07-11	Added a switch to turn on the progress bar. The old default
+		behaviour has been restored to not show anything. To see the
+		progress of the compilation of the db files, use the command
+			squidGuard -b
+		(-b for "bar" - the progressbar).
+2008-07-05	Fixed bug 37: The sample block script squidGuard.cgi has been
+		rewritten to fix some bugs (basically warnings due to old perl
+		syntax but problem with the language selection as well) and to
+		enable an easier integration of additional languages. If a new
+		language shall be supported create a babel file the same way
+		the others are build and add the language to the supported hash
+		in squidGuard.cgi. The location of the babel files is the same
+		as for squidGuard.cgi. If you want to change the location change
+		the path in squidGuard.cgi (line 298).
+		The layout of the block page has been improved a bit as well.
+		Fixed bug 23: Syntax error when using "~" in redirect statement.
+		The "~" was not in the list of allowed characters for the
+		redirect url.
+		Fixed bug 34: On some system y.tab.c and y.tab.h were not properly
+		created although bison was installed. This led to errors during
+		compilation. If now no _executable_ bison is found, make copies
+		the files over. The prepared files have been updated, too.
+2008-06-13	Fixed bug 38: Bypass vulnerability using trailing dots. This 
+		problem only occurs when squid 3.0 is used. Squid 2.6 removes
+		trailing dots from domains before passing them to squidGuard.
+2008-05-17	Removed the automatic download of the documentation when running
+		"make install". From now on the documentation will be updated as
+		part of the release.
+2008-05-15	Corrected bugs 31 and 35: The "make install" command now tests
+		if the directory of the configuration file exists. If it is not
+		existing, the directory is created. 
+		If flex/lex is not installed "make" gave errors instead of just
+		copying the prepared flex file. If no flex/lex is found during
+		the configure run, "make" checks again and copies the prepared
+		file now fine.
+2008-04-18	Added MySQL support for authentication based on a patch from
+		Chris Fletcher (thank you). (bug 19.) Tested with MySQL 5.0.
+		To use MySQL configure must be started with the new option
+		"--with-mysql". If MySQL is not installed under   /usr   or 
+		/usr/local   you can specify a directory with this option. The
+		database is assumed to be configured on localhost.
+		Four new statements are required for MySQL support in the 
+		configuration file: 
+		mysqlusername (user to connect to the database)
+		mysqlpassword (password to authenticate 'mysqlusername')
+		mysqldb (database to use within mysql)
+		userquery (the sql query WITHOUT the trailing ';')
+2008-04-16	Fixed configure.in to comply with the autoconf standard and
+		produced an updated version of configure. As a result a couple
+		of configure options changed their syntax:
+		. to set the squid runtime user use --with-squiduser=<username>
+		  (default is "squid")
+		. to suppress log messages except for start and stop messages
+		  use:  --with-nolog=yes  (default is "no").
+2008-03-12      Fixed broken "make test" (bug 17).
+		Adjusted version.h.
+2008-03-12	Added new runtime parameter "-P". This parameter changes
+		the default behaviour from stop (emergency mode) to pass
+		when an error in building the database files occurs. So
+		this parameter only works in connection with the runtime
+		paramter "-C". Before using "-P" in your environment
+		make sure that nothing breakes when the building of the
+		db files fail.
+2008-01-19	Included some changes of a set of patches collated or 
+		developed by Chris Pates and Iain Fothegill of the CLEO 
+		Systems at Lancaster University
+2007-12-31	Added Spanish translation to squidGuard.cgi (thank you, Samuel
+		García for the translation) (bug 26).
+		
+
+Release 1.3
+2007-09-19	Included configurable logging. New configure option --nolog
+		suppress all runtime logmessages. Start and stop is still logged.
+		Default behaviour is now to log the non debug messages except
+		when the runtime option -d is supplied to squidGuard. May need
+		some more finetuning in later versions. (bug 11)
+		Made some slight changes to the outdated FAQ file.
+2007-09-13	Modified auth code to work with and without ldap (choosing
+		subroutine rfc1738_unescape or sgFindUser in sg.y.in)
+2007-08-20	Corrected include statement in sg.h.in.
+2007-07-16	Added patch by Marc Clayton to include a progressbar to the
+	 	build of the database files (bug 6).
+2007-07-01	Added patch by Eric Harrison to enable full sed compliance
+		to rewrite statements (bug 7).
+2007-06-02	Corrected missing evaluation of configure parameters for
+		logdir, dbhome and config file (bug 11).
+2007-05-25	Added patch from satish to block urls entries that include
+		hostnames (bug 4).
+2007-05-20	Fixed broken regex evaluation (bug 12)
+		Fixed a compile problem on some systems (bug 10).
+2007-05-10	Corrected an issue with the fix for the double
+		slash vulnerability (incorrectly found double
+		slashes) (bug 1). 
+
+
+Release 1.2.1
+2007-04-10      Fixed multiple slash bypass vulnerabilty.
+2007-03-17	Fixed some bugs in squidGuard-simple.cgi and added a
+		German version of it.
+2007-03-16	Fixed encoding bypass vulnerabilty.
+2007-03-16	Updated y.tab.c.bison and y.tab.h.bison to the recent
+		version.
+2007-02-02	Fixed bug in user authentication.
+2007-01-20	Fixed some typos which broke compilation on Sun Solaris
+		when using the Sun CC compiler.
+2007-01-12	Corrected unproper evaluated if-clause, which broke the
+		BerkeleyDB 2 compatibility.
+		Fixed minor typo in samples/Makefile.in.
+2006-12-29	Replaced the sleepycat links from the configure program with
+		the oracle links.
+		Corrected typo in Makefile.in.
+2006-12-16	Removed a stupid bug from the Makefile in the docs directory.
+2006-12-10	Removed references to squidguard.org in Makefile.in in the
+		Doc directory (squidguard.org is down).
+		Added ISSUES.txt file about known problem with the current
+		code (any information that is missing and should go in there
+		is gladly welcomed).
+2006-06-17	Release now supports LDAP queries for authentication:
+		Added Chris Frey's ldap patches and fixes (03, 05, 06,
+		07 and 10; Patches from:
+		http://www.netdirect.ca/software/category.php?cat=SquidGuard).
+		The LDAP feature can be included during the configure run
+		by setting --with-ldap. Per default ldap support will not
+		be compiled in.
+		Added a fix provided by Francesco Ranieri to solve an issue
+		with the (un)escaping of the authentication "domain%5cusername".
+
+Patch Release 1.2.0p3
+
+2005-12-09	Modfied configure Skript to allow to specify the name of 
+		the useraccount the squid cache is using.
+		Modified Makefile.in that during the installation the
+		necessary squidGuard directories are created if they are
+		not existing. Additionally a default configuration file
+		will be copied to the default location for squidGuard unless
+		an old one is found there. 
+
+Patch Release 1.2.0p2
+
+2005-10-13	Added Adam Gorski's bugfix to correct a a null pointer access
+	 	bug in logging.
+		Added Chris Freys bugfix a bug where it won't search the url
+		db if the domain db is empty. 
+		Added Chris Frey's buffer overflow checks (except for commenting
+		out the part from line 446 to 470 in sgDb.c).
+		(Patches from: 
+		http://www.netdirect.ca/software/category.php?cat=SquidGuard)
+
+Patch Release 1.2.0p1
+
+2005-10-11      Added support for Berkeley DB 4.x
+
+Changes in release 1.2.0:
+
+2001-06-01	The source block takes a new argument: continue. With this
+		command an ipaddress or user can be configured in serval 
+		sourceblocks. If a client is found but not blocked, squidGuard
+		will continue to search in the next source block, if the 
+		continue command is defined. Thanks to Valentin Chopov 
+		<valentin@valcho.net> for the patch
+2001-06-01	Fixed configure.in so that it detects the supported
+		db lib.
+2001-05-15 	Userquota: userqouta <seconds> <sporadic> <renew>
+		<renew> can be hourly|dayly|weekly|seconds. <sporadic>
+		if a request comes within the number of seconds given
+		in the sporadic field the remaining time of the user will
+		decrease. userquota 3600 60 14400, gives the user one hour
+		surfing every 4th hour. If a user have a pause for more 
+		than a minute, the used timed does not increase.
+
+		userquota 3600 0 14400, gives the user one hour surfing
+		every 4th hour. userquota 3600 0 daily gies the user
+		one hour surfing a day.
+2001-05-11	Userquota. In an source block you can now write 
+		"userquota seconds hourly|daily|weekly". This meens that
+		a timer starts ticking when a user access an url. The user
+		is blocked when the time is used up. The user does not get
+		access until the next hour,day or week. userquota 3600 daily,
+		gives the user one hour surfing a day. 
+2001-03-02	Support for 3.2.* version of BerkleyDB. Previous version of
+		bdb 3.* is not suported. SquidGuard is still 2.7.7 compatible.
+		configure will check for vallid versions of bdb. (leh)
+
+Changes in release 1.1.5:
+
+2000-04-25	Removed dependency on LYNX in doc/Makefile.in. This should
+		make reported /bin/false dependency problems on some
+		platforms go away. (pb)
+
+Changes in release 1.1.4:
+
+2000-03-29	the %xx codes for whitespaces and newlines in the url, is not
+		decoded (0x20, 0x09, 0x0a and 0x0d) (leh) 
+2000-03-27	old .db files is now truncated (with the DB_TRUNCATE flagg) 
+		instead of removed (with unlink syscall) when running with the
+		-C option. defined() can now return DB_NOTFOUND. DB_NOTFOUND
+		from defined() indicates an empty database (leh)
+2000-03-27      %f in redirects will expand to file part of the url (leh)
+2000-03-27      the sgReloadConfig moved to the end of the while loop (leh)
+2000-03-21	sgReloadConfig uses execve instead of execvp, hopefully
+		solving exec problems with FreeBSD systems (leh)
+2000-03-21	squidGuard logs the version number when starting (leh)
+2000-03-21	squidGuard -C will not make .db files with no content (leh)
+2000-03-21	sgSourceIpList, sgSourceUserList and sgReadConfig now closes
+		open filehandle (leh)
+2000-03-21	sgReloadConfig closes the logfile and all DBs before exec(leh)
+2000-03-21	a sigHUP only sets a flag, sgReloadConfig is then called in the
+		main loop (leh)
+2000-03-21	the %u macro is not affected by the %xx decoding (leh)
+2000-03-09	uses sigaction() instead of signal() for masking the HUP 
+		signal, With signal() the HUP signal would only work once 
+		(on FreeBSD and Linux systems) (leh)	
+2000-03-09	squidGuard would core when no pass statement was defined
+		in an acl block (specially when expanding the %t macro in the 
+		redirect statement) (leh)
+2000-03-07	leading spaces in the redirect field in destination files 
+		are removed. Defined RM = rm -f in Makefiles.in (Not defined
+		on FreeBSD 3.4) Thanks to Michail Vidiassov 
+		<master@iaas.msu.ru> for patch (leh)
+
+Changes in release 1.1.3:
+
+2000-03-06	ident information is processed in lowercase (leh)
+2000-02-25	On the fly update should work, and small a change to usage(leh)
+2000-02-24	Contributed contrib/hostbyname (pb)
+2000-02-07	Fixed fopen mode when opening logfiles from "at" ??? to
+		"a"ppend. (leh)
+2000-02-07	Fixed db_open to use DB_RDONLY when DB_CREATE 
+		isn't necessary. (pb)
+2000-02-01	speeding up the code of 2000-01-27 (and removed a small 
+		case bug) (leh)
+2000-01-27	the url is %xx decoded, test data is updated (leh) 
+
+Changes in release 1.1.2:
+
+1999-12-27	now ip 0.0.0.0/0, 0.0.0.0/0.0.0.0 and 0.0.0.0-255.255.255.255
+		works as expected. Thanks to bert_driehuis@nl.compuware.com 
+		and driehuis@playbeing.org for fix (leh)
+1999-12-20	A crash caused by operating *p++ on a static string (leh)
+1999-12-20	BSD/OS doesn't have SA_NODEFER (leh)
+1999-12-07	two redirect bugs in sgDb.c  defined() function fixed (leh)
+
+Changes in release 1.1.1:
+
+1999-11-02	fixed possible problem in the time scheduler when internal
+		clock has been changed by some external source like ntp (leh)
+1999-10-29      You can now define more than one timerange on a line in 
+                the configfile: date 1999-*-* 08:00-09:00 16:00-18:00. So
+                now, at last is the doc right. Thanks to Andrew (red@skazna.ru)
+		for patch (leh)
+1999-10-25	fixed small bug with url lists. If an url was not found in db
+		sg would find the first entry in the db insted of the last(leh)
+1999-10-25	fixed problems with tabs in acl block (leh)
+1999-10-01	removed the restriction on redefinition of acl in the acl block
+		so you can write something like 
+
+		acl {
+			clients within weekend { pass any }
+			clients within holidays { pass none  }
+		} (leh)
+1999-09-30      All rewrites now works on the original url not the
+		stripped version. (leh)
+1999-09-24      SquidGuard now goes into emergency mode if default acl is 
+                missing in the configfile (leh)
+1999-09-24      logfile will be placed relative to logdir (leh)
+1999-09-23      cleanup in the regexp functions. You can now use the @g switch
+                to substitute all occurences of a string. Uptil now only the
+                first one would be substituted (leh)
+1999-09-21	fixed a bug with cidr/mask notation in iplist and a bug 
+		where /32 notation where not recognized in both ip and 
+		iplist. (leh)
+1999-09-17      .db files will be opened with 644 mode (664 mode prev) (leh)
+1999-09-17      fixed rewrite logging, the request log is now on the 
+		format: Request(src/dest/rew) url src/domain ident method (leh)
+1999-09-13      fixed bug in the domainCompare function. Thanks again
+                to Fabrice Prigent's contribution (leh)
+1999-09-13	added sgclean perl script. Use it to remove redudant entries
+		in domain and url files. Look in the contrib dir (leh) 
+1999-09-10	fixed bug in string returned to squid during rewrite (leh)
+
+Changes in release 1.1.0:
+
+1999-08-24	Brought the doc up to date. (pb)
+
+Changes in release 1.1.0.beta1:
+
+1999-08-23	fixed bug with userlists. squidGuard used wrongly DB_SET_RANGE 
+		flag when searching for users. Thanks to Joseph Lesko
+                <joe@nationnet.com> for patch. (leh)
+1999-08-06      A redirect string now expands %p to the path part of an url.
+                So you could do something like this in a url file: 
+                ftp.linux.org/kernel/v2 ftp.yournet.com/%p (Thanks again to 
+                Jiri A. Randus pointing out the need of %p) (leh)
+1999-08-05      squidGuard will now save case in the url when doing rewrite,
+                and the %u macro will now expand to the original url instead
+		of the lowercase version (Thanks to Jiri A. Randus 
+		(Jiri.Randus@inway.cz) for finding this bug) (leh)
+1999-08-05      fixed seg fault bug in the rewrite function (Thanks to
+                Jiri A. Randus (Jiri.Randus@inway.cz) for patch) (leh)
+1999-08-02	autoconf now uses /usr/local/BerkleyDB instead of 
+		$prefix/BerkleyDB. use --with-db=DIR to change location.(leh)
+1999-07-30      seg fault bug fixed, seg faulted if lines in expressionlists
+	 	didn't have newline (!) (leh)
+1999-07-26	updated usage function (leh)
+1999-07-26	Two new switches to squidGuard -u and -C. If squidGuard is 
+		started with the "-C block" argument. squidGuard will make
+		a .db files out of the domain/url files belonging to that
+		destination block. An existsing .db file will be removed before
+		a new file is created. The argument "-C all" will create .db
+		files for all domain/url files found (look at the fix of 
+		1999-06-15). 
+		If squidGuard is started with -u. SquidGuard will look for
+		.diff files in the directory where the domain/urls files
+  		lies. squidGuard will add lines to the .db file if a line in 
+		the .diff begins with a '+', and remove it, if the line begins
+		with a '-'. (leh)
+1999-07-26	fix of 1999-06-21 broke the lexer so that an ip adresses 
+		begining with the number 3 would be parsed as a word not 
+		as an ipaddress. The lexer now uses states to fix this (leh)
+1999-07-26      squidGuard logs a error if a logfile command is inserted into
+		an acl other than "default". The logfile command should be
+                used in the source block instead.(leh) 
+1999-07-14	changed the parseLine function so it doesn't strip www|ftp 
+                when searching in the domain base. urls searches will be
+	        done with stripped url. (leh)
+1999-07-14	fixed small bug in parsing of date wildcard format, ignored 
+                dot as separator. Now dot and dash can be used (leh)
+1999-07-09	Removed trailing slashes for DEFAULT_LOGDIR and DEFAULT_DBHOME
+		in src/sg.h.in (pb)
+1999-06-28	Renamed the blacklists "blacklist" so people don't jump
+		too easy into wrong conclusions in case they get a glimpse
+		of your screen.. (pb)
+1999-06-21	Problems with redirects commands begining with 301|302:http...,
+		fixed regexp in sg.l to cope with this (leh) 
+1999-06-16	Added automatic fallback to prebuilt versions of y.tab.c,
+		y.tab.h and lex.yy.c to make it easier for those who have
+		problems with their yacc or lex (pb)
+1999-06-16	Added a prerelease of the squidGuardRobot in contrib (pb)
+1999-06-15	When loading urllist and domainlist squidGuard checks if a
+		.db file exists. If it does it will use the db
+		file instead of loading the textfile into memory. This will
+		speed up the initialization of squidGuard, and limit the
+		memory usage. (leh)
+1999-06-15	Fixed a bug with empty dest blocks, and dest blocks under time
+		control. Pre 1.1 an empty destblock would stop further 
+		checks of the pass statment. Now an empty destblock will be 
+		ignored	(leh)
+1999-06-10	Added French texts to samples/squidGuard.cgi thanks to
+		Fabrice Prigent (pb)
+1999-06-09	Changed all functions and prototypes to start support for
+		both ANSI and old K&R C (pb)
+1999-06-09	Added own yywrap() (pb)
+
+Changes in release 1.0.0:
+
+1999-06-07	squidGuard skips chars after the first ':' in an userlist.
+		You can use this for something like: userlist /etc/passwd (leh)
+
+Changes in release 1.0.0.beta3:
+
+1999-06-03	Changed the test requestst to be more realistic. (pb)
+1999-06-02	squdiGuard takes a new commandline argument:
+		-t yyyy-mm-ddTHH:MM:SS, and uses the value to -t in every
+		time calculation in squidGuard. With this you can easily 
+		test your time blocks without altering the config all the 
+		time. (leh)
+
+Changes in release 1.0.0.beta2:
+
+1999-05-31	The default acl block can take a log|logfile argument (leH)
+1999-05-31	A substitution in a rewrite block now can take a [rR]
+		argument in addition to [i]. With the lowercase r 
+		squidGuard will return an 302 (redirect temporarily) code
+		in front of the rewritten url. And an 301 (redirect permanent) 
+		with the uppercase R. (leh)
+1999-05-28	A src block can have a "userlist filename" command. (leh)
+1999-05-27	More cleaning in Makefiles.in and configure.in
+		Removed less portable :sh= dependencies
+		Added make tar (pb)
+1999-05-26	Completed the documentation (pb)
+1999-05-26	The global logfunctions now uses the same logfunctions 
+		that the logfile command in the configfile. This means 
+		one open filedescriptor per file. The file is also open
+		for writing aslong as squidGuard is running. (leh)
+1999-05-26	/dev/null as configfile will pass all (not seg fault) (leh)
+1999-05-25	configure now takes --with-sg-dbhome=DIR argument (leh)
+1999-05-20	src blocks can have a "iplist filename" command where the
+		ipaddresses of a src block is stored in the file "filename". 
+		The file can look like this:
+		#
+		# iplist file for the admin src block
+		#
+		1.2.3.4-1.2.3.10 # the managers
+		1.2.4.0/24	# the servers
+		1.2.5.3 1.2.6.0/255.255.255.0 #the rest		  (leh)
+1999-05-20	Added time support for the rewrite block (leh)
+1999-05-20	Added new log functionality. The source, destination and
+		rewrite blocks now take log|logfile commands. You can 
+		write 
+		src client {
+			    user root
+			    log anonymous /log/client.log
+		}
+
+		squidGuard will then log every redirects triggered by
+		the user root. The ident entry in the logfile will be "-". (leh)
+1999-05-19	dbfiles can have #comments (leh)
+1999-05-18	removed the hostpart stripping functionality from version 
+		0.0.9. Now only www[0-9]*, web[0-9]* and ftp[0-9]* will
+		be stripped from the hostpart of an url. (leh)
+1999-05-18	empty src blocks made some problems. Every src/dest block
+		is now terminated with a call to sgSourceEnd/sgDestEnd. The
+		functions check if a block is empty, and sets it to
+		innactive if that's the case. (leh)
+1999-05-18	fixed some very dangerous memmory allocations. I forgot to add
+		1 to some of the strlen() calls. Thanks to Bruce Perens's
+		tool ElectricFence, for findig these ugly bugs so fast. (leh)
+1999-05-16	Added test and benchmark suite (pb)
+1999-05-16	Added test and benchmark suite (pb)
+1999-05-16	Added time logging for start, ready and stop to main.c (pb)
+1999-05-16	Reorganized the doc source in split files with
+		server side include (pb)
+1999-05-15	Added update uption and did some cleanup in the Makefiles.
+		Cleanup in the new samples/squidGuard.cgi. Now with
+		prototypes (pb)
+1999-05-12	Written a new heavily improved samples/squidGuard.cgi with
+		strict perl, subroutines, reverse lookup on
+		targetgroup=in-addr with optional auto redirect on 1-1 or
+		1-N match, configurable multilingual messages and more.
+		Saved the old samples/squidGuard.cgi to
+		samples/squidGuard-simple.cgi as a simpler more straight
+		forward example (pb)
+1999-05-11	INSTALL now points to the online doc (pb)
+1999-05-11	Added make options dist, distribution, version,
+		readme and changelog (pb)
+1999-05-11	Added automatic update facility for doc/* from the
+		online versions via lynx (pb)
+1999-05-11	Renamed contrib/blocked.cgi samples/squidGuard.cgi (pb)
+1999-05-11	Done some code cleanup in contrib/blocked.cgi (pb)
+1999-05-11	Added in-addr hook in contrib/blocked.cgi (pb)
+1999-05-11	Added expires header in contrib/blocked.cgi (pb)
+1999-05-11	Fixed a minor (cosmetic) bug in sgParseRedirect
+		targetclass token %t now expands to
+		destgroup|none|in-addr|unknown (leh)
+		
+Changes in release 1.0.0.beta1:
+
+1999-05-10	Added the latest documentation to the doc/ directory (pb)
+1999-05-10	Removed the out of date documentation from the README file (pb)
+1999-05-05	Removed the two last calls to scanf in parseLine (leh)
+1999-05-05	Rewrite will now fallback to the default acl's rewrite (leh)
+1999-05-05	Empty dbs will now be removed from memory. (leh) 
+1999-04-23	Exchanged four strcmp functioncalls in sgAclAccess, with 
+		two integer tests (leh)
+1999-04-21	Fixed minor bug in sgParseRedirect targetclass token %t
+		now expands to any,none and ipaddress (leh)
+1999-04-21	The pass command in an acl block got a new predefined
+		destination token "in-addr"
+		
+		acl lan {
+			pass good !in-addr !adult any
+		}
+
+		all urls witch is not found in good or adult and the
+		hostpart is an ipaddress will be stopped. If the url does
+		not contains an ipaddress then squidGuard will continue
+		with the next token ("any" in this example) (leh)
+	
+1999-04-30	New time function: (leh)
+
+		The config file can now take a new object; time <name> 
+	
+		The time object has to be configured before the src and
+		dest blocks 
+		
+		time workhours {
+			weekly mtwhf	 08:00 - 16:00
+			1999-12-24	 08:00 - 12:00
+			1999-06-10 - 1999-06-20
+			*-*-01		 08:00 - 16:00 # every first in month
+			*-05-17		 08:00 - 16:00 # every 17 may
+		}
+
+		the workhours object can now be used in the src and dest
+		block like this:
+
+		src lan {
+			ip ....
+			within workhours
+		}	 
+
+		dest good {
+			urllist -
+			outside workhours
+		}
+
+		or in the acl block
+
+		acl {
+			lan within workhours {
+				pass good !ipaddress !adult any
+			} else {
+				pass any
+			}
+		  
+			default {
+				....
+			}
+		 }
+
+Changes in release 0.9.11:
+
+1999-05-18	Added some ; in the yacc code, so yacc, not only bison
+		can compile. (leh)
+
+Changes in release 0.9.10:
+
+1999-04-07	If protocol is https squids sends a line to squidGuard
+		without the https:// in the url. Pre 0.9.10 squidGuard would 
+		skip the line and log an error. Now squidGuard sets the 
+		protocol to "unknown", and continues to parse the rest of the
+		line (leh)
+1999-03-31	fixed bug in parseLine (leh)
+
+Changes in release 0.9.9:
+
+1999-03-16	sgDbLoadTextFile will now strip user:pass, hostpart
+		and :port from the url before it's loaded into the db. So 
+		user:passwd@www.yyy.xxx.com:80/~some/index.html will be 
+		loaded as xxx.com/~some/index.html. The same goes for the 
+		strippedurl in the SquidInfo struct. If a line in the urllist
+		begins with a '.',  the hostpart of the url will be unchanged.
+		The line .abc.def.ghi.com:80/index.html in a urllist textfile 
+		will be loaded as abc.def.ghi.com/index.html (leh)
+	
+Changes in release 0.9.8:
+
+1999-03-15	Rewrite of the function parsing the url from squid.
+		the function will now take an url like
+		http://user:passwd@www.xxx.com:80/index.html 
+		and normalize it to xxx.com (used in domainlist searches) 
+		and xxx.com:80/index.html (used in urllist searches) (leh)
+1999-03-15	squidGuard will only lowercase the urlpart of the line
+		squid sends to squidGuard (GET where converted to get 
+		pre 0.9.8) (leh)
+1999-03-12	Fixed bug in sgStrRncmp (leh)
+
+Changes in release 0.9.7:
+
+1999-03-10	Attempt to fix a problem with domains like xxx.com 
+		and xxxx.com in domainfiles. Pre 0.9.7 may not find
+		the url http://aaa.xxx.com/ (leh)
+1999-03-09	Domain/url files can have trailing spaces (leh)
+1999-03-08	Any lines in domainfile or urlfile can have an optional 
+		redirect field after the key (separted by space or tab). (leh) 
+1999-03-08	A dest block can now take redirect and rewrite 
+		directives as in the acl block. If both redirect and
+		rewrite is defined only redirect will be used. Both
+		directives will be triggered if one of domainlist, urllist
+		or expressionlist matches whith the destination url (leh)
+1999-03-08	squidGuard -v shows, beside the squidGuard version,
+		the BerkleyDB version (leh)
+1999-03-08	sgDbLoadTextFile and sgDestExpressionList now removes ^M 
+		from end of line (leh)
+
+Changes in release 0.9.6:
+
+1999-02-24	Fixed bugs in sgLog.c (leh)
+1999-02-23	Fixed bug in configure.in checking db_version. (leh)
+1999-02-23	Default location of configfile is now	
+		prefix/squidGuard/squidGuard.conf. You can change this	
+		--with-sg-config= argument to configure. (leh)
+
+Changes in release 0.9.5:
+
+1999-02-22	Fixed  a bug in our reverse-string-compare functions
+		Thanks to Gary Lindstrom (gplindstrom@exodus.nnc.edu)
+		for the patch (leh)
+1999-02-22	Now with configure script. Removed regex-0.12
+		distribution. Using native regexlib instead.
+1999-02-22	Changes in the directory structure (leh)
+1999-02-22	Fixed a couple of compiler warnings (leh)
+
+Changes in release 0.9.4:
+
+1999-02-01	Some minor changes in the README file (pb)
+1999-02-01	Somewhat stronger check of lines from squid (leh)
+1999-02-01	Db and Lines from squid is convertet to lowercase (leh)
+1999-02-01	Support for db-2.6.4 (leh)
+
+Changes in release 0.9.3:
+
+1999-01-04	Updated the sample adult database and README (pb)
+1998-12-18	Added Lex/Flex choice in the Makefile (pb)
+
+Changes in release 0.9.2:
+
+1998-12-07	Removed unnecessary lib dependencies from the Makefile (pb)
+		Added a more useful sample adult database (pb)
+		Changed sample.conf accordingly (pb)
+
+1998-10-18	Changed the sgLog time format to "%Y-%m-%d %T" (pb)
+
+Changes in release 0.9.1:
+
+1998-10-12	Fixed problems with db 2.4.14 (leh)
+		Added version.h (pb)
+		Added -v option to print version number and exit (pb)

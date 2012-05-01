@@ -1,0 +1,244 @@
+                                 SquidGuard
+
+   [1]HOME [2]Downloads [3]Documentation [4]Development [5]Blacklists
+   [6]Contributions [7]Contact
+
+  Using Authentication in SquidGuard
+
+   Sometimes it is convenient to allow different user a different kind of
+   access. SquidGuard has the possibility to decide based on the username
+   what this user may have access to.
+   There are different ways how to setup user authentication:
+     * defining users directly in squidGuard
+     * using LDAP roles (this implies that you either use squidGuard 1.2.1
+       or higher or have patched your squidGuard with the [8]LDAP patches
+       from Chris Frey; you may wish to read [9]Tips for using LDAP to
+       avoid problems).
+     *
+     * retrieving users from a MySQL database (requires squidGuard 1.4 or
+       higher)
+
+   In each case you must configure your squid proxy to perform user
+   authentication. In order to achieve this you must configure your squid
+   to authenticate your users. A simple way to add user authentication to
+   squid is the usage of the old ncsa_auth utility. By adding the
+   following three lines to your squid.conf you can enable authenication:
+auth_param basic program /usr/libexec/squid/ncsa_auth /etc/squid/squid.passwd
+acl password proxy_auth REQUIRED
+http_access allow password
+
+   Please note that the path to your squid password file and to ncsa_auth
+   may differ on your system. While you can choose for yourself where you
+   want to put your squid password file, ncsa_auth has a fixed location
+   (use find or locate to obtain the correct path).
+   There are other means of authentication in squid as well. Please refer
+   to the [10]squid site for more information.
+    1. Defining users in squidGuard
+       To grant access based on usernames you have two choices: you can
+       explicitly name the users with the user tag in your squidGuard.conf
+       or you can enter the names to a file (recommended when dealing with
+       many usernames) and use the userlist tag. In both cases you have to
+       include the user definition within a source acl enviroment. The
+       next two examples show how to use the user and the userlist tag:
+
+       Including usernames in squidGuard.conf
+ src department1 {
+     user maria josef susanna micheal george1
+ }
+
+       In this example five users are grouped into the source development.
+       This source is used to grant or deny access to defined categories
+       (see the acl definition after the next example).
+       You can use numbers in usernames. Unfortunately there is currently
+       a bug in squidGuard giving errors when using usernames consisting
+       entirely of numbers. In this case use the userlist (see next
+       example) to regulate user access.
+
+       Including userlists in squidGuard.conf
+ src department1 {
+     userlist dep1users
+ }
+
+       In this example the squidGuard configuration points to a file, here
+       called dep1users, where the users can be found. The location of the
+       userlist file is relativ to the path of your defined dbhome.
+       The userlist file is a normal text file of the following format:
+       user1
+       user2
+       user3
+       user4
+       user5
+       and so on.
+       Once you have defined your users you must configure which
+       user(group) has access to which destination. This is done in the
+       acl part of your squidGuard.conf:
+
+       Defining userbased access
+ acl {
+     department1 {
+         pass !porn !hacking !warez all
+         redirect http://localhost/cgi/blocked?clientaddr=%a&clientuser=%i&clien
+tgroup=%s&url=%u
+     }
+     default {
+         pass white none
+         redirect http://localhost/cgi/blocked?clientaddr=%a&clientuser=%i&clien
+tgroup=%s&url=%u
+     }
+ }
+
+       In this example the department1 user may access all websites except
+       those listed in the porn hacking and warez categories. All other
+       users are only allowed to access what is listed in the white
+       category (whitelisting). Of course you have to define the
+       destinations before setting up the acl. :-)
+    2. Using LDAP
+       Like in the example before you have to specify in the src
+       enviroment where the user information can be found. Additionally
+       you have to define some LDAP specific tags: You must name the upper
+       part of the LDAP directory tree and a password to access the user
+       information (unless you use anonymous bind, which due to security
+       considerations is not always recommended).
+       The following LDAP specific tags exist:
+
+   ldapusersearch This keyword goes in the src config block, and specifies
+   an LDAP URL to use to search for an unknown user name.
+   You can specify multple LDAP URLs per Source block.
+   Use '%s' to reference the username in your LDAP URL.
+   If the search returns a record, the user is considered "found",
+   otherwise the next URL in the same Source block is tried.
+   SquidGuard caches the "found" state of each search, even when a user
+   name is not found. The cache is valid for ldapcachetime seconds.
+   ldapcachetime This global keyword specifies the number of seconds to
+   cache LDAP search results before contacting the LDAP server again. This
+   keyword is global and must go outside any Source/Destination/Rule
+   blocks.
+   Setting this value to a reasonably low value can allow simulation of
+   near-realtime user groupings in LDAP without restarting squidguard.
+   Recommended value: 300
+   ldapbinddn This global keyword specifies the DN to bind to the LDAP
+   server as.
+   ldapbindpass Password to bind to the LDAP server. This is a global
+   keyword.
+   ldapprotover This denotes the LDAP protocol version. It is a global
+   keyword. Use this to force squidGuard to connect to the LDAP server
+   with a certain protocol version. If unable to use the specified
+   protocol version, squidguard will enter emergency mode.
+   Valid values: 2 or 3
+       Example configuration:
+
+       LDAP specific setting in squidGuard.conf
+ ldapbinddn     cn=root, dc=example, dc=com
+ ldapbindpass   myultrasecretpassword
+
+ # ldap cache time in seconds
+ ldapcachetime  300
+
+ src my_users {
+     ldapusersearch  ldap://ldap.example.com/cn=squidguardusers,ou=groups,dc=exa
+mple,dc=com?memberUid?sub?(&(objectclass=posixGroup)(memberUid=%s))
+  }
+
+       When using LDAP for authentication make sure that the settings in
+       your ldapusersearch line correspond to the user settings in your
+       LDAP server. If the usernames of your users are not saved in
+       "memberUid" but "uid" you have to adapt your ldapusersearch line
+       accordingly. The same is true for the value you enter for
+       "objectclass". You probably habe something like "Person" or
+       "InetOrgPerson" instead.
+       If the values of ldapusersearch don't match your LDAP user
+       configuration setting the lookup will fail.
+    3. Retrieving users from MySQL
+       (You need squidGuard version 1.4 or higher to use MySQL for
+       authentication.)
+       Like in the examples mentioned above you need to specify the user
+       lookup in a src enviroment.
+       To tell squidGuard to fetch the users from MySQL you have to
+       provide the following data:
+
+   mysqlusername This is the username used to connect and query the
+   database. This is a global setting (meaning you specify this outside of
+   a src environment).
+   mysqlpassword This is the password for the user specified with
+   mysqlusername to authenticate against the database. This is a global
+   setting (meaning you specify this outside of a src environment).
+   mysqldb This is the datebase withing MySQL which holds the tables with
+   the user data. This is a global setting (meaning you specify this
+   outside of a src environment).
+   userquery With this setting you specify the sql query to be run to
+   retrieve the usernames. This setting must be inside of a src
+   environment declaration. Attention: The query must not be ended by a
+   trailing ";" and must not contain more than four statements.
+       Example configuration:
+
+       MySQL specific setting in squidGuard.conf
+ mysqlusername proxyadm
+ mysqlpassword mysqlpassword
+ mysqldb proxyuser
+
+ src outer {
+ userquery select data from pusers
+ }
+
+       [11]Documentation
+         ______________________________________________________________
+
+       [12]Installation
+         ______________________________________________________________
+
+       Configuration
+
+        [13]Getting started
+        Destination ACLs
+        Source ACLs
+        [14]Redirect Rule
+        [15]Time Constraints
+        [16]Authentication
+        [17]Regular Expressions
+        [18]Examples
+         ______________________________________________________________
+
+       [19]Runtime Options
+         ______________________________________________________________
+
+       [20]About blocking
+         ______________________________________________________________
+
+       [21]Troubleshooting
+         ______________________________________________________________
+
+       [22]Known Issues
+         ______________________________________________________________
+
+       [23]Other Sources
+         ______________________________________________________________
+       ___________________________________________________________________
+
+         © Powered by [24]Shalla Secure Services 2007-2008
+
+References
+
+   1. http://www.squidguard.org/index.html
+   2. http://www.squidguard.org/download.html
+   3. http://www.squidguard.org/Doc/
+   4. http://www.squidguard.org/Devel/
+   5. http://www.squidguard.org/blacklists.html
+   6. http://www.squidguard.org/Contrib/
+   7. http://www.squidguard.org/impressum.html
+   8. http://www.netdirect.ca/software/category.php?cat=SquidGuard
+   9. http://www.squidguard.org/Doc/ldap.html
+  10. http://www.squid-cache.org/
+  11. http://www.squidguard.org/Doc/index.html
+  12. http://www.squidguard.org/Doc/install.html
+  13. http://www.squidguard.org/Doc/configure.html
+  14. http://www.squidguard.org/Doc/redirect.html
+  15. http://www.squidguard.org/Doc/extended.html#times
+  16. http://www.squidguard.org/Doc/authentication.html
+  17. http://www.squidguard.org/Doc/expressionlist.html
+  18. http://www.squidguard.org/Doc/examples.html
+  19. http://www.squidguard.org/Doc/runtimeops.html
+  20. http://www.squidguard.org/Doc/aboutblocking.html
+  21. http://www.squidguard.org/Doc/troubleshoot.html
+  22. http://www.squidguard.org/Doc/known_issues.html
+  23. http://www.squidguard.org/Doc/other_sources.html
+  24. http://www.shalla.de/
