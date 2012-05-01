@@ -2,7 +2,7 @@ dnl
 dnl Autoconf configuration for squidGuard
 dnl
 
-AC_INIT(src/main.c)
+AC_INIT(src/main.c.in)
 AC_CONFIG_HEADER(src/config.h)
 
 dnl
