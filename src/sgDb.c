@@ -34,7 +34,7 @@ void sgDbInit(Db, file)
      char *file;
 #endif
 {
-  struct stat st;
+  struct stat st, st2;
   char *dbfile = NULL;
   char *update = NULL;
   int createdb = 0, ret;
@@ -47,6 +47,11 @@ void sgDbInit(Db, file)
     strcpy(dbfile,file);
     strcat(dbfile,".db");
     if(stat(dbfile,&st) == 0){
+
+      if(stat(file,&st2) == 0)
+        if(st.st_mtime >= st2.st_mtime)
+	  createdb = 0;
+
       if(!createdb){
 	sgLogNotice("INFO: loading dbfile %s",dbfile);
       }
@@ -409,8 +414,10 @@ void sgDbLoadTextFile(Db, filename, update)
   struct stat fpst;
   
   dbp = Db->dbp;
+  Db->entries = 0;
   if ((fp = fopen(filename, "r")) == NULL) {
-    sgLogFatal("FATAL: %s: %s", filename, strerror(errno));
+    sgLogError("%s: %s", filename, strerror(errno));
+    return;
   }
   else {
     if ( showBar == 1 ) {
