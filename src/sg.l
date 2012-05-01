@@ -98,6 +98,7 @@ weekdays (({weekday}{s}*[, \t]+{s}*)*{weekday})|[\*]
 ^acl         return ACL;
 ^dbhome                return DBHOME;
 ^logdir                return LOGDIR;
+^groupttl      return GROUPTTL;
 ^ldapcachetime return LDAPCACHETIME;
 ^ldapprotover  return LDAPPROTOVER;
 ^ldapbinddn    return LDAPBINDDN;
@@ -110,6 +111,7 @@ urllist     return URLLIST;
 expressionlist return EXPRESSIONLIST;
 iplist      return IPLIST;
 user        return USER;
+group       return GROUP;
 userlist    return USERLIST;
 userquery   {
 	BEGIN REDIRECT_STATE;

@@ -298,6 +298,7 @@ struct Source {
   struct Ip *lastip;
   struct sgDb *domainDb;
   struct sgDb *userDb;
+  void *grouplist;
   struct Time *time;
   int within;
   int cont_search;
@@ -342,6 +343,8 @@ struct AclDest {
 
 int lineno;
 
+extern time_t	groupttl;
+
 char   *sgParseRedirect	__P((char *, struct SquidInfo *, struct Acl *, struct AclDest *));
 char   *sgAclAccess __P((struct Source *, struct Acl *, struct SquidInfo *));
 
@@ -373,6 +376,7 @@ ulong  *sgConvDot __P((char *));
 void   sgSource __P((char *));
 void   sgSourceEnd __P(());
 void   sgSourceUser __P((char *));
+void   sgSourceGroup __P((char *));
 void   sgSourceUserList __P((char *));
 #ifdef HAVE_LIBLDAP
 void   sgSourceLdapUserSearch __P((char *));
@@ -486,4 +490,5 @@ int    sgFindIp __P((struct Source *, char *, struct IpInfo **));
 
 int    expand_url __P((char *, size_t, const char *, const char *));
 
+int    groupmember __P((void *, char *, const char *));
 

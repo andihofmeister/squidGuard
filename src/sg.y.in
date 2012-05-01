@@ -91,8 +91,8 @@ rfc1738_unescape(char *s)
 %token WORD END START_BRACKET STOP_BRACKET WEEKDAY
 %token DESTINATION REWRITE ACL TIME TVAL DVAL DVALCRON
 %token SOURCE CIDR IPCLASS CONTINUE
-%token IPADDR DBHOME DOMAINLIST URLLIST EXPRESSIONLIST IPLIST
-%token DOMAIN USER USERLIST USERQUERY LDAPUSERSEARCH USERQUOTA LDAPIPSEARCH IPQUOTA IP NL NUMBER
+%token IPADDR DBHOME DOMAINLIST URLLIST EXPRESSIONLIST IPLIST GROUPTTL
+%token DOMAIN USER USERLIST GROUP USERQUERY LDAPUSERSEARCH USERQUOTA LDAPIPSEARCH IPQUOTA IP NL NUMBER
 %token PASS NEXT REDIRECT LOGDIR SUBST CHAR MINUTELY HOURLY DAILY WEEKLY DATE
 %token WITHIN OUTSIDE ELSE LOGFILE SYSLOG ANONYMOUS VERBOSE CONTINIOUS SPORADIC
 %token LDAPCACHETIME EXECUSERLIST EXECCMD LDAPPROTOVER
@@ -163,6 +163,10 @@ mysqlpassword: MYSQLPASSWORD STRING { sgSetting("mysqlpassword",$2); }
 mysqldb:       DATABASE STRING { sgSetting("mysqldb",$2); }
        ;
 
+groupttl:
+           GROUPTTL NUMBER { groupttl = atol($2); }
+         ;
+
 start_block:
                START_BRACKET
 	       ;
@@ -212,6 +216,7 @@ source_contents:
 
 source_content:     DOMAIN domain
                     | USER user 
+		    | GROUP group
                     | USERLIST STRING { sgSourceUserList($2); } 
 @MYSQLLINE@
 @YACCLINE@
@@ -240,6 +245,11 @@ domain:
 user:		    
 		    | user STRING { sgSourceUser($2); }
                     | user ','
+		    ;
+
+group:
+                    | group STRING { sgSourceGroup($2); }
+                    | group ','
 		    ;
 
 acl_block: ACL start_block acl_contents stop_block 
@@ -375,6 +385,7 @@ statement:
 	     | destination_block
              | dbhome
 	     | logdir
+	     | groupttl
 	     | sg_syslog
              | ldapprotover
              | ldapbinddn
@@ -584,6 +595,7 @@ void sgSourceEnd()
  struct Source *s;
  s = lastSource;
  if(s->ip == NULL && s->domainDb == NULL && s->userDb == NULL
+       && s->grouplist == NULL
        && s->ipDb == NULL
        && s->ldapuserurlcount == 0 && s->ldapipurlcount == 0 ){
    sgLogError("sourceblock %s missing active content, set inactive",s->name);
@@ -596,7 +608,8 @@ void sgSourceEnd()
 {
  struct Source *s;
  s = lastSource;
- if(s->ip == NULL && s->domainDb == NULL && s->userDb == NULL){
+ if(s->ip == NULL && s->domainDb == NULL && s->userDb == NULL &&
+     s->grouplist == NULL){
    sgLogError("sourceblock %s missing active content, set inactive",s->name);
    s->time = NULL;
    s->active = 0;
@@ -1151,7 +1164,7 @@ struct Source *sgFindSource (bsrc, net, ident, domain)
 #endif
 //fin ip
       foundip = 1;
-      if(s->userDb != NULL){
+      if(s->userDb != NULL || s->grouplist != NULL){
       if(*ident == '\0')
 	founduser = 0;
       else {
@@ -1159,7 +1172,7 @@ struct Source *sgFindSource (bsrc, net, ident, domain)
         if(sgFindUser(s, ident, &userquota)) {
 #else
         rfc1738_unescape(ident);
-        if(defined(s->userDb, ident, (char **) &userquota) == 1){
+        if(s->userDb != NULL && defined(s->userDb, ident, (char **) &userquota) == 1){
 #endif
 	  founduser = 1;
 	  unblockeduser = 1;
@@ -1207,6 +1220,8 @@ struct Source *sgFindSource (bsrc, net, ident, domain)
 	  }
 	}
       }
+      if (founduser == 0)
+        founduser = groupmember(s->grouplist, ident, s->name);
     } else
       founduser = 1;
     if(s->domainDb != NULL){
@@ -2786,7 +2801,7 @@ int sgFindUser(src, ident, rval)
 @NOLOG1@  sgLogError("DEBUG: sgFindUser called with: %s", ident);  @NOLOG2@
 
        /* defined in the userDB? */
-       if(defined(src->userDb, ident, (char **) &userinfo) == 1) {
+       if(src->userDb != NULL && defined(src->userDb, ident, (char **) &userinfo) == 1) {
 #ifdef HAVE_LIBLDAP
        /* LDAP user? */
        if(!userinfo->ldapuser) {
