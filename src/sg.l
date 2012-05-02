@@ -102,6 +102,7 @@ weekdays (({weekday}{s}*[, \t]+{s}*)*{weekday})|[\*]
 ^dbhome                return DBHOME;
 ^logdir                return LOGDIR;
 ^groupttl      return GROUPTTL;
+^reverselookup return REVERSELOOKUP;
 ^ldapcachetime return LDAPCACHETIME;
 ^ldapprotover  return LDAPPROTOVER;
 ^ldapbinddn    return LDAPBINDDN;

@@ -140,6 +140,7 @@ rfc1738_unescape(char *s)
 %token PASS
 %token QUOTED_STRING
 %token REDIRECT
+%token REVERSELOOKUP
 %token REWRITE
 %token SOURCE
 %token SPORADIC
@@ -225,6 +226,9 @@ mysqldb:	DATABASE STRING { sgSetting("mysqldb", $2); }
 		;
 
 groupttl:	GROUPTTL NUMBER { groupttl = atol($2); }
+		;
+
+reverselookup:	REVERSELOOKUP { reverselookup = 1; }
 		;
 
 start_block:	START_BRACKET
@@ -450,6 +454,7 @@ statement:	destination
 		| dbhome
 		| logdir
 		| groupttl
+		| reverselookup
 		| sg_syslog
 		| ldapprotover
 		| ldapbinddn

@@ -71,6 +71,7 @@ int sgtime = 0;
 char *globalLogDir = NULL;
 int globalSyslog = 0;
 
+int authzMode = 0;	/* run as authorization helper, not as redirector */
 
 int main(int argc, char **argv, char **envp)
 {
@@ -94,7 +95,7 @@ int main(int argc, char **argv, char **envp)
 #ifdef USE_SYSLOG
 	openlog("squidGuard", LOG_PID | LOG_NDELAY | LOG_CONS, SYSLOG_FAC);
 #endif
-	while ((ch = getopt(argc, argv, "hbduPC:t:c:vGr:")) != EOF)
+	while ((ch = getopt(argc, argv, "hbduPC:t:c:vGr:z")) != EOF) {
 		switch (ch) {
 		case 'd':
 			globalDebug = 1;
@@ -136,11 +137,16 @@ int main(int argc, char **argv, char **envp)
 		case 'r':
 			krbRealm = optarg;
 			break;
+		case 'z':
+			authzMode = 1;
+			break;
 		case '?':
 		case 'h':
 		default:
 			usage();
 		}
+	}
+
 	globalArgv = argv;
 	globalEnvp = envp;
 	sgSetGlobalErrorLogFile();
@@ -148,6 +154,7 @@ int main(int argc, char **argv, char **envp)
 	sgSetGlobalErrorLogFile();
 	sgLogNotice("INFO: squidGuard %s started (%d.%03d)",
 		    VERSION, start_time.tv_sec, start_time.tv_usec / 1000);
+
 	if (globalUpdate || globalCreateDb != NULL) {
 		sgLogNotice("INFO: db update done");
 		gettimeofday(&stop_time, NULL);
@@ -180,8 +187,10 @@ int main(int argc, char **argv, char **envp)
 	tmp[MAX_BUF - 1] = '\0';
 	while (1) {
 		while (fgets(buf, MAX_BUF, stdin) != NULL) {
+
 			if (sig_hup)
 				sgReloadConfig();
+
 			if (failsafe_mode) {
 				puts("");
 				fflush(stdout);
@@ -189,30 +198,54 @@ int main(int argc, char **argv, char **envp)
 					sgReloadConfig();
 				continue;
 			}
-			if (parseLine(buf, &squidInfo) != 1) {
-				sgLogError("ERROR: Error parsing squid line: %s", buf);
-				puts("");
+
+			if (authzMode == 1) {
+				if (parseAuthzLine(buf, &squidInfo) != 1) {
+					sgLogError("ERROR: Error parsing squid acl helper line: %s", buf);
+					puts("ERR");
+					fflush(stdout);
+					continue;
+				}
 			} else {
-				src = Source;
-				for (;; ) {
-					strncpy(tmp, squidInfo.src, MAX_BUF - 1);
-					tmp[MAX_BUF - 1] = 0; /* force null termination */
-					globalLogFile = NULL;
-					src = sgFindSource(src, tmp, squidInfo.ident, squidInfo.srcDomain);
-					acl = sgAclCheckSource(src);
-					if ((redirect = sgAclAccess(src, acl, &squidInfo)) == NULL ||
-					    redirect == NEXT_SOURCE) {
-						if (src == NULL || (src->cont_search == 0 && redirect != NEXT_SOURCE)) {
-							puts("");
-							break;
-						} else
-						if (src->next != NULL) {
-							src = src->next;
-							continue;
+				if (parseLine(buf, &squidInfo) != 1) {
+					sgLogError("ERROR: Error parsing squid line: %s", buf);
+					puts("");
+					fflush(stdout);
+					continue;
+				}
+			}
+
+			src = Source;
+			for (;; ) {
+				strncpy(tmp, squidInfo.src, MAX_BUF - 1);
+				tmp[MAX_BUF - 1] = 0; /* force null termination */
+				globalLogFile = NULL;
+				src = sgFindSource(src, tmp, squidInfo.ident, squidInfo.srcDomain);
+				acl = sgAclCheckSource(src);
+				if ((redirect = sgAclAccess(src, acl, &squidInfo)) == NULL ||
+				    redirect == NEXT_SOURCE) {
+					if (src == NULL || (src->cont_search == 0 && redirect != NEXT_SOURCE)) {
+						if (authzMode) {
+							puts("OK");
 						} else {
 							puts("");
-							break;
 						}
+						break;
+					} else
+					if (src->next != NULL) {
+						src = src->next;
+						continue;
+					} else {
+						if (authzMode) {
+							puts("OK");
+						} else {
+							puts("");
+						}
+						break;
+					}
+				} else {
+					if (authzMode == 1) {
+						puts("ERR");
 					} else {
 						if (squidInfo.srcDomain[0] == '\0') {
 							squidInfo.srcDomain[0] = '-';
@@ -225,11 +258,11 @@ int main(int argc, char **argv, char **envp)
 						fprintf(stdout, "%s %s/%s %s %s\n", redirect, squidInfo.src,
 							squidInfo.srcDomain, squidInfo.ident,
 							squidInfo.method);
-						/* sgLogDebug("DEBUG: %s %s/%s %s %s\n",redirect,squidInfo.src,squidInfo.srcDomain,squidInfo.ident,squidInfo.method);  */
-						break;
 					}
-				} /*for(;;)*/
-			}
+					break;
+				}
+			} /*for(;;)*/
+
 			fflush(stdout);
 			if (sig_hup)
 				sgReloadConfig();
@@ -270,6 +303,7 @@ void usage()
 	fprintf(stderr, "  -c file     : load alternate configfile\n");
 	fprintf(stderr, "  -t time     : specify startup time in the format: yyyy-mm-ddTHH:MM:SS\n");
 	fprintf(stderr, "  -u          : update .db files from .diff files\n");
+	fprintf(stderr, "  -z          : run as external acl helper instead as a redirector\n");
 	fprintf(stderr, "  -C file|all : create new .db files from urls/domain files\n");
 	fprintf(stderr, "                specified in \"file\".\n");
 	fprintf(stderr, "  -P          : do not go into emergency mode when an error with the \n");

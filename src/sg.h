@@ -322,7 +322,8 @@ struct AclDest {
 
 int lineno;
 
-extern time_t groupttl;
+extern time_t	groupttl;
+extern int	reverselookup;
 
 char *sgParseRedirect(char *, struct SquidInfo *, struct Acl *, struct AclDest *);
 char *sgAclAccess(struct Source *, struct Acl *, struct SquidInfo *);
@@ -340,6 +341,7 @@ void sgLogFatal(char *, ...);
 void sgSetGlobalErrorLogFile();
 void sgLogRequest(struct LogFile *, struct SquidInfo *, struct Acl *, struct AclDest *, struct sgRewrite *, int);
 int parseLine(char *, struct SquidInfo *);
+int parseAuthzLine(char *, struct SquidInfo *);
 char *sgStripUrl(char *);
 
 void sgEmergency();

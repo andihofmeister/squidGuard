@@ -20,7 +20,11 @@
 #include "sgEx.h"
 #include "HTEscape.h"
 
+#include <netdb.h>
+#include <arpa/inet.h>
+
 /* #define METEST 8; */
+int reverselookup = 0;
 
 void sgHandlerSigHUP(int signal)
 {
@@ -64,168 +68,298 @@ void sgAlarm(int signal)
 	sgTimeNextEvent();
 }
 
+static void resetSquidInfo(struct SquidInfo *s) {
+	s->protocol[0]  = '\0';
+	s->domain[0]    = '\0';
+	s->dot          = 0;
+	s->url[0]       = '\0';
+	s->orig[0]      = '\0';
+	s->surl[0]      = '\0';
+	s->furl[0]      = '\0';
+	s->strippedurl  = s->surl;
+	s->port         = 0;
+	s->src[0]       = '\0';
+	s->srcDomain[0] = '\0';
+	s->ident[0]     = '\0';
+	s->method[0]    = '\0';
+}
+
+static int parseUrl(char * url, struct SquidInfo *s) {
+
+	char * p = NULL;
+	char * d = NULL;
+	size_t l = 0;
+	size_t n = 0;
+	char * domain  = NULL;
+	char * sdomain = NULL;
+
+	char pathcp[MAX_BUF];
+
+	memset(pathcp,0,sizeof(pathcp));
+
+	strcpy(s->orig, url);
+
+	/* Now convert url to lowercase chars */
+	for (p = url; *p != '\0'; p++)
+		*p = tolower(*p);
+
+	if ((p = strstr(url, "://")) == NULL) {
+		strcpy(s->protocol, "unknown");
+		p = url;
+	} else {
+		*p = 0;
+		strcpy(s->protocol, url);
+		p += 3;
+	}
+
+	/* p points to the begining of the host part, find first slash that ends it */
+	domain = p;
+	if ((d = strchr(p,'/')) != NULL) {
+		p = d + 1;
+		*d = 0;
+	} else {
+		p = NULL;
+	}
+
+	/* p now is either NULL or points to the first char in the path part*/
+	if (p != NULL) {
+		char * to   = pathcp;
+		char * from = p;
+
+		/* skip leading slashes */
+		while( *from == '/' )
+			from ++;
+
+		while ( *from != 0 && *from != '?' ) {
+			/* skip double slashes */
+			if (*from == '/' && *(from+1) == '/') {
+				from ++;
+				continue;
+			}
+			*to = *from;
+			to ++; from ++;
+		}
+
+		/* keep the query part when present */
+		if ( *from == '?' )
+			strcat(to,from);
+	}
+
+	/* skip authentication */
+	if ((d = strchr(domain, '@')) != NULL) {
+		domain = d + 1;
+	}
+
+	/* look for a port */
+	if ((d = strrchr(domain,':')) != NULL) {
+		n = strspn(d + 1, "0123456789");
+		if ( *(d + n + 1) == 0 ) {
+			s->port = atoi(d + 1);
+			*d = 0;
+		}
+	}
+
+	if (*domain == 0)
+		return 0;
+
+	strcpy(s->domain, domain);
+	l = strlen(s->domain);
+
+	if (strspn(s->domain, ".0123456789") == l ) {
+		/* may be an IPv4 address */
+		unsigned char binaddr[sizeof(struct in_addr)];
+		int changed = 0;
+
+		if ( inet_pton(AF_INET, s->domain, &binaddr) > 0 ) {
+			struct hostent * hp = NULL;
+
+			if (reverselookup) {
+				if ((hp = gethostbyaddr( binaddr, sizeof(binaddr), AF_INET )) != NULL) {
+					if (strlen(hp->h_name) < MAX_BUF) {
+						strcpy(s->domain, hp->h_name);
+						changed = 0;
+					}
+				}
+			}
+
+			if (!changed)
+				s->dot = 1;
+		}
+	} else if (s->domain[0] == '[' && s->domain[l- 1] == ']' &&
+		   (strspn(s->domain + 1, ":0123456789abcdef") == l - 2)) {
+		/* may be an IPv6 address */
+		unsigned char binaddr[sizeof(struct in6_addr)];
+		int changed = 0;
+
+		s->domain[l-1] = 0;
+
+		if ( inet_pton(AF_INET6, s->domain + 1, &binaddr) > 0 ) {
+			struct hostent * hp = NULL;
+
+			if (reverselookup) {
+				if ((hp = gethostbyaddr( binaddr, sizeof(binaddr), AF_INET6 )) != NULL) {
+					if (strlen(hp->h_name) < MAX_BUF) {
+						strcpy(s->domain, hp->h_name);
+						changed = 1;
+					}
+				}
+			}
+
+			if (!changed)
+				s->dot = 1;
+		}
+
+		if (!changed)
+			s->domain[l-1] = ']';
+	}
+
+	/* strip trailing dot from domain */
+	if ((d = s->domain + strlen(s->domain) - 1) >= s->domain) {
+		if (*d == '.')
+			*d = 0;
+	}
+
+	/* strip common host names like www.foo.com or web01.bar.org  */
+	sdomain = s->domain;
+
+	if ((domain[0] == 'w' &&  domain[1] == 'w' && domain[2] == 'w') ||
+	    (domain[0] == 'w' &&  domain[1] == 'e' && domain[2] == 'b') ||
+	    (domain[0] == 'f' &&  domain[1] == 't' && domain[2] == 'p'))
+	{
+		sdomain += 3;
+		while (sdomain[0] >= '0' && sdomain[0] <= '9')
+			sdomain ++;
+
+		if (sdomain[0] == '.')
+			sdomain ++;
+		else
+			sdomain = domain;
+	}
+
+	if (s->port > 0) {
+		sprintf(s->furl, "%s:%d/%s", domain, s->port, pathcp);
+		sprintf(s->surl, "%s:%d/%s", sdomain, s->port, pathcp);
+	} else {
+		sprintf(s->furl, "%s/%s", domain, pathcp);
+		sprintf(s->surl, "%s/%s", sdomain, pathcp);
+	}
+
+	return 1;
+}
+
 /*
- * parsers the squidline:
- * URL ip-address/fqdn ident method
+ * Parse an external acl helper line.
+ *
+ * Squid can be configured to pass various formats, we assume something
+ * similar to the normal redirector format:
+ *
+ *   %URI %SRC %LOGIN
+ *
+ * For example:
+ *   external_acl_type foo ttl=60 children=1 %URI %SRC %LOGIN /path/to/sg
+ */
+int parseAuthzLine(char *line, struct SquidInfo *s)
+{
+	char * field = NULL;
+
+	resetSquidInfo(s);
+
+	/* get the URL and parse */
+	if ((field = strtok(line, "\t ")) == NULL)
+		return 0;
+
+	HTUnEscape(field);
+	if (!parseUrl(field,s)) {
+		return 0;
+	}
+
+	/* get the source address and parse */
+	if ((field = strtok(NULL, " \t\n")) == NULL)
+		return 0;
+
+	HTUnEscape(field);	/* just in case, IPs should not need escaping */
+	strcpy(s->src, field);
+
+	/* get the login and parse */
+	if ((field = strtok(NULL, " \t\n")) == NULL)
+		return 0;
+
+	HTUnEscape(field);
+
+	strcpy(s->ident, field);
+
+	for (field = s->ident; *field != '\0'; field++) /* convert ident to lowercase chars */
+		*field = tolower(*field);
+
+	sgLogDebug( "got authz helper line: furl='%s' domain='%s' surl='%s' src=%s ident='%s'\n",
+			s->furl, s->domain, s->surl, s->src, s->ident );
+
+	return 1;
+}
+
+/*
+ * Parse a redirector input line, format is:
+ *
+ *   URL ip-address/fqdn ident method
+ *
+ * for example
+ *    http://www.example.com/page1.html 192.168.2.3/- andi GET
  */
 
 int parseLine(char *line, struct SquidInfo *s)
 {
-	char *p, *d = NULL, *a = NULL, *e = NULL, *o, *field;
-	int i = 0;
-	char c;
-	int report_once = 1;
-	int trailingdot = 0;
-	size_t strsz;
-	int ndx = 0;
+	char * field = NULL;
+	char * p = NULL;
 
-	field = strtok(line, "\t ");
-	/*field holds each fetched url*/
-	/* Let's first decode the url and then test it. Fixes bug2. */
+	resetSquidInfo(s);
+
+	/* get the URL and parse */
+	if ((field = strtok(line, "\t ")) == NULL)
+		return 0;
+
 	HTUnEscape(field);
-
-	if (field == NULL)
+	if (!parseUrl(field,s)) {
 		return 0;
-	strcpy(s->orig, field);
-	/* Now convert url to lowercase chars */
-	for (p = field; *p != '\0'; p++)
-		*p = tolower(*p);
-	s->url[0] = s->protocol[0] = s->domain[0] = s->src[0] = s->ident[0] =
-									s->method[0] = s->srcDomain[0] = s->surl[0] = '\0';
-	s->dot = 0;
-	s->port = 0;
-	p = strstr(field, "://");
-	/* sgLogDebug("DEBUG P2 = %s", p); */
-	if (p == NULL) { /* no protocol, defaults to http */
-		strcpy(s->protocol, "unknown");
-		p = field;
-	} else {
-		strncpy(s->protocol, field, p - field);
-		*(s->protocol + (p - field)) = '\0';
-		p += 3; /* JMC -- 3 == strlen("://") */
-		/* Now p only holds the pure URI */
-		/* Fix for multiple slash vulnerability (bug1). */
-		/* Check if there are still two or more slashes in sequence which must not happen */
-		strsz = strlen(p);
-
-		/* loop thru the string 'p' until the char '?' is hit or the "end" is hit */
-		while ('?' != p[ndx] && '\0' != p[ndx]) {
-			/* in case this is a '://' skip over it, but try to not read past EOS */
-			if (3 <= strsz - ndx) {
-				if (':' == p[ndx] && '/' == p[ndx + 1] && '/' == p[ndx + 2] && '\0' != p[ndx + 3])
-					ndx += 3; /* 3 == strlen("://"); */
-			}
-
-			/* if this char and the next char are slashes,
-			 *           then shift the rest of the string left one char */
-			if ('/' == p[ndx] && '/' == p[ndx + 1]) {
-				size_t sz = strlen(p + ndx + 1);
-				strncpy(p + ndx, p + ndx + 1, sz);
-				p[ndx + sz] = '\0';
-				if (1 == report_once) {
-					sgLogWarn("WARN: Possible bypass attempt. Found multiple slashes where only one is expected: %s", s->orig);
-						report_once--;
-				}
-			} else if ('.' == p[ndx] && '/' == p[ndx + 1] && trailingdot == 0) {
-				/* If the domain has trailing dot, remove (problem found with squid 3.0 stable1-5) */
-				/* if this char is a dot and the next char is a slash, then shift the rest of the string left one char */
-				/* We do this only the first time it is encountered. */
-				trailingdot++;
-				size_t sz = strlen(p + ndx + 1);
-				strncpy(p + ndx, p + ndx + 1, sz);
-				p[ndx + sz] = '\0';
-				sgLogWarn("WARN: Possible bypass attempt. Found a trailing dot in the domain name: %s", s->orig);
-			} else {
-				/* increment the string indexer */
-				assert(ndx < strlen(p));
-				ndx++;
-			}
-		}
 	}
 
-	i = 0;
-	d = strchr(p, '/'); /* find domain end */
-	/* Check for the single URIs (d) */
-	/* sgLogDebug("DEBUG: URL: %s", d); */
-	e = d;
-	a = strchr(p, '@'); /* find auth  */
-	if (a != NULL && (a < d || d == NULL))
-		p = a + 1;
-	a = strchr(p, ':'); /* find port */;
-	if (a != NULL && (a < d || d == NULL)) {
-		o = a + strspn(a + 1, "0123456789") + 1;
-		c = *o;
-		*o = '\0';
-		s->port = atoi(a + 1);
-		*o = c;
-		e = a;
-	}
-	o = p;
-	strcpy(s->furl, p);
-	if (p[0] == 'w' || p[0] == 'f') {
-		if ((p[0] == 'w' && p[1] == 'w' && p[2] == 'w') ||
-		    (p[0] == 'w' && p[1] == 'e' && p[2] == 'b') ||
-		    (p[0] == 'f' && p[1] == 't' && p[2] == 'p')) {
-			p += 3;
-			while (p[0] >= '0' && p[0] <= '9')
-				p++;
-			if (p[0] != '.')
-				p = o;  /* not a hostname */
-			else
-				p++;
-		}
-	}
-	if (e == NULL) {
-		strcpy(s->domain, o);
-		strcpy(s->surl, p);
-	} else {
-		strncpy(s->domain, o, e - o);
-		strcpy(s->surl, p);
-		*(s->domain + (e - o)) = '\0';
-		*(s->surl + (e - p)) = '\0';
-	}
-	//strcpy(s->surl,s->domain);
-	if (strspn(s->domain, ".0123456789") == strlen(s->domain))
-		s->dot = 1;
-	if (d != NULL)
-		strcat(s->surl, d);
-	s->strippedurl = s->surl;
-
-	while ((p = strtok(NULL, " \t\n")) != NULL) {
-		switch (i) {
-		case 0: /* src */
-			o = strchr(p, '/');
-			if (o != NULL) {
-				strncpy(s->src, p, o - p);
-				strcpy(s->srcDomain, o + 1);
-				s->src[o - p] = '\0';
-				if (*s->srcDomain == '-')
-					s->srcDomain[0] = '\0';
-			} else {
-				strcpy(s->src, p);
-			}
-			break;
-		case 1: /* ident */
-			if (strcmp(p, "-")) {
-				strcpy(s->ident, p);
-				for (p = s->ident; *p != '\0'; p++) /* convert ident to lowercase chars */
-					*p = tolower(*p);
-			} else {
-				s->ident[0] = '\0';
-			}
-			break;
-		case 2: /* method */
-			strcpy(s->method, p);
-			break;
-		}
-		i++;
-	}
-	if (s->domain[0] == '\0')
-/*    sgLogDebug("DEBUG: Domain is NULL: %s", s->orig); */
+	/* get the source address and parse */
+	if ((field = strtok(NULL, " \t\n")) == NULL)
 		return 0;
+
+	if ((p = strchr(field, '/')) != NULL) {
+		*p = 0;
+		strcpy(s->src, field);
+		strcpy(s->srcDomain,p + 1);
+		if (s->srcDomain[0] == '-' && s->srcDomain[1] == 0)
+			s->srcDomain[0] = 0;
+
+	} else {
+		strcpy(s->src, field);
+	}
+
+	/* get the identity */
+	if ((field = strtok(NULL, " \t\n")) == NULL)
+		return 0;
+
+	if (strcmp(field, "-")) {
+		strcpy(s->ident, field);
+		for (p = s->ident; *p != '\0'; p++) /* convert ident to lowercase chars */
+			*p = tolower(*p);
+	} else {
+		s->ident[0] = '\0';
+	}
+
+	/* get the method */
+	if ((field = strtok(NULL, " \t\n")) == NULL)
+		return 0;
+
+	strcpy(s->method, field);
 	if (s->method[0] == '\0')
-/*    sgLogDebug("DEBUG: Method is NULL: %s", s->orig); */
 		return 0;
+
+	sgLogDebug( "got line: furl='%s' domain='%s' surl='%s' src=%s ident='%s'\n",
+			s->furl, s->domain, s->surl, s->src, s->ident );
+
 	return 1;
 }
 
