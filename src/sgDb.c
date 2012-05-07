@@ -22,9 +22,15 @@
 
 extern int globalUpdate;
 extern char *globalCreateDb;
-extern char **globalArgv;
-extern int globalQuiet;
 extern int showBar;     /* from main.c */
+
+#if DB_VERSION_MAJOR == 4
+#define DBOPEN(dbp,txnid,dbfile,database,dbmode,flag,fmode) \
+	open(dbp,txnid,dbfile,database,dbmode,flag,fmode)
+#else
+#define DBOPEN(dbp,txnid,dbfile,database,dbmode,flag,fmode) \
+	open(dbp,dbfile,database,dbmode,flag,fmode)
+#endif
 
 void sgDbInit(struct sgDb *Db, char *file)
 {
@@ -54,13 +60,7 @@ void sgDbInit(struct sgDb *Db, char *file)
 			}
 		}
 	}
-#if DB_VERSION_MAJOR == 2
-	Db->dbenv = db_init(Db->dbhome);
-	memset(&Db->dbinfo, 0, sizeof(Db->dbinfo));
-	Db->dbinfo.db_pagesize = 1024;        /* Page size: 1K.  */
-	if (Db->type == SGDBTYPE_DOMAINLIST)
-		Db->dbinfo.bt_compare = domainCompare;
-#else
+
 	/*since we are not sharing the db's, we does not nedd dbenv */
 	//ret = db_init(Db->dbhome, &Db->dbenv);
 	//if(ret)
@@ -74,78 +74,35 @@ void sgDbInit(struct sgDb *Db, char *file)
 	//Db->dbp->set_pagesize(Db->dbp, 1024);
 	if (Db->type == SGDBTYPE_DOMAINLIST)
 		Db->dbp->set_bt_compare(Db->dbp, (void *)domainCompare);
-#endif
-#if DB_VERSION_MAJOR == 2
-	if (globalUpdate || createdb || stat(dbfile, &st)) {
-		flag = DB_CREATE;
-		if (createdb)
-			flag = flag | DB_TRUNCATE;
-		if ((errno =
-			     db_open(dbfile, DB_BTREE, flag, 0664, Db->dbenv, &Db->dbinfo, &Db->dbp)) != 0)
-			sgLogFatal("FATAL: Error db_open: %s", strerror(errno));
-	} else {
-		if ((errno =
-			     db_open(dbfile, DB_BTREE, DB_RDONLY, 0664, Db->dbenv, &Db->dbinfo, &Db->dbp)) != 0)
-			sgLogFatal("FATAL: Error db_open: %s", strerror(errno));
-	}
-#endif
-#if DB_VERSION_MAJOR == 3
+
 	if (globalUpdate || createdb || (dbfile != NULL && stat(dbfile, &st))) {
 		flag = DB_CREATE;
 		if (createdb)
 			flag = flag | DB_TRUNCATE;
-		if ((ret =
-			     Db->dbp->open(Db->dbp, dbfile, NULL, DB_BTREE, flag, 0664)) != 0) {
+		if ((ret = Db->dbp->DBOPEN(Db->dbp, NULL, dbfile, NULL, DB_BTREE, flag, 0664)) != 0) {
 			(void)Db->dbp->close(Db->dbp, 0);
 			sgLogFatal("FATAL: Error db_open: %s", strerror(ret));
 		}
 	} else {
-		if ((ret =
-			     Db->dbp->open(Db->dbp, dbfile, NULL, DB_BTREE, DB_CREATE, 0664)) != 0)
+		if ((ret = Db->dbp->DBOPEN(Db->dbp, NULL, dbfile, NULL, DB_BTREE, DB_CREATE, 0664)) != 0)
 			sgLogFatal("FATAL: Error db_open: %s", strerror(ret));
 	}
-#endif
-#if DB_VERSION_MAJOR == 4
-	if (globalUpdate || createdb || (dbfile != NULL && stat(dbfile, &st))) {
-		flag = DB_CREATE;
-		if (createdb)
-			flag = flag | DB_TRUNCATE;
-		if ((ret =
-			     Db->dbp->open(Db->dbp, NULL, dbfile, NULL, DB_BTREE, flag, 0664)) != 0) {
-			(void)Db->dbp->close(Db->dbp, 0);
-			sgLogFatal("FATAL: Error db_open: %s", strerror(ret));
-		}
-	} else {
-		if ((ret =
-			     Db->dbp->open(Db->dbp, NULL, dbfile, NULL, DB_BTREE, DB_CREATE, 0664)) != 0)
-			sgLogFatal("FATAL: Error db_open: %s", strerror(ret));
-	}
-#endif
+
 	if (file != NULL) {
 		if (dbfile == NULL) {
 			sgDbLoadTextFile(Db, file, 0);
 			if (Db->entries == 0) {
 				(void)Db->dbp->close(Db->dbp, 0);
-#if DB_VERSION_MAJOR == 2
-				db_appexit(Db->dbenv);
-				Db->dbenv = NULL;
-#else
 				//Db->dbenv->close(Db->dbenv, 0);
 				Db->dbenv = NULL;
-#endif
 			}
 		}
 		if (dbfile != NULL && createdb) {
 			sgDbLoadTextFile(Db, file, 0);
 			if (Db->entries == 0) {
 				(void)Db->dbp->close(Db->dbp, 0);
-#if DB_VERSION_MAJOR == 2
-				db_appexit(Db->dbenv);
-				Db->dbenv = NULL;
-#else
 				//Db->dbenv->close(Db->dbenv, 0);
 				Db->dbenv = NULL;
-#endif
 			} else {
 				sgLogNotice("INFO: create new dbfile %s", dbfile);
 				(void)Db->dbp->sync(Db->dbp, 0);
@@ -180,17 +137,10 @@ int defined(struct sgDb *Db, char *request, char **retval)
 	static char dbdata[MAX_BUF];
 	char *req = request, r[MAX_BUF + 1];
 
-#if DB_VERSION_MAJOR == 2
 	if ((errno = Db->dbp->cursor(Db->dbp, NULL, &Db->dbcp, 0)) != 0) {
 		sgLogFatal("FATAL: cursor: %s", strerror(errno));
 		exit(1);
 	}
-#else
-	if ((errno = Db->dbp->cursor(Db->dbp, NULL, &Db->dbcp, 0)) != 0) {
-		sgLogFatal("FATAL: cursor: %s", strerror(errno));
-		exit(1);
-	}
-#endif
 
 	switch (Db->type) {
 	case SGDBTYPE_DOMAINLIST:
@@ -475,21 +425,6 @@ void sgDbUpdate(struct sgDb *Db, char *key, char *value, size_t len)
 	}
 }
 
-#if DB_VERSION_MAJOR == 2
-DB_ENV *db_init(char *dbhome)
-{
-	DB_ENV *dbenv;
-
-	dbenv = sgMalloc(sizeof(DB_ENV));
-	dbenv->db_errfile = stderr;
-	dbenv->db_errpfx = "sg";
-
-	if ((errno = db_appinit(dbhome, NULL, dbenv, DB_CREATE)) != 0)
-		sgLogFatal("FATAL: db_appinit: %s", strerror(errno));
-	return dbenv;
-}
-/* db version greater than 2 */
-#else
 int db_init(char *dbhome, DB_ENV **dbenvp)
 {
 	int ret;
@@ -506,36 +441,12 @@ int db_init(char *dbhome, DB_ENV **dbenvp)
 	(void)dbenv->close(dbenv, 0);
 	return ret;
 }
-#endif
 
 
 /*
  * domainCompare does a reverse compare of two strings
  */
 
-#if DB_VERSION_MAJOR == 2
-int domainCompare(const DBT *a, const DBT *b)
-{
-	register const char *a1, *b1;
-	register char ac1, bc1;
-	a1 = (char *)a->data + a->size - 1;
-	b1 = (char *)b->data + b->size - 1;
-	while (*a1 == *b1) {
-		if (b1 == b->data || a1 == a->data)
-			break;
-		a1--; b1--;
-	}
-	ac1 = *a1 == '.' ? '\1' : *a1;
-	bc1 = *b1 == '.' ? '\1' : *b1;
-	if (a1 == a->data && b1 == b->data)
-		return ac1 - bc1;
-	if (a1 == a->data)
-		return -1;
-	if (b1 == b->data)
-		return 1;
-	return ac1 - bc1;
-}
-#else
 int domainCompare(const DB *dbp, const DBT *a, const DBT *b)
 {
 	register const char *a1, *b1;
@@ -557,4 +468,3 @@ int domainCompare(const DB *dbp, const DBT *a, const DBT *b)
 		return 1;
 	return ac1 - bc1;
 }
-#endif

@@ -319,7 +319,7 @@ AC_RUN_IFELSE([
                 db_version(&major, &minor, &patch);
 #endif
 		ver = major + ((float) minor / 1000);
-                if (ver >= 2.006)
+                if (ver >= 3.000)
 			exit (0);
 		exit (1);
 	}	
