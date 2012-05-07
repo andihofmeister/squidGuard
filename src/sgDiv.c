@@ -262,6 +262,8 @@ int parseAuthzLine(char *line, struct SquidInfo *s)
 {
 	char * field = NULL;
 
+	sgLogDebug("got authz line %s\n", line);
+
 	resetSquidInfo(s);
 
 	/* get the URL and parse */
@@ -291,7 +293,7 @@ int parseAuthzLine(char *line, struct SquidInfo *s)
 	for (field = s->ident; *field != '\0'; field++) /* convert ident to lowercase chars */
 		*field = tolower(*field);
 
-	sgLogDebug( "got authz helper line: furl='%s' domain='%s' surl='%s' src=%s ident='%s'\n",
+	sgLogDebug( "parsed authz line: furl='%s' domain='%s' surl='%s' src=%s ident='%s'\n",
 			s->furl, s->domain, s->surl, s->src, s->ident );
 
 	return 1;
@@ -310,6 +312,8 @@ int parseLine(char *line, struct SquidInfo *s)
 {
 	char * field = NULL;
 	char * p = NULL;
+
+	sgLogDebug("got redirector line %s\n", line);
 
 	resetSquidInfo(s);
 
@@ -357,7 +361,7 @@ int parseLine(char *line, struct SquidInfo *s)
 	if (s->method[0] == '\0')
 		return 0;
 
-	sgLogDebug( "got line: furl='%s' domain='%s' surl='%s' src=%s ident='%s'\n",
+	sgLogDebug( "parsed redirector line: furl='%s' domain='%s' surl='%s' src=%s ident='%s'\n",
 			s->furl, s->domain, s->surl, s->src, s->ident );
 
 	return 1;

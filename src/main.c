@@ -225,6 +225,7 @@ int main(int argc, char **argv, char **envp)
 				if ((redirect = sgAclAccess(src, acl, &squidInfo)) == NULL ||
 				    redirect == NEXT_SOURCE) {
 					if (src == NULL || (src->cont_search == 0 && redirect != NEXT_SOURCE)) {
+						sgLogDebug("Granted access");
 						if (authzMode) {
 							puts("OK");
 						} else {
@@ -236,6 +237,7 @@ int main(int argc, char **argv, char **envp)
 						src = src->next;
 						continue;
 					} else {
+						sgLogDebug("Granted access");
 						if (authzMode) {
 							puts("OK");
 						} else {
@@ -244,6 +246,7 @@ int main(int argc, char **argv, char **envp)
 						break;
 					}
 				} else {
+					sgLogDebug("Denied access");
 					if (authzMode == 1) {
 						puts("ERR");
 					} else {
