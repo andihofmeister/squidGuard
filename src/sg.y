@@ -19,6 +19,7 @@
 
 %{
 #include "sg.h"
+#include "sgLog.h"
 #include "sgMemory.h"
 extern int globalDebug;
 #ifdef USE_SYSLOG

@@ -1,5 +1,6 @@
 
 #include "sg.h"
+#include "sgLog.h"
 #include "sgMemory.h"
 #include <netdb.h>
 

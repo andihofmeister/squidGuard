@@ -18,6 +18,7 @@
 
 #include "sg.h"
 #include "sgMemory.h"
+#include "sgLog.h"
 
 #define DATABASE        NULL
 

@@ -18,6 +18,7 @@
 
 #include "sg.h"
 #include "sgEx.h"
+#include "sgLog.h"
 #include "sgMemory.h"
 #include "HTEscape.h"
 

@@ -331,14 +331,7 @@ void sgLogFile(int, int, int, char *);
 struct LogFileStat *sgLogFileStat(char *);
 
 void sgReadConfig(char *);
-void sgLog(struct LogFileStat *, char *, ...);
-void sgLogDebug(char *, ...);
-void sgLogNotice(char *, ...);
-void sgLogWarn(char *, ...);
-void sgLogError(char *, ...);
-void sgLogFatal(char *, ...);
-void sgSetGlobalErrorLogFile();
-void sgLogRequest(struct LogFile *, struct SquidInfo *, struct Acl *, struct AclDest *, struct sgRewrite *, int);
+
 int parseLine(char *, struct SquidInfo *);
 int parseAuthzLine(char *, struct SquidInfo *);
 char *sgStripUrl(char *);

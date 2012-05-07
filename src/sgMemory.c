@@ -17,6 +17,7 @@
  */
 
 #include "sg.h"
+#include "sgLog.h"
 #include "sgMemory.h"
 #include "sgEx.h"
 
