@@ -20,9 +20,13 @@
  */
 
 /* Library include files */
-#include "wwwsys.h"
+#include "sg.h"
 #include "HTEscape.h"                                    /* Implemented here */
 
+#ifndef TOASCII
+#define TOASCII(c) (c)
+#define FROMASCII(c) (c)
+#endif
 
 #define HEX_ESCAPE '%'
 #define ACCEPTABLE(a)   (a >= 32 && a < 128 && ((isAcceptable[a - 32]) & mask))
@@ -49,17 +53,61 @@ unsigned char isAcceptable[96] =
 };
 char *hex = "0123456789ABCDEF";
 
-/* ------------------------------------------------------------------------- */
-/*
- * 16.3.2007 Chris Kronberg: Removed function HTEscape() as we do not need
- *                           this one for squidGuard.
- */
 char HTAsciiHexToChar(char c)
 {
 	return c >= '0' && c <= '9' ?  c - '0'
 	       : c >= 'A' && c <= 'F' ? c - 'A' + 10
 	       : c - 'a' + 10;  /* accept small letters just in case */
 }
+
+/* ------------------------------------------------------------------------- */
+
+/*		Escape undesirable characters using %		HTEscape()
+**		-------------------------------------
+**
+**	This function takes a pointer to a string in which
+**	some characters may be unacceptable unescaped.
+**	It returns a string which has these characters
+**	represented by a '%' character followed by two hex digits.
+**
+**	In the tradition of being conservative in what you do and liberal
+**	in what you accept, we encode some characters which in fact are
+**	allowed in URLs unencoded -- so DON'T use the table below for
+**	parsing!
+**
+**	Unlike HTUnEscape(), this routine returns a HT_MALLOCed string.
+**
+*/
+char * HTEscape (const char * str, HTURIEncoding mask)
+{
+	const char * p;
+	char * q = NULL;
+	char * result;
+	int unacceptable = 0;
+
+	if (!str) return NULL;
+
+	for(p=str; *p; p++)
+		if (!ACCEPTABLE((unsigned char)TOASCII(*p)))
+			unacceptable++;
+
+	if ((result = sgMalloc(p - str + unacceptable + unacceptable + 1)) != NULL)
+		for(q=result, p=str; *p; p++) {
+			unsigned char a = TOASCII(*p);
+			if (!ACCEPTABLE(a)) {
+				*q++ = HEX_ESCAPE;	/* Means hex commming */
+				*q++ = hex[a >> 4];
+				*q++ = hex[a & 15];
+			}
+			else
+				*q++ = *p;
+		}
+	if (q)
+		*q++ = 0;
+
+	return result;
+}
+
 
 /*	Decode %xx escaped characters			HTUnEscape()
  **	-----------------------------

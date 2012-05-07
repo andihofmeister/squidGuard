@@ -143,6 +143,7 @@ next        return NEXT;
 rewrite     return REWRITE;
 redirect    { BEGIN REDIRECT_STATE; return REDIRECT; }
 allow       return ALLOW;
+tag         return TAG;
 minutely    return MINUTELY;
 hourly      return HOURLY;
 daily       return DAILY;

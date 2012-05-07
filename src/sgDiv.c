@@ -776,30 +776,6 @@ char *sgParseRedirect(char *redirect, struct SquidInfo *req, struct Acl *acl, st
 	return q;
 }
 
-void sgEmergency()
-{
-	char buf[MAX_BUF];
-	extern char *globalCreateDb;
-	extern int passthrough; /* from main.c */
-
-	if (globalCreateDb == NULL) {
-		if (passthrough == 1) {
-			sgLogWarn("WARN: Not going into emergency mode because -P was used");
-			fprintf(stderr, "              ****************\n");
-			fprintf(stderr, "FAILURE! Check your log file for problems with the database files!\n");
-			fprintf(stderr, "              ****************\n");
-			exit(4);
-		}
-	}
-	sgLogError("ERROR: Going into emergency mode");
-	while (fgets(buf, MAX_BUF, stdin) != NULL) {
-		puts("");
-		fflush(stdout);
-	}
-	sgLogError("ERROR: Ending emergency mode, stdin empty");
-	exit(-1);
-}
-
 
 /*
  * converts yyyy.mm.ddTHH:MM:SS to seconds since EPOC

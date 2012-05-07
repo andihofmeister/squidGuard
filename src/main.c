@@ -17,6 +17,7 @@
  */
 
 #include "sg.h"
+#include "HTEscape.h"
 #ifdef USE_SYSLOG
 #include <syslog.h>
 #endif
@@ -64,14 +65,98 @@ int globalUpdate = 0;
 int passthrough = 0;
 int showBar = 0;   /* Do not display the progress bar. */
 char *globalCreateDb = NULL;
-int failsafe_mode = 0;
 int sig_hup = 0;
 int sig_alrm = 0;
 int sgtime = 0;
 char *globalLogDir = NULL;
 int globalSyslog = 0;
 
+int inEmergencyMode = 0;
 int authzMode = 0;	/* run as authorization helper, not as redirector */
+
+static void authzExtra(struct Acl *acl) {
+	char msg[MAX_BUF];
+	char * escaped = NULL;
+
+	snprintf(msg,MAX_BUF,"Request matched rule %s", acl->name);
+	escaped = HTEscape(msg,URL_XALPHAS);
+	fprintf(stdout, " log=%s", escaped);
+	fprintf(stdout, " message=%s", escaped);
+	sgFree(escaped);
+
+	if (acl->tag) {
+		escaped = HTEscape(acl->tag,URL_XALPHAS);
+		fprintf(stdout, " tag=%s", escaped);
+		sgFree(escaped);
+	}
+
+	fflush(stdout);
+}
+
+static void grantAccess(struct Acl *acl)
+{
+	sgLogDebug("Granted access, rule %s matched.", acl->name);
+
+	if (!authzMode) {
+		puts("");
+		return;
+	}
+
+	fprintf(stdout, "OK");
+	authzExtra(acl);
+	fprintf(stdout, "\n");
+
+	fflush(stdout);
+}
+
+static void denyAccess(struct Acl *acl, const char *redirect)
+{
+	sgLogDebug("Denied access, rule %s matched.", acl->name);
+
+	if (!authzMode) {
+		fprintf(stdout, "%s\n", redirect);
+		fflush(stdout);
+		return;
+	}
+
+	fprintf(stdout, "ERR");
+	authzExtra(acl);
+	fprintf(stdout, "\n");
+
+	fflush(stdout);
+}
+
+static void denyOnError(const char * message)
+{
+	char * escaped = NULL;
+
+	if (!authzMode) {
+		/* FIXME: emergency redirect here */
+		fprintf(stdout, "\n");
+		fflush(stdout);
+	}
+
+	escaped = HTEscape(message,URL_XALPHAS);
+	fprintf(stdout, "ERR log=%s message=%s\n", escaped, escaped);
+	sgFree(escaped);
+
+	fflush(stdout);
+}
+
+static void allowOnError(const char * message) {
+	char * escaped = NULL;
+
+	if (!authzMode) {
+		fprintf(stdout, "\n");
+		fflush(stdout);
+	}
+
+	escaped = HTEscape(message,URL_XALPHAS);
+	fprintf(stdout, "OK log=%s message=%s\n", escaped, escaped);
+	sgFree(escaped);
+
+	fflush(stdout);
+}
 
 int main(int argc, char **argv, char **envp)
 {
@@ -165,8 +250,11 @@ int main(int argc, char **argv, char **envp)
 #endif
 		exit(0);
 	}
-	sgTimeElementSortEvents();
-	sgTimeNextEvent();
+
+	if (!inEmergencyMode) {
+		sgTimeElementSortEvents();
+		sgTimeNextEvent();
+	}
 #if HAVE_SIGACTION
 #ifndef SA_NODEFER
 #define SA_NODEFER 0
@@ -191,28 +279,28 @@ int main(int argc, char **argv, char **envp)
 			if (sig_hup)
 				sgReloadConfig();
 
-			if (failsafe_mode) {
-				puts("");
-				fflush(stdout);
-				if (sig_hup)
-					sgReloadConfig();
-				continue;
-			}
-
 			if (authzMode == 1) {
 				if (parseAuthzLine(buf, &squidInfo) != 1) {
-					sgLogError("ERROR: Error parsing squid acl helper line: %s", buf);
-					puts("ERR");
-					fflush(stdout);
+					sgLogError("ERROR: Error parsing squid acl helper line");
+					denyOnError("Error parsing squid acl helper line");
 					continue;
 				}
 			} else {
 				if (parseLine(buf, &squidInfo) != 1) {
-					sgLogError("ERROR: Error parsing squid line: %s", buf);
-					puts("");
-					fflush(stdout);
+					sgLogError("ERROR: Error parsing squid redirector line");
+					denyOnError("Error parsing squid acl helper line");
 					continue;
 				}
+			}
+
+			if (inEmergencyMode) {
+				const char * message = "squidGuard is in emergency mode, check configuration";
+				if (passthrough) {
+					allowOnError(message);
+				} else {
+					denyOnError(message);
+				}
+				continue;
 			}
 
 			src = Source;
@@ -225,43 +313,18 @@ int main(int argc, char **argv, char **envp)
 				if ((redirect = sgAclAccess(src, acl, &squidInfo)) == NULL ||
 				    redirect == NEXT_SOURCE) {
 					if (src == NULL || (src->cont_search == 0 && redirect != NEXT_SOURCE)) {
-						sgLogDebug("Granted access");
-						if (authzMode) {
-							puts("OK");
-						} else {
-							puts("");
-						}
+						grantAccess(acl);
 						break;
 					} else
 					if (src->next != NULL) {
 						src = src->next;
 						continue;
 					} else {
-						sgLogDebug("Granted access");
-						if (authzMode) {
-							puts("OK");
-						} else {
-							puts("");
-						}
+						grantAccess(acl);
 						break;
 					}
 				} else {
-					sgLogDebug("Denied access");
-					if (authzMode == 1) {
-						puts("ERR");
-					} else {
-						if (squidInfo.srcDomain[0] == '\0') {
-							squidInfo.srcDomain[0] = '-';
-							squidInfo.srcDomain[1] = '\0';
-						}
-						if (squidInfo.ident[0] == '\0') {
-							squidInfo.ident[0] = '-';
-							squidInfo.ident[1] = '\0';
-						}
-						fprintf(stdout, "%s %s/%s %s %s\n", redirect, squidInfo.src,
-							squidInfo.srcDomain, squidInfo.ident,
-							squidInfo.method);
-					}
+					denyAccess(acl, redirect);
 					break;
 				}
 			} /*for(;;)*/

@@ -58,6 +58,8 @@ extern int globalDebugTimeDelta;
 extern int sig_hup;
 extern int sig_alrm;
 
+extern int inEmergencyMode;
+
 extern char **globalArgv;
 extern char **globalEnvp;
 

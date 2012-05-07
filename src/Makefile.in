@@ -62,7 +62,7 @@ main.o:	main.c sg.h config.h
 sgLog.o:	sgLog.c sg.h config.h
 	@$(COMPILE) -c sgLog.c
 
-HTParse.o:	HTParse.c wwwsys.h HTEscape.h
+HTParse.o:	HTParse.c HTEscape.h
 	@$(COMPILE) -c HTParse.c
 
 sgDiv.o: sgDiv.c sg.h sgEx.h config.h

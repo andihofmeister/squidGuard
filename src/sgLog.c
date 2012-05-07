@@ -17,6 +17,7 @@
  */
 
 #include "sg.h"
+#include "sgEx.h"
 
 extern int globalDebug;         /* from main.c */
 extern int globalPid;           /* from main.c */
@@ -169,7 +170,7 @@ void sgLogFatal(char *format, ...)
 #else
 	sgLog(globalErrorLog, "%s", msg);
 #endif
-	sgEmergency();
+	inEmergencyMode = 1;
 }
 
 

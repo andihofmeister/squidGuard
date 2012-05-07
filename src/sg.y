@@ -148,6 +148,7 @@ rfc1738_unescape(char *s)
 %token STOP_BRACKET
 %token SUBST
 %token SYSLOG
+%token TAG
 %token TIME
 %token TVAL
 %token URLLIST
@@ -354,6 +355,7 @@ access_content:	PASS access_pass { }
 		| LOGFILE ANONYMOUS VERBOSE STRING { sgLogFile(SG_BLOCK_ACL, 1, 1, $4); }
 		| LOGFILE VERBOSE ANONYMOUS STRING { sgLogFile(SG_BLOCK_ACL, 1, 1, $4); }
 		| LOGFILE STRING { sgLogFile(SG_BLOCK_ACL, 0, 0, $2); }
+		| TAG WORD { sgAclTag($2); }
 		;
 
 access_pass:
@@ -2401,6 +2403,10 @@ int blocked_by_dnsbl(char *domain, char *suffix)
 	return 0;
 }
 
+void sgAclTag(const char *value)
+{
+	lastAcl->tag = strdup(value);
+}
 
 char *sgAclAccess(struct Source *src, struct Acl *acl, struct SquidInfo *req)
 {

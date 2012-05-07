@@ -159,6 +159,7 @@ void sgFreeAcl(struct Acl *acl)
 	sgFree(acl->name);
 	sgFree(acl->redirect);
 	sgFree(acl->logfile);
+	sgFree(acl->tag);
 
 	FREE_LIST(AclDest, acl->pass, sgFreeAclDest)
 

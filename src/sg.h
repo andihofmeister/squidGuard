@@ -293,10 +293,9 @@ struct Source {
 	struct Source *		next;
 };
 
-
-
 struct Acl {
 	char *			name;
+	char *			tag;
 	int			active;
 	struct Source *		source;
 	struct AclDest *	pass;
@@ -411,6 +410,7 @@ void sgIp(char *);
 struct Ip *sgIpLast(struct Source *);
 
 void sgAcl(char *, char *, int);
+void sgAclTag(const char *);
 struct Acl *sgAclFindName(char *);
 void sgAclSetValue(char *, char *, int);
 struct Acl *sgAclCheckSource(struct Source *);
