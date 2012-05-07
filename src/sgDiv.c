@@ -18,6 +18,7 @@
 
 #include "sg.h"
 #include "sgEx.h"
+#include "sgMemory.h"
 #include "HTEscape.h"
 
 #include <netdb.h>
@@ -412,44 +413,6 @@ char *sgSkipHostPart(char *domain)
 		return d2 + 1;
 	return domain;
 }
-
-void *sgMalloc(size_t elsize)
-{
-	void *p;
-	if ((p = (void *)malloc(elsize)) == NULL) {
-		sgLogFatal("FATAL: %s: %s", progname, strerror(ENOMEM));
-		exit(1);
-	}
-	memset(p,0,elsize);
-	return (void *)p;
-}
-
-void *sgCalloc(size_t nelem, size_t elsize)
-{
-	void *p;
-	if ((p = (void *)calloc(nelem, elsize)) == NULL) {
-		sgLogFatal("FATAL: %s: %s", progname, strerror(ENOMEM));
-		exit(1);
-	}
-	return (void *)p;
-}
-
-
-void *sgRealloc(void *ptr, size_t elsize)
-{
-	void *p;
-	if ((p = (void *)realloc(ptr, elsize)) == NULL) {
-		sgLogFatal("FATAL: %s: %s", progname, strerror(ENOMEM));
-		exit(1);
-	}
-	return (void *)p;
-}
-
-void _sgFree(void *ptr)
-{
-	free(ptr);
-}
-
 
 /*
  *

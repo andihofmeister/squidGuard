@@ -17,6 +17,7 @@
  */
 
 #include "sg.h"
+#include "sgMemory.h"
 #include "HTEscape.h"
 #ifdef USE_SYSLOG
 #include <syslog.h>

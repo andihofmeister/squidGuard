@@ -22,6 +22,7 @@
  */
 
 #include "sg.h"
+#include "sgMemory.h"
 #include <pwd.h>
 #include <grp.h>
 

@@ -21,6 +21,7 @@
 
 /* Library include files */
 #include "sg.h"
+#include "sgMemory.h"
 #include "HTEscape.h"                                    /* Implemented here */
 
 #ifndef TOASCII

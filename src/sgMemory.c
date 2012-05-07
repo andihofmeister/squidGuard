@@ -17,7 +17,45 @@
  */
 
 #include "sg.h"
+#include "sgMemory.h"
 #include "sgEx.h"
+
+
+void *sgMalloc(size_t elsize)
+{
+	void *p;
+	if ((p = (void *)malloc(elsize)) == NULL) {
+		sgLogFatal("FATAL: %s: %s", progname, strerror(ENOMEM));
+		exit(1);
+	}
+	memset(p,0,elsize);
+	return (void *)p;
+}
+
+void *sgCalloc(size_t nelem, size_t elsize)
+{
+	void *p;
+	if ((p = (void *)calloc(nelem, elsize)) == NULL) {
+		sgLogFatal("FATAL: %s: %s", progname, strerror(ENOMEM));
+		exit(1);
+	}
+	return (void *)p;
+}
+
+void *sgRealloc(void *ptr, size_t elsize)
+{
+	void *p;
+	if ((p = (void *)realloc(ptr, elsize)) == NULL) {
+		sgLogFatal("FATAL: %s: %s", progname, strerror(ENOMEM));
+		exit(1);
+	}
+	return (void *)p;
+}
+
+void _sgFree(void *ptr)
+{
+	free(ptr);
+}
 
 void sgFreeAllLists()
 {
@@ -183,3 +221,4 @@ void sgFreeLogFileStat(struct LogFileStat *lfs)
 	if (lfs->name != NULL) sgFree(lfs->name);
 	sgFree(lfs);
 }
+

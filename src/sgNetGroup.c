@@ -1,4 +1,6 @@
+
 #include "sg.h"
+#include "sgMemory.h"
 #include <netdb.h>
 
 extern int groupDebug;
