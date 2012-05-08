@@ -37,9 +37,6 @@ struct sgRewrite *lastRewrite = NULL;
 struct sgRewrite *Rewrite = NULL;              /* linked list, Calloc */
 struct sgRegExp *lastRewriteRegExec = NULL;
 
-struct Time *lastTime = NULL;
-struct Time *Time = NULL;                      /* linked list, Calloc */
-
 struct LogFileStat *globalErrorLog = NULL;
 struct LogFile *globalLogFile = NULL;
 

@@ -42,7 +42,18 @@ logdir	= @sg_logdir@
 cfgdir	= @sg_cfgdir@
 infodir	= $(prefix)/info
 
-OBJS	= main.o sgLog.o sgDb.o HTParse.o sgDiv.o sgMemory.o sgGroup.o sgNetGroup.o y.tab.o lex.yy.o
+OBJS = \
+	main.o \
+	sgLog.o \
+	sgDb.o \
+	HTParse.o \
+	sgDiv.o \
+	sgMemory.o \
+	sgGroup.o \
+	sgNetGroup.o \
+	sgTime.o \
+	y.tab.o \
+	lex.yy.o
 
 all::
 	@echo making $@ in `basename \`pwd\``
@@ -79,6 +90,9 @@ sgGroup.o:	sgGroup.c sg.h config.h
 
 sgNetGroup.o:	sgNetGroup.c sg.h config.h
 	@$(COMPILE) -c sgNetGroup.c
+
+sgNetTime.o:	sgTime.c sg.h config.h
+	@$(COMPILE) -c sgTime.c
 
 lex.yy.o: lex.yy.c y.tab.h sg.h config.h
 	@$(COMPILE) -c lex.yy.c

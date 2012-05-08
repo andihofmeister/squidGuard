@@ -112,11 +112,6 @@ struct LogFile {
 	struct LogFileStat *	stat;
 };
 
-struct SquidQueue {
-	struct SquidInfo *	squidInfo;
-	struct SquidQueue *	next;
-};
-
 struct SquidInfo {
 	char	protocol[MAX_BUF];
 	char	domain[MAX_BUF];
@@ -188,24 +183,7 @@ struct Setting {
 	struct Setting *next;
 };
 
-struct TimeElement {
-	char			wday;
-	int			from;
-	int			to;
-	int			y;
-	int			m;
-	int			d;
-	time_t			fromdate;
-	time_t			todate;
-	struct TimeElement *	next;
-};
-
-struct Time {
-	char *			name;
-	int			active;
-	struct TimeElement *	element;
-	struct Time *		next;
-};
+#include "sgTime.h"
 
 struct Destination {
 	//int syslogStatus;
@@ -224,6 +202,7 @@ struct Destination {
 	struct LogFile *	logfile;
 	struct Destination *	next;
 };
+
 
 struct Source {
 	char *			name;
@@ -316,7 +295,7 @@ void sgSourceDomain(char *);
 void sgSourceIpList(char *);
 struct Source *sgSourceFindName(char *);
 struct Source *sgFindSource(struct Source *, char *, char *, char *);
-void sgSourceTime(char *, int);
+void sgSourceTime(char *, enum TimeScope);
 
 void sgDest(char *);
 void sgDestEnd();
@@ -326,7 +305,7 @@ void sgDestExpressionList(char *, char *);
 void sgDestRedirect(char *);
 void sgDestRewrite(char *);
 struct Destination *sgDestFindName(char *);
-void sgDestTime(char *, int);
+void sgDestTime(char *, enum TimeScope);
 
 void sgSetting(char *, char *);
 #ifdef USE_SYSLOG
@@ -339,19 +318,7 @@ void sgRewrite(char *);
 void sgRewriteSubstitute(char *);
 struct sgRewrite *sgRewriteFindName(char *);
 char *sgRewriteExpression(struct sgRewrite *, char *);
-void sgRewriteTime(char *, int);
-
-void sgTime(char *);
-struct Time *sgTimeFindName(char *);
-int sgTimeCheck(struct tm *, time_t);
-void sgTimeElementInit();
-void sgTimeElementSortEvents();
-void sgTimeElementAdd(char *, char);
-void sgTimeElementEnd();
-int sgTimeNextEvent();
-void sgTimeSetAcl();
-void sgTimeElementClone();
-void sgTimePrint();
+void sgRewriteTime(char *, enum TimeScope);
 
 void sgSetIpType(int, char *, int);
 void sgIp(char *);
@@ -371,14 +338,6 @@ char *sgRegExpSubst(struct sgRegExp *, char *);
 void sgDbInit();
 void sgDbLoadTextFile(struct sgDb *, char *, int);
 void sgDbUpdate(struct sgDb *, char *, char *, size_t);
-
-#if DB_VERSION_GT2
-int db_init(char *, DB_ENV * *);
-int domainCompare(const DB *, const DBT *, const DBT *);
-#else
-DB_ENV * db_init(char *);
-int domainCompare(const DBT *, const DBT *);
-#endif
 
 time_t date2sec(char *);
 time_t iso2sec(char *);

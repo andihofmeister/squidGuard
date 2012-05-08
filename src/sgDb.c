@@ -26,6 +26,8 @@ extern int globalUpdate;
 extern char *globalCreateDb;
 extern int showBar;     /* from main.c */
 
+static int domainCompare(const DB *, const DBT *, const DBT *);
+
 #if DB_VERSION_MAJOR == 4
 #define DBOPEN(dbp,txnid,dbfile,database,dbmode,flag,fmode) \
 	open(dbp,txnid,dbfile,database,dbmode,flag,fmode)
@@ -63,10 +65,6 @@ void sgDbInit(struct sgDb *Db, char *file)
 		}
 	}
 
-	/*since we are not sharing the db's, we does not nedd dbenv */
-	//ret = db_init(Db->dbhome, &Db->dbenv);
-	//if(ret)
-	//  sgLogFatal("FATAL: error db_init %s", strerror(ret));
 	Db->entries = 1;
 	Db->dbenv = NULL;
 	if ((ret = db_create(&Db->dbp, Db->dbenv, 0)) != 0)
@@ -417,29 +415,11 @@ void sgDbUpdate(struct sgDb *Db, char *key, char *value, size_t len)
 	}
 }
 
-int db_init(char *dbhome, DB_ENV **dbenvp)
-{
-	int ret;
-	DB_ENV *dbenv;
-
-	if ((ret = db_env_create(&dbenv, 0)) != 0)
-		return ret;
-	//dbenv->set_errfile(dbenv, stderr);
-
-	if ((ret = dbenv->open(dbenv, dbhome, DB_CREATE | DB_INIT_MPOOL, 0)) == 0) {
-		*dbenvp = dbenv;
-		return 0;
-	}
-	(void)dbenv->close(dbenv, 0);
-	return ret;
-}
-
-
 /*
  * domainCompare does a reverse compare of two strings
  */
 
-int domainCompare(const DB *dbp, const DBT *a, const DBT *b)
+static int domainCompare(const DB *dbp, const DBT *a, const DBT *b)
 {
 	register const char *a1, *b1;
 	register char ac1, bc1;
