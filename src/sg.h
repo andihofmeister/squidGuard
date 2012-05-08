@@ -335,7 +335,7 @@ void sgFreePatternBuffer(struct sgRegExp *);
 int sgRegExpMatch(struct sgRegExp *, char *);
 char *sgRegExpSubst(struct sgRegExp *, char *);
 
-void sgDbInit();
+struct sgDb * sgDbInit(int , char *);
 void sgDbLoadTextFile(struct sgDb *, char *, int);
 void sgDbUpdate(struct sgDb *, char *, char *, size_t);
 

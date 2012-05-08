@@ -36,13 +36,20 @@ static int domainCompare(const DB *, const DBT *, const DBT *);
 	open(dbp,dbfile,database,dbmode,flag,fmode)
 #endif
 
-void sgDbInit(struct sgDb *Db, char *file)
+struct sgDb * sgDbInit(int type, char *file)
 {
 	struct stat st, st2;
 	char *dbfile = NULL;
 	char *update = NULL;
 	int createdb = 0, ret;
 	u_int32_t flag = 0;
+	struct sgDb * Db;
+
+	if ((Db = sgMalloc(sizeof(struct sgDb))) == NULL)
+		return NULL;
+
+	Db->type = type;
+
 	if (file != NULL) {
 		if (globalCreateDb != NULL && (!strcmp(globalCreateDb, "all") ||
 					       !sgStrRncmp(file, globalCreateDb, strlen(globalCreateDb))))
@@ -67,8 +74,13 @@ void sgDbInit(struct sgDb *Db, char *file)
 
 	Db->entries = 1;
 	Db->dbenv = NULL;
-	if ((ret = db_create(&Db->dbp, Db->dbenv, 0)) != 0)
+	if ((ret = db_create(&Db->dbp, Db->dbenv, 0)) != 0) {
 		sgLogFatal("FATAL: Error db_create: %s", strerror(ret));
+		sgFree(dbfile);
+		sgFree(Db);
+		return NULL;
+	}
+
 	/*please feel free to experiment with cacesize and pagesize */
 	//Db->dbp->set_cachesize(Db->dbp, 0, 1024 * 1024,0);
 	//Db->dbp->set_pagesize(Db->dbp, 1024);
@@ -125,6 +137,8 @@ void sgDbInit(struct sgDb *Db, char *file)
 	}
 	if (dbfile != NULL)
 		sgFree(dbfile);
+
+	return Db;
 }
 
 int defined(struct sgDb *Db, char *request)

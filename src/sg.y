@@ -656,14 +656,15 @@ void sgSourceUser(char *user)
 	struct Source *sp;
 	char *lc;
 	sp = lastSource;
-	if (sp->userDb == NULL) {
-		sp->userDb = sgMalloc(sizeof(struct sgDb));
-		sp->userDb->type = SGDBTYPE_USERLIST;
-		sgDbInit(sp->userDb, NULL);
+
+	if (sp->userDb == NULL)
+		sp->userDb = sgDbInit(SGDBTYPE_USERLIST, NULL);
+
+	if (sp->userDb != NULL) {
+		for (lc = user; *lc != '\0'; lc++) /* convert username to lowercase chars */
+			*lc = tolower(*lc);
+		sgLogDebug("Added User: %s", user);
 	}
-	for (lc = user; *lc != '\0'; lc++) /* convert username to lowercase chars */
-		*lc = tolower(*lc);
-	sgLogDebug("Added User: %s", user);
 }
 
 void sgSourceUserList(char *file)
@@ -673,13 +674,14 @@ void sgSourceUserList(char *file)
 	char line[MAX_BUF];
 	char *p, *c, *s, *lc;
 	int l = 0;
-	struct Source *sp;
-	sp = lastSource;
-	if (sp->userDb == NULL) {
-		sp->userDb = sgMalloc(sizeof(struct sgDb));
-		sp->userDb->type = SGDBTYPE_USERLIST;
-		sgDbInit(sp->userDb, NULL);
-	}
+	struct Source *sp = lastSource;
+
+	if (sp->userDb == NULL)
+		sp->userDb = sgDbInit(SGDBTYPE_USERLIST, NULL);
+
+	if (sp->userDb == NULL)
+		return;
+
 	dbhome = sgSettingGetValue("dbhome");
 	if (dbhome == NULL)
 		dbhome = DEFAULT_DBHOME;
@@ -737,13 +739,14 @@ void sgSourceUserQuery(char *query, char * broke_1, char * broke_2, char * broke
 	char *my_query, *my_user, *my_pass, *my_db;
 	char *str = ";";
 	int l = 0;
-	struct Source *sp;
-	sp = lastSource;
-	if (sp->userDb == NULL) {
-		sp->userDb = sgMalloc(sizeof(struct sgDb));
-		sp->userDb->type = SGDBTYPE_USERLIST;
-		sgDbInit(sp->userDb, NULL);
-	}
+	struct Source *sp = lastSource;
+
+	if (sp->userDb == NULL)
+		sp->userDb = sgDbInit(SGDBTYPE_USERLIST, NULL);
+
+	if (sp->userDb == NULL)
+		return;
+
 	dbhome = sgSettingGetValue("dbhome");
 	my_user = sgSettingGetValue("mysqlusername");
 	my_pass = sgSettingGetValue("mysqlpassword");
@@ -807,11 +810,9 @@ void sgSourceLdapUserSearch(char *url)
 
 	/* create a userDb if it doesn't exist, since we'll need it later
 	 * for caching */
-	if (sp->userDb == NULL) {
-		sp->userDb = sgMalloc(sizeof(struct sgDb));
-		sp->userDb->type = SGDBTYPE_USERLIST;
-		sgDbInit(sp->userDb, NULL);
-	}
+	if (sp->userDb == NULL)
+		sp->userDb = sgDbInit(SGDBTYPE_USERLIST, NULL);
+
 #else
 	sgLogFatal("This SquidGuard has not been compiled with LDAP support");
 #endif
@@ -838,11 +839,8 @@ void sgSourceLdapIpSearch(char *url)
 
 	/* create a ipDb if it doesn't exist, since we'll need it later
 	 * for caching */
-	if (sp->ipDb == NULL) {
-		sp->ipDb = sgMalloc(sizeof(struct sgDb));
-		sp->ipDb->type = SGDBTYPE_USERLIST;
-		sgDbInit(sp->ipDb, NULL);
-	}
+	if (sp->ipDb == NULL)
+		sp->ipDb = sgDbInit(SGDBTYPE_USERLIST, NULL);
 #else
 	sgLogFatal("This SquidGuard has not been compiled with LDAP support");
 #endif
@@ -855,11 +853,12 @@ void sgSourceExecUserList(char *cmd)
 	struct Source *sp;
 	char *lc;
 	sp = lastSource;
-	if (sp->userDb == NULL) {
-		sp->userDb = sgMalloc(sizeof(struct sgDb));
-		sp->userDb->type = SGDBTYPE_USERLIST;
-		sgDbInit(sp->userDb, NULL);
-	}
+
+	if (sp->userDb == NULL)
+		sp->userDb = sgDbInit(SGDBTYPE_USERLIST, NULL);
+
+	if (sp->userDb == NULL)
+		return;
 
 /*  DEBUG
  * sgLogDebug("sgSourceExecUserList called with: %s", cmd);
@@ -895,12 +894,11 @@ void sgSourceDomain(char *domain)
 {
 	struct Source *sp;
 	sp = lastSource;
-	if (sp->domainDb == NULL) {
-		sp->domainDb = sgMalloc(sizeof(struct sgDb));
-		sp->domainDb->type = SGDBTYPE_DOMAINLIST;
-		sgDbInit(sp->domainDb, NULL);
-	}
-	sgDbUpdate(sp->domainDb, domain, NULL, 0);
+	if (sp->domainDb == NULL)
+		sp->domainDb = sgDbInit(SGDBTYPE_DOMAINLIST, NULL);
+
+	if (sp->domainDb != NULL)
+		sgDbUpdate(sp->domainDb, domain, NULL, 0);
 }
 
 void sgSourceTime(char *name, enum TimeScope within)
@@ -1179,10 +1177,12 @@ void sgDestDomainList(char *domainlist)
 			strcat(sp->domainlist, domainlist);
 		}
 	}
-	sp->domainlistDb = sgMalloc(sizeof(struct sgDb));
-	sp->domainlistDb->type = SGDBTYPE_DOMAINLIST;
+
 	sgLogDebug("init domainlist %s", sp->domainlist);
-	sgDbInit(sp->domainlistDb, sp->domainlist);
+
+	if (sp->domainlistDb == NULL)
+		sp->domainlistDb = sgDbInit(SGDBTYPE_DOMAINLIST, sp->domainlist);
+
 	if (sp->domainlistDb->entries == 0) { /* empty database */
 		sgLogDebug("domainlist empty, removed from memory");
 		sgFree(sp->domainlistDb);
@@ -1219,10 +1219,14 @@ void sgDestUrlList(char *urllist)
 			strcat(sp->urllist, urllist);
 		}
 	}
-	sp->urllistDb = sgMalloc(sizeof(struct sgDb));
-	sp->urllistDb->type = SGDBTYPE_URLLIST;
+
 	sgLogDebug("init urllist %s", sp->urllist);
-	sgDbInit(sp->urllistDb, sp->urllist);
+	if ( sp->urllistDb == NULL )
+		sp->urllistDb = sgDbInit(SGDBTYPE_URLLIST, sp->urllist);
+
+	if ( sp->urllistDb == NULL )
+		return;
+
 	if (sp->urllistDb->entries == 0) { /* empty database */
 		sgLogDebug("urllist empty, removed from memory");
 		sgFree(sp->urllistDb);
