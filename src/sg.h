@@ -117,26 +117,6 @@ struct SquidQueue {
 	struct SquidQueue *	next;
 };
 
-struct UserInfo {
-	/* quota tracking */
-	time_t	time;
-	time_t	last;
-	int	consumed;
-	char	status;
-#ifdef HAVE_LIBLDAP
-	/* LDAP tracking */
-	int	ldapuser;       /* bool: 1 if user loaded from LDAP */
-	int	found;          /* bool: we also cache if not found in LDAP */
-	time_t	cachetime;      /* time this item was added to cache */
-#endif
-};
-
-struct UserQuota {
-	time_t	seconds;
-	int	renew;
-	time_t	sporadic;
-};
-
 struct SquidInfo {
 	char	protocol[MAX_BUF];
 	char	domain[MAX_BUF];
@@ -202,29 +182,6 @@ struct Ip {
 	struct Ip *	next;
 };
 
-/* ldapip */
-#ifdef HAVE_LIBLDAP
-/* LDAP tracking */
-struct IpInfo {
-	/* quota tracking */
-	time_t	time;
-	time_t	last;
-	int	consumed;
-	char	status;
-	int	ldapip;         /* bool: 1 if ip loaded from LDAP */
-	int	found;          /* bool: we also cache if not found in LDAP */
-	time_t	cachetime;      /* time this item was added to cache */
-};
-#endif
-
-struct IpQuota {
-	time_t	seconds;
-	int	renew;
-	time_t	sporadic;
-};
-/* ldapip */
-
-
 struct Setting {
 	char *		name;
 	char *		value;
@@ -280,11 +237,9 @@ struct Source {
 	struct Time *		time;
 	int			within;
 	int			cont_search;
-	struct UserQuota	userquota;
 	struct LogFile *	logfile;
 #ifdef HAVE_LIBLDAP
 	struct sgDb *		ipDb;
-	struct IpQuota		ipquota;
 	char **			ldapuserurls;           /* dynamic array of url strings */
 	int			ldapuserurlcount;       /* current size of pointer array */
 	char **			ldapipurls;             /* dynamic array of url strings */
@@ -416,7 +371,6 @@ char *sgRegExpSubst(struct sgRegExp *, char *);
 void sgDbInit();
 void sgDbLoadTextFile(struct sgDb *, char *, int);
 void sgDbUpdate(struct sgDb *, char *, char *, size_t);
-struct UserInfo *setuserinfo();
 
 #if DB_VERSION_GT2
 int db_init(char *, DB_ENV * *);
@@ -429,13 +383,8 @@ int domainCompare(const DBT *, const DBT *);
 time_t date2sec(char *);
 time_t iso2sec(char *);
 char *niso(time_t);
-struct UserQuotaInfo *setuserquota();
-void sgSourceUserQuota(char *, char *, char *);
 
-struct IpQuotaInfo *setipquota();                 /* ldapip */
-void sgSourceIpQuota(char *, char *, char *);     /*ldapip */
-
-int defined(struct sgDb *, char *, char **);
+int defined(struct sgDb *, char *);
 
 void usage(void);
 
@@ -443,10 +392,10 @@ void yyerror(char *);
 int yyparse(void);
 int yylex(void);
 
-int sgFindUser(struct Source *, char *, struct UserInfo **);
+int sgFindUser(struct Source *, char *);
 #ifdef HAVE_LIBLDAP
 int sgDoLdapSearch(const char *, const char *);
-int sgFindIp(struct Source *, char *, struct IpInfo **);
+int sgFindIp(struct Source *, char *);
 #endif
 
 int expand_url(char *, size_t, const char *, const char *);

@@ -122,7 +122,6 @@ rfc1738_unescape(char *s)
 %token IPADDR
 %token IPCLASS
 %token IPLIST
-%token IPQUOTA
 %token LDAPBINDDN
 %token LDAPBINDPASS
 %token LDAPCACHETIME
@@ -157,7 +156,6 @@ rfc1738_unescape(char *s)
 %token USER
 %token USERLIST
 %token USERQUERY
-%token USERQUOTA
 %token VERBOSE
 %token WEEKDAY
 %token WEEKLY
@@ -290,10 +288,6 @@ source_content:	DOMAIN domain
 		| LDAPUSERSEARCH STRING { sgSourceLdapUserSearch($2); }
 		| LDAPIPSEARCH STRING { sgSourceLdapIpSearch($2); }
 		| EXECUSERLIST EXECCMD { sgSourceExecUserList($2); }
-		| USERQUOTA NUMBER NUMBER HOURLY { sgSourceUserQuota($2, $3, "3600"); }
-		| USERQUOTA NUMBER NUMBER DAILY { sgSourceUserQuota($2, $3, "86400"); }
-		| USERQUOTA NUMBER NUMBER WEEKLY { sgSourceUserQuota($2, $3, "604800"); }
-		| USERQUOTA NUMBER NUMBER NUMBER { sgSourceUserQuota($2, $3, $4); }
 		| IP ips
 		| IPLIST STRING { sgSourceIpList($2); }
 		| WITHIN WORD { sgSourceTime($2, WITHIN); }
@@ -615,14 +609,8 @@ void sgSource(char *source)
 	sp->within = 0;
 	sp->cont_search = 0;
 	sp->time = NULL;
-	sp->userquota.seconds = 0;
-	sp->userquota.renew = 0;
-	sp->userquota.sporadic = 0;
 #ifdef HAVE_LIBLDAP
 	sp->ipDb = NULL;
-	sp->ipquota.seconds = 0;
-	sp->ipquota.renew = 0;
-	sp->ipquota.sporadic = 0;
 #endif
 	sp->next = NULL;
 	sp->logfile = NULL;
@@ -681,8 +669,6 @@ void sgSourceUser(char *user)
 	}
 	for (lc = user; *lc != '\0'; lc++) /* convert username to lowercase chars */
 		*lc = tolower(*lc);
-	sgDbUpdate(sp->userDb, user, (char *)setuserinfo(),
-		   sizeof(struct UserInfo));
 	sgLogDebug("Added User: %s", user);
 }
 
@@ -731,17 +717,12 @@ void sgSourceUserList(char *file)
 			*s = '\0';
 			for (lc = line; *lc != '\0'; lc++) /* convert username to lowercase chars */
 				*lc = tolower(*lc);
-			sgDbUpdate(sp->userDb, line, (char *)setuserinfo(),
-				   sizeof(struct UserInfo));
 		} else {
 			do {
 				if (c != NULL && p >= c)        /*find the comment */
 					break;
 				for (lc = p; *lc != '\0'; lc++) /* convert username to lowercase chars */
 					*lc = tolower(*lc);
-				sgDbUpdate(sp->userDb, p, (char *)setuserinfo(),
-					   sizeof(struct UserInfo));
-// DEBUG
 				sgLogDebug("Added UserList source: %s", p);
 			} while ((p = strtok(NULL, " \t,")) != NULL);
 		}
@@ -908,36 +889,11 @@ void sgSourceExecUserList(char *cmd)
 		while (lc >= sc && (*lc == '\0' || isspace(*lc)))
 			*lc-- = '\0';
 		if (lc >= sc) {
-			sgDbUpdate(sp->userDb, sc, (char *)setuserinfo(),
-				   sizeof(struct UserInfo));
 			sgLogDebug("Added exec source: %s", sc);
 		}
 	}
 
 	pclose(pInput);
-}
-
-
-
-void sgSourceUserQuota(char *seconds, char *sporadic, char *renew)
-{
-	int s;
-	struct UserQuota *uq;
-	struct Source *sp;
-	sp = lastSource;
-	uq = &sp->userquota;
-	s = atoi(seconds);
-	if (s <= 0)
-		sgLogError("Userquota seconds sporadic hourly|daily|weekly");
-	uq->seconds = s;
-	s = atoi(sporadic);
-	if (s <= 0)
-		sgLogError("Userquota seconds sporadic hourly|daily|weekly");
-	uq->sporadic = s;
-	s = atoi(renew);
-	if (s <= 0)
-		sgLogError("Userquota seconds sporadic hourly|daily|weekly");
-	uq->renew = s;
 }
 
 
@@ -1055,11 +1011,9 @@ struct Source *sgFindSource(struct Source *bsrc, char *net, char *ident, char *d
 	struct Ip *ip;
 	int foundip, founduser, founddomain, unblockeduser;
 	unsigned long i, octet = 0, *op;
-	struct UserInfo *userquota;
 	char *dotnet = NULL;
 #ifdef HAVE_LIBLDAP
 	int unblockedip;
-	struct IpInfo *ipquota;
 #endif
 	if (net != NULL) {
 		dotnet = sgMalloc(strlen(net) + 1);
@@ -1102,51 +1056,9 @@ struct Source *sgFindSource(struct Source *bsrc, char *net, char *ident, char *d
 				foundip = 0;
 			} else {
 //        rfc1738_unescape(dotnet);
-				if (sgFindIp(s, dotnet, &ipquota)) {
+				if (sgFindIp(s, dotnet)) {
 					foundip = 1;
 					unblockedip = 1;
-					if (s->ipquota.seconds != 0) {
-						time_t t = time(NULL) + globalDebugTimeDelta;
-						sgLogDebug("status %d time %d lasttime %d consumed %d", ipquota->status, ipquota->time, ipquota->last, ipquota->consumed);
-						sgLogDebug("renew %d seconds %d", s->ipquota.renew, s->ipquota.seconds);
-						if (ipquota->status == 0) { //first time
-							ipquota->status = 1;
-							ipquota->time = t;
-							ipquota->last = t;
-							sgLogDebug("ip %s first time %d", dotnet, ipquota->time);
-						} else if (ipquota->status == 1) {
-							sgLogDebug("ip %s other time %d %d", dotnet, ipquota->time, t);
-							if (s->ipquota.sporadic > 0) {
-								if (t - ipquota->last < s->ipquota.sporadic) {
-									ipquota->consumed += t - ipquota->last;
-									ipquota->time = t;
-								}
-								if (ipquota->consumed > s->ipquota.seconds) {
-									ipquota->status = 2; // block this ip, time is up
-									unblockedip = 0;
-								}
-								ipquota->last = t;
-								sgLogDebug("ip %s consumed %d %d", dotnet, ipquota->consumed, ipquota->last);
-							} else if (ipquota->time + s->ipquota.seconds < t) {
-								sgLogDebug("time is up ip %s blocket", net);
-								ipquota->status = 2; // block this ip, time is up
-								unblockedip = 0;
-							}
-						} else {
-							sgLogDebug("ip %s blocked %d %d %d %d", dotnet, ipquota->status, ipquota->time, t, (ipquota->time + s->ipquota.renew) - t);
-							if (ipquota->time + s->ipquota.renew < t) { // new chance
-								sgLogDebug("ip %s new chance", net);
-								unblockedip = 1;
-								ipquota->status = 1;
-								ipquota->time = t;
-								ipquota->consumed = 0;
-							} else {
-								unblockedip = 0;
-							}
-						}
-						sgDbUpdate(s->ipDb, dotnet, (void *)ipquota,
-							   sizeof(struct IpInfo));
-					}
 				}
 			}
 		} else
@@ -1159,55 +1071,13 @@ struct Source *sgFindSource(struct Source *bsrc, char *net, char *ident, char *d
 				founduser = 0;
 			} else {
 #ifdef HAVE_LIBLDAP
-				if (sgFindUser(s, ident, &userquota)) {
+				if (sgFindUser(s, ident)) {
 #else
 				rfc1738_unescape(ident);
-				if (s->userDb != NULL && defined(s->userDb, ident, (char **)&userquota) == 1) {
+				if (s->userDb != NULL && defined(s->userDb, ident) == 1) {
 #endif
 					founduser = 1;
 					unblockeduser = 1;
-					if (s->userquota.seconds != 0) {
-						time_t t = time(NULL) + globalDebugTimeDelta;
-						//sgLogError("status %d time %d lasttime %d consumed %d", userquota->status, userquota->time, userquota->last, userquota->consumed);
-						//sgLogError("renew %d seconds %d", s->userquota.renew, s->userquota.seconds);
-						if (userquota->status == 0) { //first time
-							userquota->status = 1;
-							userquota->time = t;
-							userquota->last = t;
-							//sgLogError("user %s first time %d", ident, userquota->time);
-						} else if (userquota->status == 1) {
-							//sgLogError("user %s other time %d %d",ident,userquota->time,t);
-							if (s->userquota.sporadic > 0) {
-								if (t - userquota->last < s->userquota.sporadic) {
-									userquota->consumed += t - userquota->last;
-									userquota->time = t;
-								}
-								if (userquota->consumed > s->userquota.seconds) {
-									userquota->status = 2; // block this user, time is up
-									unblockeduser = 0;
-								}
-								userquota->last = t;
-								//sgLogError("user %s consumed %d %d",ident,userquota->consumed, userquota->last);
-							} else if (userquota->time + s->userquota.seconds < t) {
-								sgLogDebug("time is up user %s blocked", ident);
-								userquota->status = 2; // block this user, time is up
-								unblockeduser = 0;
-							}
-						} else {
-							//sgLogError("user %s blocked %d %d %d %d", ident, userquota->status, userquota->time, t, (userquota->time + s->userquota.renew) - t);
-							if (userquota->time + s->userquota.renew < t) { // new chance
-								//sgLogError("user %s new chance", ident);
-								unblockeduser = 1;
-								userquota->status = 1;
-								userquota->time = t;
-								userquota->consumed = 0;
-							} else {
-								unblockeduser = 0;
-							}
-						}
-						sgDbUpdate(s->userDb, ident, (void *)userquota,
-							   sizeof(struct UserInfo));
-					}
 				}
 			}
 			if (founduser == 0)
@@ -1221,7 +1091,7 @@ struct Source *sgFindSource(struct Source *bsrc, char *net, char *ident, char *d
 			if (*domain == '\0')
 				founddomain = 0;
 			else
-				if (defined(s->domainDb, domain, (char **)NULL) == 1)
+				if (defined(s->domainDb, domain) == 1)
 					founddomain = 1;
 		} else {
 			founddomain = 1;
@@ -2446,7 +2316,7 @@ char *sgAclAccess(struct Source *src, struct Acl *acl, struct SquidInfo *req)
 				continue;
 			}
 			if (aclpass->dest->domainlistDb != NULL) {
-				result = defined(aclpass->dest->domainlistDb, req->domain, &dbdata);
+				result = defined(aclpass->dest->domainlistDb, req->domain);
 				if (result != DB_NOTFOUND) {
 					if (result) {
 						if (aclpass->access) {
@@ -2461,9 +2331,9 @@ char *sgAclAccess(struct Source *src, struct Acl *acl, struct SquidInfo *req)
 				}
 			}
 			if (aclpass->dest->urllistDb != NULL && access) {
-				result = defined(aclpass->dest->urllistDb, req->strippedurl, &dbdata);
+				result = defined(aclpass->dest->urllistDb, req->strippedurl);
 				if (!result)
-					result = defined(aclpass->dest->urllistDb, req->furl, &dbdata);
+					result = defined(aclpass->dest->urllistDb, req->furl);
 				if ((result) && (result != DB_NOTFOUND)) {
 					if (aclpass->access) {
 						access++;
@@ -2558,38 +2428,24 @@ int yywrap()
  * returns a pointer to a UserInfo structure when found
  * handles all LDAP sub-lookups and caching
  */
-int sgFindUser(struct Source *src, char *ident, struct UserInfo **rval)
+int sgFindUser(struct Source *src, char *ident)
 {
 	int i, found;
 	int CacheTimeOut;
 	char *interval;
-	struct UserInfo *userinfo;
-	static struct UserInfo info;
 
-	 sgLogDebug("DEBUG: sgFindUser called with: %s", ident);
+	sgLogDebug("DEBUG: sgFindUser called with: %s", ident);
 
 	/* defined in the userDB? */
-	if (src->userDb != NULL && defined(src->userDb, ident, (char **)&userinfo) == 1) {
+	if (src->userDb != NULL && defined(src->userDb, ident) == 1) {
 #ifdef HAVE_LIBLDAP
 		/* LDAP user? */
-		if (!userinfo->ldapuser) {
-			*rval = userinfo;
-			return 1; /* no, return regular user */
-		}
-
 		/* from here on, we assume it is an LDAP user */
 
 		/* is this info valid? */
 		interval = sgSettingGetValue("ldapcachetime");
 		CacheTimeOut = atoi(interval != NULL ? interval : "0");
-		if ((time(NULL) - userinfo->cachetime) <= CacheTimeOut) {
-			if (userinfo->found)
-				*rval = userinfo;
-			return userinfo->found; /* yes */
-		}
 #endif
-	} else {
-		userinfo = NULL;       /* no record defined, must add our own*/
 	}
 
 	found = 0;                     /* assume not found */
@@ -2604,28 +2460,10 @@ int sgFindUser(struct Source *src, char *ident, struct UserInfo **rval)
 		 * that have been authenticated (?) */
 
 		/* any record defined from above? */
-		if (userinfo == NULL) {
-			/* no, must use our own memory */
-			userinfo = &info;
-			info.status = 0;
-			info.time = 0;
-			info.consumed = 0;
-			info.last = 0;
-			info.ldapuser = 1;
-			info.found = found;
-			info.cachetime = time(NULL);
-		} else {
-			/* yes, just update the found flag */
-			userinfo->found = found;
-			userinfo->cachetime = time(NULL);
-		}
 
-		sgDbUpdate(src->userDb, ident, (char *)userinfo,
-			   sizeof(struct UserInfo));
 		sgLogDebug("Added LDAP source: %s", ident);
 
 		if (found) {
-			*rval = userinfo;
 			break;
 		}
 	}
@@ -2638,36 +2476,22 @@ int sgFindUser(struct Source *src, char *ident, struct UserInfo **rval)
  * returns a pointer to a IpInfo structure when found
  * handles all LDAP sub-lookups and caching
  */
-int sgFindIp(struct Source *src, char *net, struct IpInfo **rval)
+int sgFindIp(struct Source *src, char *net)
 {
 	int i, found;
 	int CacheTimeOut;
 	char *interval;
-	struct IpInfo *ipinfo;
-	static struct IpInfo info;
 /* DEBUG
  * sgLogError("debug : sgfindip called with: %s", net);
  */
 	/* defined in the ipDB? */
-	if (defined(src->ipDb, net, (char **)&ipinfo) == 1) {
+	if (defined(src->ipDb, net) == 1) {
 		/* LDAP ip? */
-		if (!ipinfo->ldapip) {
-			*rval = ipinfo;
-			return 1;      /* no, return regular ip */
-		}
-
 		/* from here on, we assume it is an LDAP ip */
 
 		/* is this info valid? */
 		interval = sgSettingGetValue("ldapcachetime");
 		CacheTimeOut = atoi(interval != NULL ? interval : "0");
-		if ((time(NULL) - ipinfo->cachetime) <= CacheTimeOut) {
-			if (ipinfo->found)
-				*rval = ipinfo;
-			return ipinfo->found; /* yes */
-		}
-	} else {
-		ipinfo = NULL;       /* no record defined, must add our own*/
 	}
 
 	found = 0;                     /* assume not found */
@@ -2679,29 +2503,9 @@ int sgFindIp(struct Source *src, char *net, struct IpInfo **rval)
 		/* cache every search in the ip database */
 		/* this should be safe, since squid only sends real ip adresses (?) */
 		/* any record defined from above? */
-		if (ipinfo == NULL) {
-			/* no, must use our own memory */
-			ipinfo = &info;
-			info.status = 0;
-			info.time = 0;
-			info.consumed = 0;
-			info.last = 0;
-			info.ldapip = 1;
-			info.found = found;
-			info.cachetime = time(NULL);
-		} else {
-			/* yes, just update the found flag */
-			ipinfo->found = found;
-			ipinfo->cachetime = time(NULL);
-		}
-
-		sgDbUpdate(src->ipDb, net, (char *)ipinfo,
-			   sizeof(struct IpInfo));
-		// DEBUG
 		sgLogDebug("Added LDAP source: %s", net);
 
 		if (found) {
-			*rval = ipinfo;
 			break;
 		}
 	}

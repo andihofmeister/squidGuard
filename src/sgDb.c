@@ -129,14 +129,13 @@ void sgDbInit(struct sgDb *Db, char *file)
 		sgFree(dbfile);
 }
 
-int defined(struct sgDb *Db, char *request, char **retval)
+int defined(struct sgDb *Db, char *request)
 
 {
 	int errno, result = 0;
 	u_int32_t dbmethod = DB_SET_RANGE;
 	char *data1 = NULL;
 	char *data2 = NULL;
-	static char dbdata[MAX_BUF];
 	char *req = request, r[MAX_BUF + 1];
 
 	if ((errno = Db->dbp->cursor(Db->dbp, NULL, &Db->dbcp, 0)) != 0) {
@@ -219,15 +218,6 @@ int defined(struct sgDb *Db, char *request, char **retval)
 		break;
 	}
 
-	if (result == 1) {
-		if (retval != NULL && Db->data.size > 1) {
-			if (Db->data.size >= sizeof(dbdata))
-				sgLogFatal("FATAL: Data size too large in defined()");
-			memcpy(dbdata, Db->data.data, Db->data.size);
-			*(dbdata + Db->data.size) = '\0';
-			*retval = dbdata;
-		}
-	}
 	memset(&Db->data, 0, sizeof(Db->data));
 	(void)Db->dbcp->c_close(Db->dbcp);
 	return result;

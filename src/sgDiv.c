@@ -634,7 +634,6 @@ char *sgParseRedirect(char *redirect, struct SquidInfo *req, struct Acl *acl, st
 {
 	static char buf[MAX_BUF + MAX_BUF];
 	char *p = redirect, *q = NULL, *t = NULL;
-	struct Source *s = lastActiveSource;
 	*buf = '\0';
 	if (aclpass == NULL)
 		aclpass = defaultAcl->pass;
@@ -659,25 +658,6 @@ char *sgParseRedirect(char *redirect, struct SquidInfo *req, struct Acl *acl, st
 				strcat(buf, req->ident);
 			p++;
 			break;
-		case 'q': /* userquota info */
-			if (s != NULL && s->userquota.seconds != 0 && strcmp(req->ident, "-")) {
-				struct UserInfo *userquota;
-				if (defined(s->userDb, req->ident, (char **)&userquota) == 1) {
-					char qbuf[150];
-					sprintf(qbuf, "%d-%ld-%d-%ld-%ld-%d",
-					        s->userquota.renew,
-					        s->userquota.seconds,
-					        userquota->status,
-					        userquota->time,
-					        userquota->last,
-					        userquota->consumed);
-					strcat(buf, qbuf);
-				} else {
-					strcat(buf, "noquota");
-				}
-			} else {
-				strcat(buf, "noquota");
-			}
 		case 'n': /* Source Domain Name */
 			if (!strcmp(req->srcDomain, "-"))
 				strcat(buf, "unknown");
@@ -801,34 +781,3 @@ char *niso(time_t t)
 	return buf;
 }
 
-struct UserInfo *setuserinfo()
-{
-	static struct UserInfo uq;
-
-	uq.status = 0;
-	uq.time = 0;
-	uq.consumed = 0;
-	uq.last = 0;
-#ifdef HAVE_LIBLDAP
-	uq.ldapuser = 0;
-	uq.found = 0;
-	uq.cachetime = 0;
-#endif
-	return &uq;
-}
-
-#ifdef HAVE_LIBLDAP
-struct IpInfo *setipinfo()
-{
-	static struct IpInfo uq;
-
-	uq.status = 0;
-	uq.time = 0;
-	uq.consumed = 0;
-	uq.last = 0;
-	uq.ldapip = 0;
-	uq.found = 0;
-	uq.cachetime = 0;
-	return &uq;
-}
-#endif

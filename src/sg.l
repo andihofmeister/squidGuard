@@ -136,7 +136,6 @@ execuserlist {
        BEGIN EXEC_STATE;
        return EXECUSERLIST;
        }
-userquota   return USERQUOTA;
 domain      return DOMAIN;
 pass        return PASS;
 next        return NEXT;
