@@ -73,8 +73,7 @@ struct sgDb * sgDbInit(int type, char *file)
 	}
 
 	Db->entries = 1;
-	Db->dbenv = NULL;
-	if ((ret = db_create(&Db->dbp, Db->dbenv, 0)) != 0) {
+	if ((ret = db_create(&Db->dbp, NULL, 0)) != 0) {
 		sgLogFatal("FATAL: Error db_create: %s", strerror(ret));
 		sgFree(dbfile);
 		sgFree(Db);
@@ -105,16 +104,12 @@ struct sgDb * sgDbInit(int type, char *file)
 			sgDbLoadTextFile(Db, file, 0);
 			if (Db->entries == 0) {
 				(void)Db->dbp->close(Db->dbp, 0);
-				//Db->dbenv->close(Db->dbenv, 0);
-				Db->dbenv = NULL;
 			}
 		}
 		if (dbfile != NULL && createdb) {
 			sgDbLoadTextFile(Db, file, 0);
 			if (Db->entries == 0) {
 				(void)Db->dbp->close(Db->dbp, 0);
-				//Db->dbenv->close(Db->dbenv, 0);
-				Db->dbenv = NULL;
 			} else {
 				sgLogNotice("INFO: create new dbfile %s", dbfile);
 				(void)Db->dbp->sync(Db->dbp, 0);
@@ -141,98 +136,124 @@ struct sgDb * sgDbInit(int type, char *file)
 	return Db;
 }
 
-int defined(struct sgDb *Db, char *request)
+static char * key2str(const DBT * dbt)
+{
+	char * result = sgMalloc(dbt->size + 1);
+	strncpy(result, dbt->data, dbt->size);
+	result[dbt->size + 1] = 0;
+	return result;
+}
 
+static int dbSearch(struct sgDb *Db, const char *request, void **rdata, int *rlen)
 {
 	int errno, result = 0;
 	u_int32_t dbmethod = DB_SET_RANGE;
-	char *data1 = NULL;
-	char *data2 = NULL;
-	char *req = request, r[MAX_BUF + 1];
+	char *req = strdup(request);
+	char r[MAX_BUF + 1];
 
-	if ((errno = Db->dbp->cursor(Db->dbp, NULL, &Db->dbcp, 0)) != 0) {
+	DBC *   dbcp = NULL;
+	DBT key, data;
+
+	memset(&key, 0, sizeof(key));
+	memset(&data, 0, sizeof(data));
+
+	if ((errno = Db->dbp->cursor(Db->dbp, NULL, &dbcp, 0)) != 0) {
 		sgLogFatal("FATAL: cursor: %s", strerror(errno));
 		exit(1);
 	}
 
 	switch (Db->type) {
-	case SGDBTYPE_DOMAINLIST:
-		r[0] = '.'; r[1] = '\0';
-		strcat(r, request);
-		req = r;
-		break;
-	case SGDBTYPE_USERLIST:
-		dbmethod = DB_SET;
-		break;
-	default:
-		break;
+		case SGDBTYPE_DOMAINLIST:
+			r[0] = '.'; r[1] = '\0';
+			strcat(r, request);
+			req = r;
+			break;
+		case SGDBTYPE_USERLIST:
+			dbmethod = DB_SET;
+			break;
+		default:
+			break;
 	}
 
-	memset(&Db->key, 0, sizeof(DBT));
-	memset(&Db->data, 0, sizeof(DBT));
-	Db->key.data = req;
-	Db->key.size = strlen(req);
-	errno = Db->dbcp->c_get(Db->dbcp, &Db->key, &Db->data, dbmethod);
+	key.data = (char *)req;
+	key.size = strlen(req);
 
+	errno = dbcp->c_get(dbcp, &key, &data, dbmethod);
 
 	switch (errno) {
-	case EAGAIN:                    /* Deadlock. */
-		break;
-	case 0:                         /* Success. */
-		data1 = sgMalloc(Db->key.size + 1);
-		strncpy(data1, Db->key.data, Db->key.size);
-		if (!strncmp(req, data1, Db->key.size)) {
-			result = 1;
-		} else {
-			switch (errno = Db->dbcp->c_get(Db->dbcp, &Db->key, &Db->data, DB_PREV)) {
-			case DB_NOTFOUND:
-				errno = Db->dbcp->c_get(Db->dbcp, &Db->key, &Db->data, DB_FIRST);
-				/* ONTOP */
-				break;
-			case 0:
-				data2 = sgMalloc(Db->key.size + 1);
-				strncpy(data2, Db->key.data, Db->key.size);
-				/* PPREV */
-				if (Db->type == SGDBTYPE_DOMAINLIST) {
-					if ((sgStrRncmp(data1, data2, Db->key.size) != 0) && (!sgStrRncmp(data2, req, Db->key.size)))
-						result = 1;
-				} else {
-					if ((strncmp(data1, data2, Db->key.size) != 0) && (!strncmp(data2, req, Db->key.size)))
-						result = 1;
-				}
-				sgFree(data2);
-			}
-		}
-		sgFree(data1);
-		break;
-	case DB_NOTFOUND:           /* Not found. */
-		if (Db->type == SGDBTYPE_USERLIST) {
-			result = 0;
+		case EAGAIN:                    /* Deadlock. */
 			break;
-		}
-		switch (errno = Db->dbcp->c_get(Db->dbcp, &Db->key, &Db->data, DB_LAST)) {
-		case DB_NOTFOUND:
-			result = DB_NOTFOUND;
-			break;
-		case 0:
-			data1 = sgMalloc(Db->key.size + 1);
-			strncpy(data1, Db->key.data, Db->key.size);
-			if (Db->type == SGDBTYPE_DOMAINLIST) {
-				if (!sgStrRncmp(data1, req, Db->key.size))
-					result = 1;
+		case 0: {                       /* Success. */
+			char * data1 = key2str(&key);
+
+			if (strncmp(req, data1, key.size) == 0) {
+				result = 1;
 			} else {
-				if (!strncmp(data1, req, Db->key.size))
-					result = 1;
+				switch (errno = dbcp->c_get(dbcp, &key, &data, DB_PREV)) {
+					case DB_NOTFOUND:
+						errno = dbcp->c_get(dbcp, &key, &data, DB_FIRST);
+						/* ONTOP */
+						break;
+					case 0: {
+						char * data2 = key2str(&key);
+						/* PPREV */
+						if (Db->type == SGDBTYPE_DOMAINLIST) {
+							if ((sgStrRncmp(data1, data2, key.size) != 0) &&
+							    (!sgStrRncmp(data2, req, key.size)))
+								result = 1;
+						} else {
+							if ((strncmp(data1, data2, key.size) != 0) &&
+							    (!strncmp(data2, req, key.size)))
+								result = 1;
+						}
+						sgFree(data2);
+					}
+				}
 			}
 			sgFree(data1);
 			break;
 		}
-		break;
+
+		case DB_NOTFOUND:           /* Not found. */
+			if (Db->type == SGDBTYPE_USERLIST) {
+				result = 0;
+				break;
+			}
+			switch (errno = dbcp->c_get(dbcp, &key, &data, DB_LAST)) {
+				case DB_NOTFOUND:
+					result = DB_NOTFOUND;
+					break;
+				case 0: {
+					char * data1 = sgMalloc(key.size + 1);
+					strncpy(data1, key.data, key.size);
+					if (Db->type == SGDBTYPE_DOMAINLIST) {
+						if (!sgStrRncmp(data1, req, key.size))
+							result = 1;
+					} else {
+						if (!strncmp(data1, req, key.size))
+							result = 1;
+					}
+					sgFree(data1);
+					break;
+				}
+			}
+			break;
 	}
 
-	memset(&Db->data, 0, sizeof(Db->data));
-	(void)Db->dbcp->c_close(Db->dbcp);
+	sgFree(req);
+	(void)dbcp->c_close(dbcp);
+
+	if (rdata != NULL)
+		*rdata = data.data;
+	if (rlen != NULL)
+		*rlen = data.size;
+
 	return result;
+}
+
+int defined(struct sgDb *Db, const char *request)
+{
+	return dbSearch(Db, request, NULL, NULL);
 }
 
 static int stdoutisatty;
@@ -292,6 +313,10 @@ void sgDbLoadTextFile(struct sgDb *Db, char *filename, int update)
 	size_t fpsz;
 	size_t lnsz = 0;
 	struct stat fpst;
+	DBT dbkey, dbdata;
+
+	memset(&dbkey, 0, sizeof(DBT));
+	memset(&dbdata, 0, sizeof(DBT));
 
 	dbp = Db->dbp;
 	Db->entries = 0;
@@ -308,8 +333,6 @@ void sgDbLoadTextFile(struct sgDb *Db, char *filename, int update)
 	if (showBar == 1)
 		startProgressBar();
 
-	memset(&Db->key, 0, sizeof(DBT));
-	memset(&Db->data, 0, sizeof(DBT));
 	while (fgets(line, sizeof(line), fp) != NULL) {
 		lnsz += strlen(line);
 		if (showBar == 1)
@@ -358,21 +381,21 @@ void sgDbLoadTextFile(struct sgDb *Db, char *filename, int update)
 		} else {
 			k = key;
 		}
-		Db->key.data = k;
-		Db->key.size = strlen(k);
+		dbkey.data = k;
+		dbkey.size = strlen(k);
 		if (val == NULL) {
-			Db->data.data = "";
-			Db->data.size = 1;
+			dbdata.data = "";
+			dbdata.size = 1;
 		} else {
-			Db->data.data = val;
-			Db->data.size = strlen(val);
+			dbdata.data = val;
+			dbdata.size = strlen(val);
 		}
 		if (update && !add) {
-			errno = dbp->del(dbp, NULL, &Db->key, 0);
+			errno = dbp->del(dbp, NULL, &dbkey, 0);
 			deleted++;
 			entries--;
 		} else {
-			switch (errno = dbp->put(dbp, NULL, &Db->key, &Db->data, 0)) {
+			switch (errno = dbp->put(dbp, NULL, &dbkey, &dbdata, 0)) {
 			case 0:
 				added++;
 			/*FALLTHROUGH*/
@@ -401,23 +424,27 @@ void sgDbUpdate(struct sgDb *Db, char *key, char *value, size_t len)
 	char key_buf[MAX_BUF];
 	char value_buf[MAX_BUF];
 	dbp = Db->dbp;
-	memset(&Db->key, 0, sizeof(DBT));
-	memset(&Db->data, 0, sizeof(DBT));
+
+	DBT dbkey, dbdata;
+
+	memset(&dbkey, 0, sizeof(DBT));
+	memset(&dbdata, 0, sizeof(DBT));
+
 	strcpy(key_buf, key);
-	Db->key.data = key_buf;
-	Db->key.size = strlen(key);
+	dbkey.data = key_buf;
+	dbkey.size = strlen(key);
 	if (value == NULL) {
-		Db->data.data = "default";
-		Db->data.size = 8;
+		dbdata.data = "default";
+		dbdata.size = 8;
 	} else {
 		if (len > sizeof(value_buf))
 			sgLogFatal("FATAL: Buffer too large in sgDbUpdate()");
 		memcpy(value_buf, value, len);
-		Db->data.data = value_buf;
-		Db->data.size = len;
+		dbdata.data = value_buf;
+		dbdata.size = len;
 		flags = 0;
 	}
-	switch (errno = dbp->put(dbp, NULL, &Db->key, &Db->data, flags)) {
+	switch (errno = dbp->put(dbp, NULL, &dbkey, &dbdata, flags)) {
 	case 0:
 		break;
 	case DB_KEYEXIST:
@@ -454,3 +481,4 @@ static int domainCompare(const DB *dbp, const DBT *a, const DBT *b)
 		return 1;
 	return ac1 - bc1;
 }
+

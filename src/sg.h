@@ -157,13 +157,6 @@ struct sgRewrite {
 struct sgDb {
 	char *	dbhome;
 	DB *	dbp;
-	DBC *	dbcp;
-	DB_ENV *dbenv;
-#ifndef DB_VERSION_GT2
-	DB_INFO dbinfo;
-#endif
-	DBT	key;
-	DBT	data;
 	int	entries;
 	int	type;
 };
@@ -274,9 +267,9 @@ void sgEmergency();
 void sgReloadConfig();
 void sgHandlerSigHUP(int);
 void sgAlarm();
-int sgStrRcmp(char *, char *);
-int sgStrRncmp(char *, char *, int);
-int sgDomStrRncmp(char *, char *, int);
+int sgStrRcmp(const char *, const char *);
+int sgStrRncmp(const char *, const char *, int);
+int sgDomStrRncmp(const char *, const char *, int);
 char *sgSkipHostPart(char *);
 ulong *sgConvDot(char *);
 
@@ -343,7 +336,7 @@ time_t date2sec(char *);
 time_t iso2sec(char *);
 char *niso(time_t);
 
-int defined(struct sgDb *, char *);
+int defined(struct sgDb *, const char *);
 
 void usage(void);
 

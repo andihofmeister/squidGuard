@@ -455,10 +455,10 @@ ulong *sgConvDot(char *dot)
  * Reverses cmp of strings
  */
 
-int sgStrRcmp(char *a, char *b)
+int sgStrRcmp(const char *a, const char *b)
 {
-	char *a1 = (char *)strchr(a, '\0');
-	char *b1 = (char *)strchr(b, '\0');
+	const char *a1 = (char *)strchr(a, '\0');
+	const char *b1 = (char *)strchr(b, '\0');
 	while (*a1 == *b1) {
 		if (b1 == b || a1 == a)
 			break;
@@ -473,10 +473,10 @@ int sgStrRcmp(char *a, char *b)
 	return *a1 - *b1;
 }
 
-int sgStrRncmp(char *a, char *b, int blen)
+int sgStrRncmp(const char *a, const char *b, int blen)
 {
-	char *a1 = (char *)strchr(a, '\0');
-	char *b1 = (char *)strchr(b, '\0');
+	const char *a1 = (char *)strchr(a, '\0');
+	const char *b1 = (char *)strchr(b, '\0');
 	while (*a1 == *b1 && blen > 0) {
 		if (b1 == b || a1 == a)
 			break;
@@ -500,10 +500,10 @@ int sgStrRncmp(char *a, char *b, int blen)
  */
 
 
-int sgDomStrRcmp(char *p1, char *p2)
+int sgDomStrRcmp(const char *p1, const char *p2)
 {
-	char *p11 = (char *)strchr(p1, '\0');
-	char *p22 = (char *)strchr(p2, '\0');
+	const char *p11 = (char *)strchr(p1, '\0');
+	const char *p22 = (char *)strchr(p2, '\0');
 	for (; p11 >= p1 && p22 >= p2 && *p11 == *p22; p11--, p22--) ;
 	if (p11 < p1 && p22 < p2)
 		return 0;
