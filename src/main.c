@@ -86,12 +86,17 @@ static void grantAccess(struct AccessList *acl)
 	fflush(stdout);
 }
 
-static void denyAccess(struct AccessList *acl, const char *redirect)
+static void denyAccess(struct AccessList *acl, const char *redirect, const struct SquidInfo *req)
 {
 	sgLogDebug("Denied access, rule %s matched.", acl->name);
 
 	if (!authzMode) {
-		fprintf(stdout, "%s\n", redirect);
+		fprintf(stdout, "%s %s/%s %s %s\n",
+		        redirect,
+			req->src,
+			*(req->srcDomain) ? req->srcDomain : "-",
+			*(req->ident) ? req->ident : "-",
+			*(req->method) ? req->method : "-");
 		fflush(stdout);
 		return;
 	}
@@ -291,7 +296,7 @@ int main(int argc, char **argv, char **envp)
 				break;
 			}
 
-			denyAccess(acl, redirect);
+			denyAccess(acl, redirect, &request);
 			sgFree(redirect);
 
 			break;
