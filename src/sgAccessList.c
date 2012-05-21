@@ -1,3 +1,6 @@
+
+#include <string.h>
+
 #include "sgSourceList.h"
 #include "sgDestList.h"
 #include "sgAccessList.h"
@@ -122,6 +125,11 @@ void addDestinationAccessCheck(struct AccessList *list, int inverted, const char
 		return;
 
 	dest->inverted = inverted;
+
+	if (strcmp(destListName, "none") == 0 ) {
+		/* special hack for "none" which is an inverted "any" match */
+		dest->inverted = 1;
+	}
 
 	if (list->lastDest == NULL) {
 		list->firstDest = dest;
@@ -309,8 +317,8 @@ enum AccessResults checkAccess(struct AccessList *list, const struct SquidInfo *
 			redirect = substRedirect(request, matchingDest->redirect, list->name, matchingDest->name);
 
 		if (!redirect && defaultRedirect)
-			redirect = defaultRedirect;
-
+			redirect = substRedirect(request, defaultRedirect, list->name,
+						 (matchingDest ? matchingDest->name : "-"));
 		if (redirect)
 			*rewrite = redirect;
 	}

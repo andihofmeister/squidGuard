@@ -14,16 +14,6 @@ static struct DestMatch *newAnyDestMatch()
 	return sgNewDestMatch(matchAny, NULL);
 }
 
-static int matchNone(void *priv, const struct SquidInfo *info)
-{
-	return 0;
-}
-
-static struct DestMatch *newNoDestMatch()
-{
-	return sgNewDestMatch(matchNone, NULL);
-}
-
 static int matchInAddr(void *priv, const struct SquidInfo *info)
 {
 	return info->isAddress;
@@ -43,9 +33,15 @@ void makeStaticDestLists()
 		addDestListMatch(now, newAnyDestMatch());
 	}
 
+	if ((now = findDestList("all")) == NULL) {
+		now = newDestList("all");
+		addDestListMatch(now, newAnyDestMatch());
+	}
+
 	if ((now = findDestList("none")) == NULL) {
+		/* there is a hack in sgAccessList.c for this */
 		now = newDestList("none");
-		addDestListMatch(now, newNoDestMatch());
+		addDestListMatch(now, newAnyDestMatch());
 	}
 
 	if ((now = findDestList("in-addr")) == NULL) {
