@@ -19,8 +19,8 @@
  *
  */
 
-/* Library include files */
-#include "sg.h"
+#include <stdlib.h>
+
 #include "sgMemory.h"
 #include "HTEscape.h"                                    /* Implemented here */
 
@@ -44,7 +44,7 @@
  */
 unsigned char isAcceptable[96] =
 {
-     /* 0x0  0x1  0x2  0x3  0x4  0x5  0x6  0x7  0x8  0x9  0xA  0xB  0xC  0xD  0xE  0xF */
+	/* 0x0  0x1  0x2  0x3  0x4  0x5  0x6  0x7  0x8  0x9  0xA  0xB  0xC  0xD  0xE  0xF */
 	0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xF, 0xE, 0x0, 0xF, 0xF, 0xC, /* 2x  !"#$%&'()*+,-./   */
 	0xF, 0xF, 0xF, 0xF, 0xF, 0xF, 0xF, 0xF, 0xF, 0xF, 0x8, 0x0, 0x0, 0x0, 0x0, 0x0, /* 3x 0123456789:;<=>?   */
 	0xF, 0xF, 0xF, 0xF, 0xF, 0xF, 0xF, 0xF, 0xF, 0xF, 0xF, 0xF, 0xF, 0xF, 0xF, 0xF, /* 4x @ABCDEFGHIJKLMNO   */
@@ -79,30 +79,31 @@ char HTAsciiHexToChar(char c)
 **	Unlike HTUnEscape(), this routine returns a HT_MALLOCed string.
 **
 */
-char * HTEscape (const char * str, HTURIEncoding mask)
+char *HTEscape(const char *str, HTURIEncoding mask)
 {
-	const char * p;
-	char * q = NULL;
-	char * result;
+	const char *p;
+	char *q = NULL;
+	char *result;
 	int unacceptable = 0;
 
 	if (!str) return NULL;
 
-	for(p=str; *p; p++)
+	for (p = str; *p; p++)
 		if (!ACCEPTABLE((unsigned char)TOASCII(*p)))
 			unacceptable++;
 
-	if ((result = sgMalloc(p - str + unacceptable + unacceptable + 1)) != NULL)
-		for(q=result, p=str; *p; p++) {
+	if ((result = sgMalloc(p - str + unacceptable + unacceptable + 1)) != NULL) {
+		for (q = result, p = str; *p; p++) {
 			unsigned char a = TOASCII(*p);
 			if (!ACCEPTABLE(a)) {
-				*q++ = HEX_ESCAPE;	/* Means hex commming */
+				*q++ = HEX_ESCAPE;      /* Means hex commming */
 				*q++ = hex[a >> 4];
 				*q++ = hex[a & 15];
-			}
-			else
+			} else {
 				*q++ = *p;
+			}
 		}
+	}
 	if (q)
 		*q++ = 0;
 
@@ -111,13 +112,13 @@ char * HTEscape (const char * str, HTURIEncoding mask)
 
 
 /*	Decode %xx escaped characters			HTUnEscape()
- **	-----------------------------
- **
- **	This function takes a pointer to a string in which some
- **	characters may have been encoded in %xy form, where xy is
- **	the acsii hex code for character 16x+y.
- **	The string is converted in place, as it will never grow.
- */
+**	-----------------------------
+**
+**	This function takes a pointer to a string in which some
+**	characters may have been encoded in %xy form, where xy is
+**	the acsii hex code for character 16x+y.
+**	The string is converted in place, as it will never grow.
+*/
 char *HTUnEscape(char *str)
 {
 	char *p = str;

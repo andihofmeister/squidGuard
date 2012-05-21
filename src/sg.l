@@ -22,19 +22,25 @@
 %{
 
 #include "y.tab.h"
-#include "sg.h"
+#include "sgMemory.h"
+
+#define STRBUF_SIZE 16384
+char string_buf[STRBUF_SIZE];
+
+char *string_buf_ptr = NULL;
+int lineno = 0;
 
 %}
 
 ignore   [,\t\r ]+
 s        [\t ]
 d        [0-9]
-ip       {d}{1,3}\.{d}{1,3}\.{d}{1,3}\.{d}{1,3}
 tval     {d}{d}[:]{d}{d}
 dval     {d}{d}{d}{d}[\.-]{d}{d}[\.-]{d}{d}
 dvalcron ({d}{d}{d}{d}|[\*])[\.-]({d}{d}|[\*])[\.-]({d}{d}|[\*])
 weekday  (mon|mondays?|tue|tuesdays?|wed|wednesdays?|thu|thursdays?|fri|fridays?|sat|saturdays?|sun|sundays?)
 weekdays (({weekday}{s}*[, \t]+{s}*)*{weekday})|[\*]
+ipv4     {d}{1,3}\.{d}{1,3}\.{d}{1,3}\.{d}{1,3}(\/{d}{1,2})?
 
 /* from RFC1779:
 
@@ -84,100 +90,75 @@ weekdays (({weekday}{s}*[, \t]+{s}*)*{weekday})|[\*]
 
 %%
 
-       char string_buf[MAX_BUF];
-       char *string_buf_ptr = NULL;
 
-[ \t]*#.*        ;
-"{"         return START_BRACKET;
-"}"         return STOP_BRACKET; 
-^dest        return DESTINATION;
-^destination return DESTINATION;
-^src         return SOURCE;
-^source      return SOURCE;
-^rew         return REWRITE;
-^rewrite     return REWRITE;
-^time        return TIME;
-^syslog      return SYSLOG;
-^acl         return ACL;
-^dbhome                return DBHOME;
-^logdir                return LOGDIR;
-^groupttl      return GROUPTTL;
-^reverselookup return REVERSELOOKUP;
-^ldapcachetime return LDAPCACHETIME;
-^ldapprotover  return LDAPPROTOVER;
-^ldapbinddn    return LDAPBINDDN;
-^ldapbindpass  return LDAPBINDPASS;
-^mysqlusername return MYSQLUSERNAME;
-^mysqlpassword return MYSQLPASSWORD;
-^mysqldb       return DATABASE;
-domainlist  return DOMAINLIST;
-urllist     return URLLIST;
-expressionlist return EXPRESSIONLIST;
-iplist      return IPLIST;
-user        return USER;
-group       return GROUP;
-netgroup    return NETGROUP;
-userlist    return USERLIST;
-userquery   {
-	BEGIN REDIRECT_STATE;
-	return USERQUERY;
-	}
+"{"         { return START_BRACKET; }
+"}"         { return STOP_BRACKET; }
+any         { return ANY; }
+none        { return NONE; }
+dest        { return DESTINATION; }
+destination { return DESTINATION; }
+else        { return ELSE; }
+src         { return SOURCE; }
+source      { return SOURCE; }
+rew         { return REWRITE; }
+rewrite     { return REWRITE; }
+set         { return SET; }
+time        { return TIME; }
+acl         { return ACL; }
+domainlist  { return DOMAINLIST; }
+urllist     { return URLLIST; }
+expressionlist { return EXPRESSIONLIST; }
+dnsbl       { return DNSBL; }
+iplist      { return IPLIST; }
+user        { return USER; }
+group       { return GROUP; }
+netgroup    { return NETGROUP; }
+userlist    { return USERLIST; }
+
 ldapusersearch {
        /* use the REDIRECT_STATE logic, since it handles URLs nicely */
        /* BEGIN REDIRECT_STATE; */
        return LDAPUSERSEARCH;
        }
-ldapipsearch {
+ldapipsearch  {
        /* use the REDIRECT_STATE logic, since it handles URLs nicely */
        BEGIN REDIRECT_STATE;
        return LDAPIPSEARCH;
        }
-execuserlist {
-       BEGIN EXEC_STATE;
-       return EXECUSERLIST;
-       }
-domain      return DOMAIN;
-pass        return PASS;
-next        return NEXT;
-rewrite     return REWRITE;
-redirect    { BEGIN REDIRECT_STATE; return REDIRECT; }
-allow       return ALLOW;
-tag         return TAG;
-minutely    return MINUTELY;
-hourly      return HOURLY;
-daily       return DAILY;
-weekly      return WEEKLY;
-continuous  return CONTINIOUS;
-continue    return CONTINUE;
-sporadic    return SPORADIC;
-date        return DATE;
-anonymous   return ANONYMOUS;
-verbose     return VERBOSE;
-log         return LOGFILE;
-logfile     return LOGFILE;
-{weekdays} {yylval.string = yytext; return WEEKDAY;}
-within return WITHIN;
-outside return OUTSIDE;
-else return ELSE;
-ip          return IP;
-{ip}        {yylval.string = yytext; return IPADDR;}
-[/]{d}+     {yylval.string = yytext; return CIDR;}
-[/]{ip}     {yylval.string = yytext; return IPCLASS;}
-{tval}      {yylval.string = yytext; return TVAL;}
-{dval}      {yylval.string = yytext; return DVAL;}
-{dvalcron}  {yylval.string = yytext; return DVALCRON;}
-{d}+        {yylval.string = yytext; return NUMBER;}
+execuserlist { BEGIN EXEC_STATE; return EXECUSERLIST; }
+domain       { return DOMAIN; }
+pass         { return PASS; }
+next         { return NEXT; }
+redirect     { BEGIN REDIRECT_STATE; return REDIRECT; }
+allow        { return ALLOW; }
+tag          { return TAG; }
+continue     { return CONTINUE; }
+date         { return DATE; }
+anonymous    { return ANONYMOUS; }
+verbose      { return VERBOSE; }
+log          { return LOGFILE; }
+logfile      { return LOGFILE; }
+weekly       { return WEEKLY; }
+{weekdays}   { yylval.string = sgStrdup(yytext); return WEEKDAY;}
+within       { return WITHIN; }
+outside      { return OUTSIDE; }
+ip           { return IP; }
+{ipv4}       { yylval.string = sgStrdup(yytext); return QUOTED_STRING; }
+{tval}       { yylval.string = sgStrdup(yytext); return TVAL;}
+{dval}       { yylval.string = sgStrdup(yytext); return DVAL;}
+{dvalcron}   { yylval.string = sgStrdup(yytext); return DVALCRON;}
+{d}+         { yylval.string = sgStrdup(yytext); return NUMBER;}
 
-<REDIRECT_STATE>[a-zA-Z3\/][a-zA-Z0-9/_\-\.\,\(\)\/\:\%\+\?=&~!\|]*  { yylval.string = yytext ; BEGIN 0; return WORD;}
+<REDIRECT_STATE>[a-zA-Z3\/][a-zA-Z0-9/_\-\.\,\(\)\/\:\%\+\?=&~!\|]*  { yylval.string = sgStrdup(yytext) ; BEGIN 0; return WORD;}
 <REDIRECT_STATE>[ \t]+     ;
 <REDIRECT_STATE>\n        {lineno++;}
 <REDIRECT_STATE>.         {return yytext[0];}
 
-<EXEC_STATE>[^\n]* { yylval.string = yytext; BEGIN 0; return EXECCMD; }
+<EXEC_STATE>[^\n]* { yylval.string = sgStrdup(yytext); BEGIN 0; return EXECCMD; }
 <EXEC_STATE>\n     {lineno++;}
 
 \"                 { string_buf_ptr = string_buf; BEGIN STRING_STATE; }
-<STRING_STATE>\"   { *string_buf_ptr = '\0'; yylval.string = string_buf; BEGIN 0; return QUOTED_STRING; }
+<STRING_STATE>\"   { *string_buf_ptr = '\0'; yylval.string = sgStrdup(string_buf); BEGIN 0; return QUOTED_STRING; }
 <STRING_STATE>\\x[0-9a-fA-F]{2} {
                      if (string_buf_ptr-string_buf < sizeof(string_buf)-1)
                      {
@@ -205,8 +186,11 @@ ip          return IP;
                    }
 <STRING_STATE>.    { if (string_buf_ptr-string_buf < sizeof(string_buf)-1) *string_buf_ptr++ = yytext[1];  }
 
-[a-zA-Z\/][a-zA-Z0-9/_\-\.\/\:\%\+\@\,\?=&\à\é\è\ñ\á\ì\í\ò\ó\ù\ú\*]*  {yylval.string = yytext ; return WORD;}
-s@(([^@}]|\\@|\\\})+)@(([^@}]|\\@|\\\})+)@[girR]* {yylval.string = yytext; return SUBST;}
+s@(([^@}]|\\@|\\\})+)@(([^@}]|\\@|\\\})+)@[girR]* {yylval.string = sgStrdup(yytext); return SUBST;}
+
+[a-zA-Z\/][a-zA-Z0-9/_\-\.\/\:\%\+\@\,\?=&\à\é\è\ñ\á\ì\í\ò\ó\ù\ú\*]*  {yylval.string = sgStrdup(yytext); return WORD;}
+
+[ \t]*#.*  ;
 [ \t]+     ;
 \n        {lineno++;}
 .         {return yytext[0];}

@@ -44,63 +44,56 @@ infodir	= $(prefix)/info
 
 OBJS = \
 	main.o \
+	y.tab.o \
+	lex.yy.o \
+	\
 	sgLog.o \
 	sgDb.o \
 	HTParse.o \
-	sgDiv.o \
+	sgAccessList.o \
 	sgMemory.o \
 	sgGroup.o \
 	sgNetGroup.o \
-	sgTime.o \
-	y.tab.o \
-	lex.yy.o
+	sgTimeMatch.o \
+	\
+	sgDNSBL.o \
+	sgDestList.o \
+	sgDomainList.o \
+	sgLDAP.o \
+	sgMatch.o \
+	sgRegex.o \
+	sgRequest.o \
+	sgRequestLog.o \
+	sgSetting.o \
+	sgStaticSource.o \
+	sgStaticDest.o \
+	sgSourceList.o \
+	sgUrlList.o \
+	patricia/patricia.o \
+	\
 
-all::
-	@echo making $@ in `basename \`pwd\``
+DEPS = $(OBJS:.o=.dep)
 
-all::	squidGuard
+all:	squidGuard
 	@echo making $? in `basename \`pwd\``
 
-squidGuard:	$(OBJS)
-	@$(LINK) $(OBJS) $(LIBS)
+$(OBJS): %.o: %.c
+	@$(COMPILE) -c $< -o $@
 
-conf: y.tab.o lex.yy.o
-	@$(COMPILE) -o conf y.tab.o lex.yy.o
+%.dep: %.c
+	@set -e; rm -f $@; \
+	$(CC) -MM $(CPPFLAGS) $< | sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' > $@;
 
-main.o:	main.c sg.h config.h
-	@$(COMPILE) -c main.c
+include $(DEPS)
 
-sgLog.o:	sgLog.c sg.h config.h
-	@$(COMPILE) -c sgLog.c
-
-HTParse.o:	HTParse.c HTEscape.h
-	@$(COMPILE) -c HTParse.c
-
-sgDiv.o: sgDiv.c sg.h sgEx.h config.h
-	@$(COMPILE) -c sgDiv.c
-
-sgMemory.o: sgMemory.c sg.h sgEx.h config.h
-	@$(COMPILE) -c sgMemory.c
-
-sgDb.o:	sgDb.c sg.h config.h
-	@$(COMPILE) -c sgDb.c
-
-sgGroup.o:	sgGroup.c sg.h config.h
-	@$(COMPILE) -c sgGroup.c
-
-sgNetGroup.o:	sgNetGroup.c sg.h config.h
-	@$(COMPILE) -c sgNetGroup.c
-
-sgNetTime.o:	sgTime.c sg.h config.h
-	@$(COMPILE) -c sgTime.c
+squidGuard: $(OBJS)
+	$(LINK) $(OBJS) $(LIBS)
 
 lex.yy.o: lex.yy.c y.tab.h sg.h config.h
-	@$(COMPILE) -c lex.yy.c
 
-y.tab.o: y.tab.c y.tab.h sg.h sgEx.h config.h
-	@$(COMPILE) -c y.tab.c
+y.tab.o: y.tab.c y.tab.h sg.h config.h
 
-lex.yy.c: sg.l sg.h config.h
+lex.yy.c: sg.l sg.h y.tab.h config.h
 	$(LEX) sg.l
 
 y.tab.c y.tab.h: sg.y sg.h config.h
@@ -110,40 +103,39 @@ y.tab.c y.tab.h: sg.y sg.h config.h
 # Dependencies for installing
 #
 
-install::	 install.bin
+install:	 install.bin
 	@echo making $@ in `basename \`pwd\``
 
-uninstall::	 uninstall.bin
+uninstall:	 uninstall.bin
 	@echo making $@ in `basename \`pwd\``
 
-install.bin:: squidGuard
+install.bin:	squidGuard
 	@echo making $@ in `basename \`pwd\``
 	@$(MKDIR) $(bindir) $(logdir) $(cfgdir)
 	$(INSTALL_PROGRAM) squidGuard $(bindir)/squidGuard
 
-uninstall.bin::
+uninstall.bin:
 	@echo making $@ in `basename \`pwd\``
 	$(RM) $(bindir)/squidGuard
 
-update::
-	@echo making $@ in `basename \`pwd\``
 
-update::lex.yy.c.flex y.tab.c.bison y.tab.h.bison
 
 #
 # Dependencies for cleanup
 #
 
-clean::
+clean:
 	@echo making $@ in `basename \`pwd\``
+	$(RM) $(OBJS)
 	$(RM) *~ *.bak core *.log *.error
 	$(RM) *.o y.tab.c y.tab.h squidGuard lex.yy.c
 
-realclean:: clean
+realclean: clean
 	@echo making $@ in `basename \`pwd\``
+	$(RM) $(DEPS)
 	$(RM) TAGS *.orig
 
-distclean:: realclean
+distclean: realclean
 	@echo making $@ in `basename \`pwd\``
 	$(RM) Makefile sg.h config.h
 

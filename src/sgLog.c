@@ -16,222 +16,241 @@
  * (GPL) along with this program.
  */
 
-#include "sg.h"
-#include "sgEx.h"
+#define _GNU_SOURCE
 
-extern int globalDebug;         /* from main.c */
-extern int globalPid;           /* from main.c */
-extern char *globalLogDir;      /* from main.c */
-extern struct LogFileStat *globalErrorLog;
-
-#ifdef USE_SYSLOG
+#include <sys/types.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <errno.h>
+#include <string.h>
 #include <syslog.h>
-#endif
-extern int globalSyslog;   /* from main.c */
+#include <time.h>
+#include <stdarg.h>
+
+#include "config.h"
+
+#include "sg.h"
+#include "sgMemory.h"
+#include "sgLog.h"
+#include "sgSetting.h"
+
+extern int inEmergencyMode;
+
+struct ErrorLog {
+	char *	filename;
+	FILE *	fd;
+};
+
+char *globalLogDir = NULL;
+
+static int globalDebug = 0;
+static int globalSyslog = 0;
+
+static char *level2str[] = {
+	"EMERG",        /* LOG_EMERG       0 */
+	"ALERT",        /* LOG_ALERT       1 */
+	"CRITICAL",     /* LOG_CRIT        2 */
+	"ERROR",        /* LOG_ERR         3 */
+	"WARNING",      /* LOG_WARNING     4 */
+	"NOTICE",       /* LOG_NOTICE      5 */
+	"INFO",         /* LOG_INFO        6 */
+	"DEBUG",        /* LOG_DEBUG       7 */
+};
+
+static struct ErrorLog *errorLog = NULL;
+
+static int reopenErrorLog(struct ErrorLog *log)
+{
+	if (log->fd != NULL) {
+		fclose(log->fd);
+		log->fd = NULL;
+	}
+
+	if ((log->fd = fopen(log->filename, "a+")) == NULL) {
+		sgLogError("cannot open error log '%s': %s", log->filename, strerror(errno));
+		return 0;
+	}
+
+	return 1;
+}
+
+static struct ErrorLog *newErrorLog(const char *filename)
+{
+	struct ErrorLog *result = sgMalloc(sizeof(struct ErrorLog));
+
+	result->filename = sgStrdup(filename);
+	result->fd = NULL;
+
+	if (!reopenErrorLog(result)) {
+		sgFree(result->filename);
+		sgFree(result);
+		return NULL;
+	}
+
+	return result;
+}
+
+void freeErrorLog(struct ErrorLog *log)
+{
+	if (log->fd) {
+		fclose(log->fd);
+		log->fd = NULL;
+	}
+
+	sgFree(log->filename);
+	sgFree(log);
+}
+
+static char *niso()
+{
+	static char buf[20];
+	time_t tp = time(NULL);
+	struct tm *lc;
+
+	lc = localtime(&tp);
+
+	sprintf(buf, "%04d-%02d-%02d %02d:%02d:%02d", lc->tm_year + 1900, lc->tm_mon + 1,
+		lc->tm_mday, lc->tm_hour, lc->tm_min, lc->tm_sec);
+	return buf;
+}
+
+void setDebugFlag(const char *value)
+{
+	globalDebug = booleanSetting(value);
+}
+
+void setSyslogFlag(const char *value)
+{
+	globalSyslog = booleanSetting(value);
+}
 
 void sgSetGlobalErrorLogFile()
 {
-	static char file[MAX_BUF];
+	char *file = NULL;
+	char *dir;
+	size_t len;
 
 	if (globalDebug)
 		return;
+
 	if (globalLogDir == NULL)
-		strncpy(file, DEFAULT_LOGDIR, MAX_BUF);
+		dir = DEFAULT_LOGDIR;
 	else
-		strncpy(file, globalLogDir, MAX_BUF);
-	strcat(file, "/");
-	strcat(file, DEFAULT_LOGFILE);
-	globalErrorLog = sgLogFileStat(file);
+		dir = globalLogDir;
+
+	len = strlen(DEFAULT_LOGFILE) + strlen(dir) + 2;
+	file = sgMalloc(len);
+
+	snprintf(file, len, "%s/%s", dir, DEFAULT_LOGFILE);
+
+	if (errorLog)
+		freeErrorLog(errorLog);
+	errorLog = newErrorLog(file);
+	sgFree(file);
 }
 
-void sgLog(struct LogFileStat *log, char *format, ...)
+static void doFileLog(const char *prefix, const char *message)
 {
 	FILE *fd;
-	char *date = NULL;
-	char msg[MAX_BUF];
-	va_list ap;
-	va_start(ap, format);
-	if (vsnprintf(msg, MAX_BUF, format, ap) > (MAX_BUF - 1))
-		fprintf(stderr, "ERROR: overflow in vsnprintf (sgLog): %s", strerror(errno));
-	va_end(ap);
-	date = niso(0);
-	if (globalDebug || log == NULL) {
-		fprintf(stderr, "%s [%d] %s\n", date, globalPid, msg);
-		fflush(stderr);
-	} else {
-		fd = log->fd;
-		if (fd == NULL) {
-			globalDebug = 1;
-			fprintf(stderr, "%s [%d] filedescriptor closed for  %s\n",
-				date, globalPid, log->name);
-			fprintf(stderr, "%s [%d] %s\n", date, globalPid, msg);
-		} else {
-			fprintf(fd, "%s [%d] %s\n", date, globalPid, msg);
-			fflush(fd);
-		}
-	}
+
+	if (errorLog != NULL)
+		fd = errorLog->fd;
+
+	if (fd == NULL)
+		fd = stderr;
+
+	fprintf(fd, "%s [%d] %s: %s\n", niso(), getpid(), prefix, message);
+	fflush(fd);
 }
+
+static void doLog(int level, const char *message)
+{
+	if (globalSyslog)
+		syslog(level, "%s", message);
+	else
+		doFileLog(level2str[level], message);
+}
+
 
 void sgLogDebug(char *format, ...)
 {
-	char msg[MAX_BUF];
+	char *msg = NULL;
 	va_list ap;
 
 	if (!globalDebug)
 		return;
 
 	va_start(ap, format);
-	if (vsnprintf(msg, MAX_BUF, format, ap) > (MAX_BUF - 1))
-		sgLog(globalErrorLog, "FATAL: overflow in vsnprintf (sgLogError): %s", strerror(errno));
+	vasprintf(&msg, format, ap);
 	va_end(ap);
-#ifdef USE_SYSLOG
-	if (globalSyslog == 1) {
-		syslog(LOG_DEBUG, "%s\n", msg);
-	} else {
-		sgLog(globalErrorLog, "%s", msg);
-	}
-#else
-	sgLog(globalErrorLog, "%s", msg);
-#endif
+
+	doLog(LOG_DEBUG, msg);
+	sgFree(msg);
 }
 
 
+void sgLogInfo(char *format, ...)
+{
+	char *msg = NULL;
+	va_list ap;
+
+	va_start(ap, format);
+	vasprintf(&msg, format, ap);
+	va_end(ap);
+
+	doLog(LOG_INFO, msg);
+	sgFree(msg);
+}
+
 void sgLogNotice(char *format, ...)
 {
-	char msg[MAX_BUF];
+	char *msg = NULL;
 	va_list ap;
+
 	va_start(ap, format);
-	if (vsnprintf(msg, MAX_BUF, format, ap) > (MAX_BUF - 1))
-		sgLog(globalErrorLog, "FATAL: overflow in vsnprintf (sgLogError): %s", strerror(errno));
+	vasprintf(&msg, format, ap);
 	va_end(ap);
-#ifdef USE_SYSLOG
-	if (globalSyslog == 1) {
-		syslog(LOG_NOTICE, "%s\n", msg);
-	} else {
-		sgLog(globalErrorLog, "%s", msg);
-	}
-#else
-	sgLog(globalErrorLog, "%s", msg);
-#endif
+
+	doLog(LOG_NOTICE, msg);
+	sgFree(msg);
 }
 
 void sgLogWarn(char *format, ...)
 {
-	char msg[MAX_BUF];
+	char *msg = NULL;
 	va_list ap;
+
 	va_start(ap, format);
-	if (vsnprintf(msg, MAX_BUF, format, ap) > (MAX_BUF - 1))
-		sgLog(globalErrorLog, "FATAL: overflow in vsnprintf (sgLogError): %s", strerror(errno));
+	vasprintf(&msg, format, ap);
 	va_end(ap);
-#ifdef USE_SYSLOG
-	if (globalSyslog == 1) {
-		syslog(LOG_WARNING, "%s\n", msg);
-	} else {
-		sgLog(globalErrorLog, "%s", msg);
-	}
-#else
-	sgLog(globalErrorLog, "%s", msg);
-#endif
+
+	doLog(LOG_WARNING, msg);
+	sgFree(msg);
 }
 
 void sgLogError(char *format, ...)
 {
-	char msg[MAX_BUF];
+	char *msg = NULL;
 	va_list ap;
+
 	va_start(ap, format);
-	if (vsnprintf(msg, MAX_BUF, format, ap) > (MAX_BUF - 1))
-		sgLog(globalErrorLog, "FATAL: overflow in vsnprintf (sgLogError): %s", strerror(errno));
+	vasprintf(&msg, format, ap);
 	va_end(ap);
-#ifdef USE_SYSLOG
-	if (globalSyslog == 1) {
-		syslog(LOG_ERR, "%s\n", msg);
-	} else {
-		sgLog(globalErrorLog, "%s", msg);
-	}
-#else
-	sgLog(globalErrorLog, "%s", msg);
-#endif
+
+	doLog(LOG_ERR, msg);
+	sgFree(msg);
 }
 
 void sgLogFatal(char *format, ...)
 {
-	char msg[MAX_BUF];
+	char *msg = NULL;
 	va_list ap;
+
 	va_start(ap, format);
-	if (vsnprintf(msg, MAX_BUF, format, ap) > (MAX_BUF - 1))
-		return;
+	vasprintf(&msg, format, ap);
 	va_end(ap);
-#ifdef USE_SYSLOG
-	if (globalSyslog == 1) {
-		syslog(LOG_EMERG, "%s\n", msg);
-	} else {
-		sgLog(globalErrorLog, "%s", msg);
-	}
-#else
-	sgLog(globalErrorLog, "%s", msg);
-#endif
+
+	doLog(LOG_CRIT, msg);
 	inEmergencyMode = 1;
-}
-
-
-void sgLogRequest(struct LogFile *log, struct SquidInfo *req,
-                  struct Acl *acl, struct AclDest *aclpass,
-                  struct sgRewrite *rewrite, int request)
-{
-	char *ident = req->ident;
-	char *srcDomain = req->srcDomain;
-	char *srcclass, *targetclass;
-	char *rew;
-	char *action;
-	switch (request) {
-	case REQUEST_TYPE_REWRITE:
-		action = "REWRITE";
-		break;
-	case REQUEST_TYPE_REDIRECT:
-		action = "REDIRECT";
-		break;
-	case REQUEST_TYPE_PASS:
-		if (!log->verbose)
-			return;
-		action = "PASS";
-		break;
-	default:
-		action = "-";
-		break;
-	}
-	if (rewrite == NULL)
-		rew = "-";
-	else
-		rew = rewrite->name;
-	if (*ident == '\0' || log->anonymous == 1)
-		ident = "-";
-	if (*srcDomain == '\0')
-		srcDomain = "-";
-	if (acl->source == NULL || acl->source->name == NULL)
-		srcclass = "default";
-	else
-		srcclass = acl->source->name;
-	if (aclpass == NULL) {
-		targetclass = "unknown";
-	} else if (aclpass->name == NULL) {
-		if (aclpass->type == ACL_TYPE_INADDR)
-			targetclass = "in-addr";
-		else if (aclpass->type == ACL_TYPE_TERMINATOR)
-			targetclass = "none";
-		else
-			targetclass = "unknown";
-	} else {
-		targetclass = aclpass->name;
-	}
-	sgLog(log->stat, "Request(%s/%s/%s) %s %s/%s %s %s %s",
-	      srcclass,
-	      targetclass,
-	      rew,
-	      req->orig,
-	      req->src,
-	      srcDomain,
-	      ident,
-	      req->method,
-	      action
-	      );
+	sgFree(msg);
 }
