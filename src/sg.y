@@ -21,6 +21,7 @@
 
 #include <stdio.h>
 
+#include "sg.h"
 #include "sgLog.h"
 #include "sgMemory.h"
 #include "sgRequestLog.h"
@@ -67,7 +68,6 @@ const char *configFile;
 %token ANONYMOUS
 %token ANY
 %token CHAR
-%token CONTINUE
 %token DATE
 %token DESTINATION
 %token DNSBL
@@ -77,6 +77,7 @@ const char *configFile;
 %token DVALCRON
 %token ELSE
 %token END
+%token ERRORREDIRECT
 %token EXECCMD
 %token EXECUSERLIST
 %token EXPRESSIONLIST
@@ -335,6 +336,7 @@ statements:
 statement:	  setting
 		| logfile { setDefaultRequestLog($1); }
 		| REDIRECT STRING  { setDefaultRedirect($2); sgFree($2); }
+		| ERRORREDIRECT STRING { setErrorRedirect($2); sgFree($2); }
 		| acl_block
 		| destination_block
 		| source_block
@@ -371,6 +373,7 @@ void freeAllLists() {
 	freeAllRewrites();
 	freeAllTimeMatches();
 	freeAllRequestLogs();
+	freeErrorRedirect();
 }
 
 void sgReloadConfig(const char *file)

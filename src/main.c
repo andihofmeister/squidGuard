@@ -41,7 +41,26 @@ int showBar = 0;   /* Do not display the progress bar. */
 char *globalCreateDb = NULL;
 
 int inEmergencyMode = 0;
+static char * errorRedirect = NULL;
+
 int authzMode = 0;      /* run as authorization helper, not as redirector */
+
+
+void setErrorRedirect(const char *redirect)
+{
+	if (errorRedirect) {
+		sgLogError("default redirect already set");
+		return;
+	}
+
+	errorRedirect = sgStrdup(redirect);
+}
+
+void freeErrorRedirect()
+{
+	sgFree(errorRedirect);
+	errorRedirect = NULL;
+}
 
 static void authzExtra(struct AccessList *acl)
 {
@@ -105,16 +124,19 @@ static void denyOnError(const char *message)
 {
 	char *escaped = NULL;
 
-	if (!authzMode) {
-		/* FIXME: emergency redirect here */
-		fprintf(stdout, "\n");
-		fflush(stdout);
-	}
-
 	escaped = HTEscape(message, URL_XALPHAS);
-	fprintf(stdout, "ERR log=%s message=%s\n", escaped, escaped);
-	sgFree(escaped);
 
+	if (!authzMode) {
+		const char *redir = (errorRedirect && *errorRedirect) ? errorRedirect : "Error:";
+		if (!strchr(redir,'?')) {
+			fprintf(stdout, "%s?message=%s\n", redir, escaped);
+		} else {
+			fprintf(stdout, "%s&message=%s\n", redir, escaped);
+		}
+	} else {
+		fprintf(stdout, "ERR log=%s message=%s\n", escaped, escaped);
+	}
+	sgFree(escaped);
 	fflush(stdout);
 }
 
@@ -149,6 +171,7 @@ static void usage()
 	fprintf(stderr, "                specified in \"file\".\n");
 	fprintf(stderr, "  -P          : do not go into emergency mode when an error with the \n");
 	fprintf(stderr, "                blacklists is encountered.\n");
+	fprintf(stderr, "  -E <url>    : When in emergency mode, redirect to this URL.\n");
 }
 
 
@@ -160,7 +183,7 @@ static int parseOptions(int argc, char **argv)
 {
 	char c;
 
-	while ((c = getopt(argc, argv, "hbdsuPC:t:c:vz")) != EOF) {
+	while ((c = getopt(argc, argv, "hbdsuPC:t:c:vzE:")) != EOF) {
 		switch (c) {
 		case 'c':
 			configFile = strdup(optarg);
@@ -188,6 +211,9 @@ static int parseOptions(int argc, char **argv)
 			break;
 		case 'z':
 			authzMode = 1;
+			break;
+		case 'E':
+			errorRedirect = sgStrdup(optarg);
 			break;
 		case '?':
 		case 'h':
@@ -298,10 +324,6 @@ int main(int argc, char **argv, char **envp)
 		}
 
 		fflush(stdout);
-		/*
-		 * if (sig_hup)
-		 *      sgReloadConfig();
-		 */
 	}
 
 	sgLogNotice("squidGuard stopped");

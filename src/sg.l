@@ -130,9 +130,9 @@ domain       { return DOMAIN; }
 pass         { return PASS; }
 next         { return NEXT; }
 redirect     { BEGIN REDIRECT_STATE; return REDIRECT; }
+errorredirect { BEGIN REDIRECT_STATE; return ERRORREDIRECT; }
 allow        { return ALLOW; }
 tag          { return TAG; }
-continue     { return CONTINUE; }
 date         { return DATE; }
 anonymous    { return ANONYMOUS; }
 verbose      { return VERBOSE; }

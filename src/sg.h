@@ -40,9 +40,14 @@
 #define DEFAULT_DBHOME "/usr/local/squidGuard/db"
 #endif
 
-void sgReadConfig(char *);
+/* from sg.y */
+void sgReadConfig(const char *);
 void freeAllLists(void);
 void sgReloadConfig();
+
+/* from main.c */
+void setErrorRedirect(const char *redirect);
+void freeErrorRedirect();
 
 
 #endif
