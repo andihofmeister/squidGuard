@@ -62,6 +62,9 @@ char *sgStrdup(const char *in)
 {
 	char *out;
 
+	if (!in)
+		return NULL;
+
 	out = sgMalloc(strlen(in) + 1);
 	strcpy(out, in);
 
