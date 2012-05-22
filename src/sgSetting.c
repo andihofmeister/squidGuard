@@ -20,7 +20,7 @@ static struct Setting *newSetting(const char *key, const char *value)
 	struct Setting *result = sgMalloc(sizeof(struct Setting));
 
 	result->name = sgStrdup(key);
-	result->value = sgStrdup(value);
+	result->value = value ? sgStrdup(value) : NULL;
 	result->defaultValue = NULL;
 	result->cb = NULL;
 
@@ -80,10 +80,10 @@ void registerSetting(const char *key, const char *defaultValue, SettingCB cb)
 	} else {
 		sgLogDebug("register setting '%s', default '%s'", key, defaultValue);
 		setting = newSetting(key, defaultValue);
-		setting->defaultValue = sgStrdup(defaultValue);
+		setting->defaultValue = defaultValue ? sgStrdup(defaultValue) : NULL;
 		setting->cb = cb;
 
-		if (setting->cb)
+		if (setting->cb && defaultValue)
 			setting->cb(defaultValue);
 	}
 }
