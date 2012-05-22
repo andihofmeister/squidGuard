@@ -92,6 +92,8 @@ void setSetting(const char *key, const char *value)
 {
 	struct Setting *setting;
 
+	sgLogDebug("set setting '%s', value '%s'", key, value);
+
 	if ((setting = findSetting(key)) == NULL) {
 		sgLogWarn("setting '%s' is not registered (value='%s')", key, value);
 		setting = newSetting(key, value);
@@ -99,6 +101,9 @@ void setSetting(const char *key, const char *value)
 		sgFree(setting->value);
 		setting->value = sgStrdup(value);
 	}
+
+	if (setting->cb)
+		setting->cb(value);
 }
 
 const char *getSetting(const char *key)
