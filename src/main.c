@@ -288,13 +288,13 @@ int main(int argc, char **argv, char **envp)
 
 		if (authzMode == 1) {
 			if (parseAuthzLine(line, &request) != 1) {
-				sgLogError("ERROR: Error parsing squid acl helper line");
+				sgLogError("Error parsing squid acl helper line");
 				denyOnError("Error parsing squid acl helper line");
 				continue;
 			}
 		} else {
 			if (parseLine(line, &request) != 1) {
-				sgLogError("ERROR: Error parsing squid redirector line");
+				sgLogError("Error parsing squid redirector line");
 				denyOnError("Error parsing squid acl helper line");
 				continue;
 			}
