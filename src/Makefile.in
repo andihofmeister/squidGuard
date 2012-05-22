@@ -61,6 +61,7 @@ OBJS = \
 	sgDomainList.o \
 	sgLDAP.o \
 	sgMatch.o \
+	sgReadBuffer.o \
 	sgRegex.o \
 	sgRequest.o \
 	sgRequestLog.o \

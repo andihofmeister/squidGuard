@@ -23,6 +23,7 @@
 #include <syslog.h>
 
 #include "sg.h"
+#include "sgReadBuffer.h"
 #include "sgMemory.h"
 #include "sgLog.h"
 #include "sgAccessList.h"
@@ -34,18 +35,10 @@
 
 struct LogFile *globalLogFile = NULL;
 
-struct LogFileStat *lastLogFileStat;
-struct LogFileStat *LogFileStat;               /* linked list, Calloc */
-
-char **globalArgv;
-char **globalEnvp;
 int globalUpdate = 0;
 int passthrough = 0;
 int showBar = 0;   /* Do not display the progress bar. */
 char *globalCreateDb = NULL;
-int sig_hup = 0;
-int sig_alrm = 0;
-int sgtime = 0;
 
 int inEmergencyMode = 0;
 int authzMode = 0;      /* run as authorization helper, not as redirector */
@@ -221,7 +214,12 @@ static void registerSettings()
 
 int main(int argc, char **argv, char **envp)
 {
-	char buf[MAX_BUF];
+	struct ReadBuffer * buf = newReadBuffer(fileno(stdin));
+	char * line = NULL;
+	size_t linesz = 0;
+	int act = 0;
+
+	setupSignals();
 
 	openlog("squidGuard", LOG_PID | LOG_NDELAY | LOG_CONS, SYSLOG_FAC);
 
@@ -231,9 +229,6 @@ int main(int argc, char **argv, char **envp)
 	}
 
 	registerSettings();
-
-	globalArgv = argv;
-	globalEnvp = envp;
 
 	//sgSetGlobalErrorLogFile();
 	sgReadConfig(configFile);
@@ -252,23 +247,23 @@ int main(int argc, char **argv, char **envp)
 
 	sgLogInfo("squidGuard ready for requests");
 
-	while (fgets(buf, MAX_BUF, stdin) != NULL) {
+	while ((act = doBufferRead(buf, &line, &linesz)) >= 0) {
 		struct AccessList *acl;
 		struct SquidInfo request;
 
-		/*
-		 * if (sig_hup)
-		 *      sgReloadConfig();
-		 */
+		if (act == 0) {
+			//sgReloadConfig();
+			continue;
+		}
 
 		if (authzMode == 1) {
-			if (parseAuthzLine(buf, &request) != 1) {
+			if (parseAuthzLine(line, &request) != 1) {
 				sgLogError("ERROR: Error parsing squid acl helper line");
 				denyOnError("Error parsing squid acl helper line");
 				continue;
 			}
 		} else {
-			if (parseLine(buf, &request) != 1) {
+			if (parseLine(line, &request) != 1) {
 				sgLogError("ERROR: Error parsing squid redirector line");
 				denyOnError("Error parsing squid acl helper line");
 				continue;
@@ -312,5 +307,7 @@ int main(int argc, char **argv, char **envp)
 	sgLogNotice("squidGuard stopped");
 	closelog();
 	freeAllLists();
+	sgFree(line);
+	freeReadBuffer(buf);
 	exit(0);
 }
