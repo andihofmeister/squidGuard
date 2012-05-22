@@ -42,8 +42,7 @@
 
 void sgReadConfig(char *);
 void freeAllLists(void);
+void sgReloadConfig();
 
-//void sgReloadConfig();
-//void sgHandlerSigHUP(int);
 
 #endif

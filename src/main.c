@@ -252,7 +252,7 @@ int main(int argc, char **argv, char **envp)
 		struct SquidInfo request;
 
 		if (act == 0) {
-			//sgReloadConfig();
+			sgReloadConfig(configFile);
 			continue;
 		}
 

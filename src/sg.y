@@ -58,7 +58,7 @@ void yyerror(char *);
 extern int yylex(void);
 
 FILE *yyin, *yyout;
-char *configFile;
+const char *configFile;
 
 %}
 
@@ -345,7 +345,7 @@ statement:	  setting
 
 %%
 
-void sgReadConfig(char *file)
+void sgReadConfig(const char *file)
 {
 	char *defaultFile = DEFAULT_CONFIGFILE;
 	lineno = 1;
@@ -371,6 +371,12 @@ void freeAllLists() {
 	freeAllRewrites();
 	freeAllTimeMatches();
 	freeAllRequestLogs();
+}
+
+void sgReloadConfig(const char *file)
+{
+	freeAllLists();
+	sgReadConfig(file);
 }
 
 void yyerror(char *s)
