@@ -13,10 +13,26 @@
 #include <arpa/inet.h>
 
 static int reverselookup = 0;
+static int stripRealm = 0;
+static char * realm = NULL;
 
 void setReverseLookup(const char *value)
 {
 	reverselookup = booleanSetting(value);
+}
+
+void setStripRealm(const char *value)
+{
+	stripRealm = booleanSetting(value);
+}
+
+void setRealmToStrip(const char *value)
+{
+	if (realm)
+		sgFree(realm);
+	realm = sgStrdup(value);
+
+	stripRealm = 1;
 }
 
 static void resetSquidInfo(struct SquidInfo *s)
@@ -199,6 +215,32 @@ static int parseUrl(char *url, struct SquidInfo *s)
 	return 1;
 }
 
+static int parseIdent(char *field, struct SquidInfo *s)
+{
+	char *p = NULL;
+
+	HTUnEscape(field);
+
+	if (strcmp(field, "-") != 0) {
+		strcpy(s->ident, field);
+		for (p = s->ident; *p != '\0'; p++) /* convert ident to lowercase chars */
+			*p = tolower(*p);
+
+		if (stripRealm && (p = strrchr(s->ident,'@'))) {
+			if (realm) {
+				if (strcmp(p, realm) == 0)
+					*p = 0;
+			} else {
+				*p = 0;
+			}
+		}
+	} else {
+		s->ident[0] = '\0';
+	}
+
+	return 1;
+}
+
 /*
  * Parse an external acl helper line.
  *
@@ -237,12 +279,8 @@ int parseAuthzLine(char *line, struct SquidInfo *s)
 	if ((field = strtok(NULL, " \t\n")) == NULL)
 		return 0;
 
-	HTUnEscape(field);
-
-	strcpy(s->ident, field);
-
-	for (field = s->ident; *field != '\0'; field++) /* convert ident to lowercase chars */
-		*field = tolower(*field);
+	if (!parseIdent(field,s))
+		return 0;
 
 	sgLogDebug("parsed authz line: furl='%s' domain='%s' surl='%s' src=%s ident='%s'",
 		   s->furl, s->domain, s->surl, s->src, s->ident);
@@ -293,13 +331,8 @@ int parseLine(char *line, struct SquidInfo *s)
 	if ((field = strtok(NULL, " \t\n")) == NULL)
 		return 0;
 
-	if (strcmp(field, "-")) {
-		strcpy(s->ident, field);
-		for (p = s->ident; *p != '\0'; p++) /* convert ident to lowercase chars */
-			*p = tolower(*p);
-	} else {
-		s->ident[0] = '\0';
-	}
+	if (!parseIdent(field,s))
+		return 0;
 
 	/* get the method */
 	if ((field = strtok(NULL, " \t\n")) == NULL)

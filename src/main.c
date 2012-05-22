@@ -235,7 +235,11 @@ static void registerSettings()
 	registerSetting("syslog", optSyslog, setSyslogFlag);
 
 	registerSetting("groupttl", "600", setGroupCacheTTL);
+
+	/* from sgRequest.c */
 	registerSetting("reverselookup", "false", setReverseLookup);
+	registerSetting("strip-realm", "false", setStripRealm);
+	registerSetting("realm", NULL, setRealmToStrip);
 }
 
 int main(int argc, char **argv, char **envp)

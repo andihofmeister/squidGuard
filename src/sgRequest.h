@@ -19,6 +19,9 @@ struct SquidInfo {
 };
 
 void setReverseLookup(const char *value);
+void setStripRealm(const char *value);
+void setRealmToStrip(const char *value);
+
 int parseAuthzLine(char *line, struct SquidInfo *s);
 int parseLine(char *line, struct SquidInfo *s);
 
