@@ -29,6 +29,7 @@
 #include "sgAccessList.h"
 
 #include "sgSourceList.h"
+#include "sgSourceDomain.h"
 #include "sgStaticSource.h"
 #include "sgGroup.h"
 #include "sgLDAP.h"
@@ -46,10 +47,11 @@
 
 extern int lineno;
 
-struct SourceList * curSrc = NULL;
-struct AccessList * curAcl = NULL;
-struct DestList   * curDest = NULL;
-struct RegexList  * curExpr = NULL;
+struct SourceList  * curSrc = NULL;
+struct AccessList  * curAcl = NULL;
+struct DestList    * curDest = NULL;
+struct RegexList   * curExpr = NULL;
+struct SourceMatch * curSrcDom = NULL;
 
 struct TimeMatch * curTimeMatch = NULL;
 struct TimeMatchElement * curWM = NULL;
@@ -211,7 +213,14 @@ source_static:	  DOMAIN domain
 		;
 
 domain:
-		| domain STRING { /* sgSourceDomain($2); */ sgFree($2); }
+		| domain STRING {
+			if (!curSrcDom) {
+				curSrcDom = newSourceDomainMatch();
+				addSourceListMatch(curSrc, curSrcDom);
+			};
+			addDomainToSourceDomainMatch(curSrcDom,$2);
+			sgFree($2);
+		}
 		| domain ','
 		;
 

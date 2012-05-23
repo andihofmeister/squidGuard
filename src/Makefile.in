@@ -69,6 +69,7 @@ OBJS = \
 	sgStaticSource.o \
 	sgStaticDest.o \
 	sgSourceList.o \
+	sgSourceDomain.o \
 	sgUrlList.o \
 	patricia/patricia.o \
 	\
