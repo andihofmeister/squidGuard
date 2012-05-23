@@ -326,7 +326,12 @@ int sgDbSearch(struct sgDb *Db, const char *request, void **rdata, size_t *rlen)
 	}
 
 	case DB_NOTFOUND:
-		result = 0;
+		if (Db->type == SGDBTYPE_USERLIST) {
+			result = 0;
+		} else {
+			again = 1;
+			dbmethod = DB_LAST;
+		}
 		break;
 	}
 	;
