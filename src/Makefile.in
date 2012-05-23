@@ -139,7 +139,7 @@ realclean: clean
 
 distclean: realclean
 	@echo making $@ in `basename \`pwd\``
-	$(RM) Makefile sg.h config.h
+	$(RM) Makefile config.h
 
 #
 # Dependencies for maintenance

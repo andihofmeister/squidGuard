@@ -50,3 +50,4 @@ realclean:: clean
 distclean:: realclean
 	@echo making $@ in `basename \`pwd\``
 	$(RM) Makefile sample.conf squidGuard.cgi squidGuard-simple.cgi
+	$(RM) squidGuard-simple-de.cgi
