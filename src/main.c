@@ -285,7 +285,7 @@ int main(int argc, char **argv, char **envp)
 
 	while ((act = doBufferRead(buf, &line, &linesz)) >= 0) {
 		struct AccessList *acl;
-		struct SquidInfo request;
+		static struct SquidInfo request;
 
 		if (act == 0) {
 			sgReloadConfig(configFile);
