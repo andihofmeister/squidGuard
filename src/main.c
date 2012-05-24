@@ -301,7 +301,7 @@ int main(int argc, char **argv, char **envp)
 		} else {
 			if (parseLine(line, &request) != 1) {
 				sgLogError("Error parsing squid redirector line");
-				denyOnError("Error parsing squid acl helper line");
+				denyOnError("Error parsing squid redirector line");
 				continue;
 			}
 		}
