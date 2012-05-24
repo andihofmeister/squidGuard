@@ -234,12 +234,18 @@ static void registerSettings()
 	registerSetting("debug", optDebug, setDebugFlag);
 	registerSetting("syslog", optSyslog, setSyslogFlag);
 
+	/* from sgGroup.c */
 	registerSetting("groupttl", "600", setGroupCacheTTL);
 
 	/* from sgRequest.c */
 	registerSetting("reverselookup", "false", setReverseLookup);
 	registerSetting("strip-realm", "false", setStripRealm);
 	registerSetting("realm", NULL, setRealmToStrip);
+
+	/* from sgLDAP.c */
+	registerSetting("ldapprotover", NULL, NULL);
+	registerSetting("ldapbinddn", NULL, NULL);
+	registerSetting("ldapbindpass", NULL, NULL);
 }
 
 int main(int argc, char **argv, char **envp)
