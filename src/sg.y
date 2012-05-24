@@ -256,7 +256,7 @@ access_contents:
 		;
 
 access_content:	  PASS access_dest { curAcl->terminal = 1; }
-		| ALLOW            { curAcl->terminal = 1; }
+		| ALLOW            { curAcl->allow = 1; }
 		| NEXT access_dest { curAcl->terminal = 0; }
 		| REWRITE WORD     { addAccessListRewrite(curAcl,$2); sgFree($2); }
 		| REDIRECT STRING  { addAccessListRedirect(curAcl,$2); sgFree($2); }

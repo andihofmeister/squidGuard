@@ -21,6 +21,7 @@ struct AccessList {
 	char *			redirect;
 
 	int			terminal;
+	int			allow;
 
 	struct RequestLog *	log;
 

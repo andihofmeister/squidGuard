@@ -77,6 +77,7 @@ struct AccessList *newAccessList(const char *name)
 	result->log = NULL;
 	result->redirect = NULL;
 	result->rewrite = NULL;
+	result->allow = 0;
 
 	if (lastAccessList == NULL) {
 		firstAccessList = result;
@@ -261,8 +262,8 @@ enum AccessResults checkAccess(struct AccessList *list, const struct SquidInfo *
 		}
 	}
 
-	if (found) {
-		if (list->terminal) {
+	if (found || (list->allow && !found)) {
+		if (list->terminal || (list->allow && !found)) {
 			struct RequestLog *requestLog = NULL;
 
 			if (rewrite) {
