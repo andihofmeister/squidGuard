@@ -64,7 +64,7 @@ static struct Setting *findSetting(const char *key)
 	struct Setting *now;
 
 	for (now = firstSetting; now; now = now->next)
-		if (strcmp(now->name, key) == 0)
+		if (strcasecmp(now->name, key) == 0)
 			return now;
 
 	return now;
