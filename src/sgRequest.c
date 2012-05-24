@@ -381,7 +381,7 @@ char *substRedirect(const struct SquidInfo *req, const char *redirect, const cha
 		case 't':               // Target Class Matched
 			rlen += (destClass ? strlen(destClass) : 1);
 			break;
-		case 'u':               // Target Class Matched
+		case 'u':               // Target URL
 			rlen += strlen(req->orig);
 			break;
 		default:                // %% and unknown c
@@ -418,8 +418,8 @@ char *substRedirect(const struct SquidInfo *req, const char *redirect, const cha
 			case 't':               // Target Class Matched
 				t += sprintf(t, "%s", (destClass ? destClass : "-"));
 				break;
-			case 'u':               // Target Class Matched
-				t += sprintf(t, req->orig);
+			case 'u':               // Target URL
+				t += sprintf(t, "%s", req->orig);
 				break;
 			default:
 				*t = *np;
