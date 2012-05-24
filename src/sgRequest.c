@@ -15,6 +15,7 @@
 static int reverselookup = 0;
 static int stripRealm = 0;
 static char * realm = NULL;
+static int serial = 1;
 
 void setReverseLookup(const char *value)
 {
@@ -37,6 +38,8 @@ void setRealmToStrip(const char *value)
 
 static void resetSquidInfo(struct SquidInfo *s)
 {
+	s->serial = serial ++;
+
 	s->protocol[0] = '\0';
 	s->domain[0] = '\0';
 	s->isAddress = 0;

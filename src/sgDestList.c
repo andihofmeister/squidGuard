@@ -28,6 +28,9 @@ struct DestList *newDestList(const char *name)
 	if (result == NULL)
 		return NULL;
 
+	result->lastSerialMatched = 0;
+	result->lastSerialResult  = 0;
+
 	result->name = sgStrdup(name);
 	result->time = NULL;
 	result->timeOutside = 0;
@@ -141,6 +144,11 @@ int matchDestList(struct DestList *list, const struct SquidInfo *info)
 
 	sgLogDebug("Checking destination list %s", list->name);
 
+	if (info->serial == list->lastSerialMatched) {
+		sgLogDebug("Already checked list %s, return %d", list->name, list->lastSerialResult);
+		return list->lastSerialResult;
+	}
+
 	if (list->time) {
 		result = matchTime(list->time);
 		if (list->timeOutside) {
@@ -158,7 +166,10 @@ int matchDestList(struct DestList *list, const struct SquidInfo *info)
 
 	for (now = list->first; now != NULL; now = now->next)
 		if ((result = now->match(now->priv, info)) != 0)
-			return result;
+			break;
 
-	return 0;
+	list->lastSerialMatched = info->serial;
+	list->lastSerialResult = result;
+
+	return result;
 }

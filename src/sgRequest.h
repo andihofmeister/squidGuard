@@ -4,6 +4,7 @@
 #define MAX_BUF 12288
 
 struct SquidInfo {
+	int	serial;
 	char	protocol[MAX_BUF];
 	char	domain[MAX_BUF];
 	int	isAddress;

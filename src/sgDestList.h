@@ -19,6 +19,9 @@ struct DestList {
 
 	struct DestMatch *	first;
 	struct DestMatch *	last;
+
+	int			lastSerialMatched;
+	int			lastSerialResult;
 };
 
 struct DestList *findDestList(const char *name);
