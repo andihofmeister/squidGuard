@@ -126,6 +126,9 @@ struct SourceList *newSourceList(const char *name)
 
 	result->name = sgStrdup(name);
 
+	result->needUserCache = 0;
+	result->needIPCache   = 0;
+
 	result->negativeCacheTime = 60;
 	result->positiveCacheTime = 60;
 
@@ -207,13 +210,20 @@ void addSourceListMatch(struct SourceList *list, struct SourceMatch *source)
 	if (list == NULL)
 		list = lastSource;
 
-	if (list->first == NULL) {
+	if (list->last == NULL) {
 		list->first = source;
 		list->last = source;
 	} else {
-		source->next = list->last;
+		list->last->next = source;
 		list->last = source;
 	}
+
+	if (source->type & SOURCE_USER_MATCH)
+		list->needUserCache ++;
+
+	if (source->type & (SOURCE_DOMAIN_MATCH | SOURCE_IP_MATCH))
+		list->needIPCache ++;
+
 }
 
 void addSourceListTime(struct SourceList *list, const char *tname, int invert)
@@ -285,6 +295,7 @@ void addUserPermanently(struct SourceList *list, const char *ident)
 	freeUserInfo(cachedUser);
 
 	list->staticUsers++;
+	list->needUserCache ++;
 }
 
 static struct IpInfo *ipCacheLookup(struct SourceList *list, const char *ip)
@@ -364,6 +375,7 @@ void addIpPermanently(struct SourceList *list, const char *ip)
 		return;
 	cachedIp->validUntil = 0;
 	list->staticIps++;
+	list->needIPCache ++;
 }
 
 /*
@@ -371,15 +383,10 @@ void addIpPermanently(struct SourceList *list, const char *ip)
 int matchSourceList(struct SourceList *list, const struct SquidInfo *info)
 {
 	struct SourceMatch *now;
-	struct UserInfo *cachedUser;
-	struct IpInfo *cachedIp;
 	int result;
 
 	int foundIp = 0;
-	int ipMatches = 0;
-
 	int foundUser = 0;
-	int userMatches = 0;
 
 	if (list->time) {
 		result = matchTime(list->time);
@@ -396,64 +403,64 @@ int matchSourceList(struct SourceList *list, const struct SquidInfo *info)
 		}
 	}
 
-	cachedUser = userCacheLookup(list, info->ident);
+	sgLogDebug("user match %s: static users %d, user matches %d",
+		   ( list->needUserCache > 0) ? "required" : "not required",
+		   list->staticUsers, list->needUserCache - list->staticUsers);
 
-	if (!validUserInfo(cachedUser)) {
-		for (now = list->first; now != NULL; now = now->next) {
-			if ((now->type & SOURCE_USER_MATCH) == 0)
-				continue;
+	if (list->needUserCache) {
+		struct UserInfo *cachedUser = userCacheLookup(list, info->ident);
 
-			userMatches++;
+		if (!validUserInfo(cachedUser)) {
+			for (now = list->first; now != NULL; now = now->next) {
+				if ((now->type & SOURCE_USER_MATCH) == 0)
+					continue;
 
-			if (now->match(now->priv, info) > 0) {
-				foundUser++;
-				break;
+				if (now->match(now->priv, info) > 0) {
+					foundUser++;
+					break;
+				}
 			}
-		}
 
-		userCacheAdd(list, info->ident, foundUser);
-	} else {
-		foundUser = cachedUser->found;
-		sgLogDebug("user cache hit for %s = %d, valid = %ld",
-			   info->ident, foundUser, cachedUser->validUntil);
+			userCacheAdd(list, info->ident, foundUser);
+		} else {
+			foundUser = cachedUser->found;
+			sgLogDebug("user cache hit for %s = %d, valid = %ld",
+				   info->ident, foundUser, cachedUser->validUntil);
+		}
 	}
 
-	cachedIp = ipCacheLookup(list, info->src);
+	sgLogDebug("ip match %s: static ips %d, ip matches %d",
+		   (list->needIPCache > 0) ? "required" : "not required",
+		   list->staticIps, list->needIPCache - list->staticIps);
 
-	if (!validIpInfo(cachedIp)) {
-		for (now = list->first; now != NULL; now = now->next) {
-			if ((now->type & (SOURCE_IP_MATCH | SOURCE_DOMAIN_MATCH)) == 0)
-				continue;
+	if (list->needIPCache) {
+		struct IpInfo *cachedIp = ipCacheLookup(list, info->src);
 
-			ipMatches++;
+		if (!validIpInfo(cachedIp)) {
+			for (now = list->first; now != NULL; now = now->next) {
+				if ((now->type & (SOURCE_IP_MATCH | SOURCE_DOMAIN_MATCH)) == 0)
+					continue;
 
-			if (now->match(now->priv, info) > 0) {
-				foundIp++;
-				break;
+				if (now->match(now->priv, info) > 0) {
+					foundIp++;
+					break;
+				}
 			}
-		}
 
-		if (!cachedIp)
-			ipCacheAdd(list, info->src, foundIp);
-	} else {
-		foundIp = cachedIp->found;
-		sgLogDebug("IP cache hit for %s = %d, valid = %ld", info->src, foundIp, cachedIp->validUntil);
+			if (!cachedIp)
+				ipCacheAdd(list, info->src, foundIp);
+		} else {
+			foundIp = cachedIp->found;
+			sgLogDebug("IP cache hit for %s = %d, valid = %ld", info->src, foundIp, cachedIp->validUntil);
+		}
 	}
 
 	result = 1;
 
-	sgLogDebug("user match %s: matches %d static users %d",
-		   (userMatches > 0 || list->staticUsers > 0) ? "required" : "not required",
-		   userMatches, list->staticUsers);
-
-	if ((userMatches > 0 || list->staticUsers > 0) && (!foundUser))
+	if ((list->needUserCache > 0) && (!foundUser))
 		result = 0;
 
-	sgLogDebug("ip match %s: matches %d static ips %d",
-		   (ipMatches > 0 || list->staticIps > 0) ? "required" : "not required",
-		   ipMatches, list->staticIps);
-
-	if ((ipMatches > 0 || list->staticIps > 0) && (!foundIp))
+	if ((list->needIPCache > 0) && (!foundIp))
 		result = 0;
 
 	return result;

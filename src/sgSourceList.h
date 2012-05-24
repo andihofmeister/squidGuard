@@ -23,6 +23,9 @@ struct SourceList {
 	int			staticUsers;
 	int			staticIps;
 
+	int			needUserCache;
+	int			needIPCache;
+
 	struct sgDb *		userCache;
 	patricia_tree_t *	ipCache;
 	patricia_tree_t *	ip6Cache;
