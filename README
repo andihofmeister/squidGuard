@@ -1,3 +1,6 @@
+
+This repostiroy does NOT contain an official version of squidGuard (see below)
+
 The official squidGuard homepage is:
 
 		      http://www.squidguard.org/
@@ -14,9 +17,9 @@ a squid cache.  squidGuard uses squid's standard redirector interface.
 			       Authors
 			       ~~~~~~~
 
-The initial squidGuard concept was designed by Pål Baltzersen and was
-implemented and was maintained and extended by Lars Erik Håland at
-ElTele Øst AS. 
+The initial squidGuard concept was designed by PÃ¥l Baltzersen and was
+implemented and was maintained and extended by Lars Erik HÃ¥land at
+ElTele Ã˜st AS. 
 Since December 2006 squidGuard is maintained by Shalla Secure Services.
 
 
@@ -25,5 +28,338 @@ Since December 2006 squidGuard is maintained by Shalla Secure Services.
 
 squidGuard is distributed by Shalla Secure Services under GPLv2 and may
 therefore be freely used and distributed according to the conditions of
-the licence. 
+the licence.
+
+
+========================================================================
+
+The version here is a rewrite of most of the code. While it provides (almost)
+all features found in SG 1.5, the configuration is not entirely compatible.
+
+Please read on ...
+
+
+New Features (the good news)
+============================
+
+Authorization Helper for Squid
+------------------------------
+
+SG can now be used as an external authorization helper for squid. This mode
+requires a particular Squid setup, for example
+
+  external_acl_type sgaccess  ttl=300 children=8\
+           %URI %SRC %un /usr/bin/squidGuard -d -z -c /etc/squidGuard.conf
+  acl sgaccess external sgaccess
+  http_access allow sgaccess
+  http_access deny all
+
+The new "tag" statement within an ACL statement can be used to pass a tag back
+to squid, which can then subsequently be used in further Squid-ACLs or in log
+statements.
+
+Of course, "redirect" and "rewrite" statements in the configuration won't work
+in this mode.
+
+Note: to use "%un" as above with Squid 3.1 requires a patch for Squid, see
+
+  http://bugs.squid-cache.org/show_bug.cgi?id=3345
+
+Alternatively, you can use "%LOGIN" instead, but then you can not have optional
+authentication.
+
+IPv6 Support
+------------
+
+In source blocks, IPv6 addresses can be used just like IPv4 addresses, except
+that you need to quote them. To match all private address ranges:
+
+  source private {
+     ip "fc00::/7" "fe80::/10"
+     ip "10.0.0.0/8" "172.16.0.0/12" "192.168.0.0/16"
+  }
+
+The built-in destination list "in-addr" now matches IPv6 addresses in URLs, such
+as in "http://[2a02:2e0:3fe:100::7]".
+
+IPv6 addresses in URL/domain lists won't work very well though: There is some
+variation how one could write the same address and SG currently does not
+translate the IP into a canonical form.
+
+Reverse DNS lookups for URLs
+----------------------------
+
+Reverse lookups can be enabled for IP addresses in URLs. This works for IPv6
+and IPv4 addresses.
+
+System user group support
+-------------------------
+
+A new "group" statement is available in "source" blocks to check if a user is member
+of a system group. In conjunction with Samba, this also enables AD group support.
+
+"netgroup" support for users
+----------------------------
+
+Users can now also be checked against membership in a NIS netgroup.
+
+There is currently no support to check against a specific NIS domain and no support
+for IP address checks, but that would now be easy to implement.
+
+
+Configuration Syntax Changes
+============================
+
+General
+-------
+
+While unquoted strings still work almost anywhere, you should always quote
+words that are not supposed to be interpreted as a keyword. For example, use
+
+  user "fred" "barney" "mon"
+
+instead of
+
+  user fred barney mon
+
+The latter would result in a syntax error, because the unquoted "mon" is
+interpreted as the weekday "monday". This is no new problem though and you
+can use quoted strings since 1.5 or so.
+
+Settings
+--------
+
+Global settings now need to be prefixed with the "set" keyword,
+for example
+
+  set dbhome "/var/lib/squidGuard"
+  set logdir "/var/log/squidGuard"
+
+instead of
+
+  dbhome /var/lib/squidGuard
+  logdir /var/log/squidGuard
+
+Due to this change, global settings are no longer keywords and it is now much
+easier to introduce new such settings without causing surprises with existing
+configurations.
+
+Default Redirect
+----------------
+
+A "redirect" statement outside of any block is used as a default redirect when
+no more specific redirect or rewrite rule can be found. This is especially
+useful in cases where you want to redirect all blocked requests to a specific
+page or CGI and do not want to repeat the same redirect statement over and over
+again.
+
+
+Request Logs
+------------
+
+A separate log can be specified per ACL, per source, per destination or
+globally (with this precedence).
+
+Logs in a rewrite block are still accepted by the configuration parser but are
+silently ignored.
+
+The global request log file must now be specified with a "logfile" directive
+outside any block.
+
+There is still no configurable log format and you can still not log to anything
+but files.
+
+"time" blocks
+-------------
+
+Not much intentional changes here, except that a time specification now
+includes the final minute of the range, hence "00:00-23:59" really means the
+whole day.
+
+"source" blocks
+---------------
+
+* quotas have been removed.
+
+* the behavior of the "continue" statement is now implied and the word is
+  no longer a keyword (= using it is a syntax error).
+
+IP addresses:
+
+  * the "ip" keyword now allows IPv6 addresses.
+
+  * IP masks can no longer be specified in dot notation, f.e
+    192.168.1.0/255.255.255.0 must now be written as 192.168.1.0/24
+
+  * IP ranges are no longer supported. Use CIDR notation instead.
+
+  * the same rules apply to address list read from a file.
+
+External lookups
+
+  * live-lookups are executed in the order specified.
+
+  * all lookups are cached. You can specify the cache time with the new
+    setting "source-ttl". The special settings for "ldapusersearch" and
+    "ldapipsearch" have been removed.
+
+  * "ip", "user", "iplist" and "userlist" statements just populate the
+    lookup cache permanently, they are no live lookups.
+
+  * MySQL support has been removed. The old code did not actually
+    compile and the thing it did was a bit stupid. On the bright side, a
+    properly working live-lookup can now be implemented much more easily.
+
+"destination" blocks
+--------------------
+
+* DNS blacklists can be specified with the "dnsbl" keyword within a destination
+  block. For example
+
+  destination "uribl" {
+    dnsbl ".black.uribl.com"
+  }
+
+  If you use DNS blacklists, you want to run a local DNS server (preferably on
+  the local host) for caching.
+
+ACLs
+----
+
+* DNS blacklists must now be specified in a destination block. See above.
+
+* SG no longer searches the best matching source block for a request. Instead,
+  ACLs are evaluated in the order specified.
+
+* multiple ACLs for the same source are now possible.
+
+* the "default"-ACL is no longer special and especially the behavior to take
+  the default request log location from there no longer works. Otherwise, since
+  an existing configuration file would not have a source "default" and a
+  non-existing source matches any source, a "default" ACL as last rule would
+  still work as before.
+
+* the "else" keyword just creates an ACL with the same source as the previous
+  one. You can also use multiple "else" blocks, with different time ranges for
+  example.
+
+* the new "next" keyword is similar to "pass", except that "pass" terminates
+  ACL processing with a positive result, while "next" causes ACL processing to
+  continue.
+
+* the "allow" keyword is the opposite of redirect, meaning access is granted
+  when the ACL matches.
+
+  You can use "allow" in authorization helper mode if you just want to tag
+  matching connection. The tag can then be used in the Squid configuration to
+  change its behavior based on SG rules.
+
+  In both modes "allow" is useful in conjunction with "next", for example
+
+  acl {
+     default {
+        next restricted
+	allow
+     }
+     trusted {
+        pass all
+     }
+     suspect {
+        pass none
+     }
+   }
+
+* "tag" allows you to pass a tag back to squid, which can then be used in Squid
+  access rules and log files.
+  Tags only work in authorization helper mode since squid currently does not
+  support it with a redirector.
+
+Reasoning
+=========
+
+Recently, I needed some features that popped up in SG 1.4 and we had some
+extensions based on the 1.2 version I had to port. Getting these extensions to
+work again, was not easy and no fun at all.
+
+And then I needed the LDAP support from 1.5-beta and had to port our stuff
+again.
+
+And then I wanted IPv6. And I also needed the authorization helper support to
+pass informations back to Squid ...
+
+While digging through the code, I finally realized, that SG truly was the
+manifestation of the Flying Spaghetti Monster in C !
+
+So, instead of converting to Pastafarism, I started cleaning up:
+
+General code cleanup
+--------------------
+
+Among the changes was getting rid of K&R support. Heck, C90 was hot back then,
+when I started serious software development. Nowadays, if your compiler does
+not grasp this code, upgrade your compiler.
+
+The code has been restructured in a way so that the C compiler can better
+optimize (use of "static" functions) and can better detect possibly dangerous
+constructs (use "const" when sensible, better use of function prototypes, use
+-Wall -Werror). It has also been split in more isolated modules where only the
+absolute necessary guts are exposed to other modules.
+
+
+Better extensibility
+--------------------
+
+It is now significantly easier to add new source- or destination matches, and
+although there is no proper "plug-in" support (yet?), the impact of such
+extensions on the software at large  has been greatly reduced.
+
+There is still the problem that any serious extension has to patch the parser
+and the lexer, but due to some structural changes (sorting affected elements,
+isolating interfaces etc.), merge conflicts should be more unlikely or at least
+be far easier to fix.
+
+
+Things not yet solved
+=====================
+
+Shared caches
+-------------
+
+User and IP caches are not shared between instances. Not a problem in simple
+settings, but it is with many users and slow source lookups (which means you
+need many SG instances, hence much memory, but still get slow responses).
+
+Having a shared user cache would probably be easy to do, but making the radix
+tree used for the IP cache shared, would need quite a bit of work.
+
+A solution to this would be necessary to seriously revive the quota stuff.
+
+Destination Lookups
+-------------------
+
+If a destination is used in multiple ACLs (with "next" for example), the destination
+list is checked multiple times. Not much of a problem with BDB lookups, but
+dynamic lookups slow things down.
+
+Different mechanism for blacklists
+----------------------------------
+
+B-Tree based lookups ala BDB are probably not the most space and time efficient
+mechanisms to store and search Domain- or URL-lists.
+
+Such lists describe a hierarchical and sparsely populated key space, where SG
+searches for a matching domain suffix - or if you reverse the domain, a prefix.
+
+Some sort of radix tree would probably better fit this particular problem, but
+the usual implementations are in-memory only.
+
+
+Extensibility
+-------------
+
+While it is significantly easier to write new extensions, there are still too
+many places where an extension has to hook into. Some plug-in style module
+initialization stuff could help with that.
+
+Which still leaves the problem how to tell lex & yacc about new extensions.
 
