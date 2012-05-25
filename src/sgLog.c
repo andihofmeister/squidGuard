@@ -153,7 +153,7 @@ void sgSetGlobalErrorLogFile()
 
 static void doFileLog(const char *prefix, const char *message)
 {
-	FILE *fd;
+	FILE *fd = NULL;
 
 	if (errorLog != NULL)
 		fd = errorLog->fd;

@@ -16,6 +16,7 @@
  * (GPL) along with this program.
  */
 
+#include <stddef.h>
 #include <netdb.h>
 
 #include "sgNetGroup.h"
