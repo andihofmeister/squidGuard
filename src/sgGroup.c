@@ -1,6 +1,7 @@
 /*
  * Group handling for squidGuard
  *
+ * Copyright (C) 2012, Andreas Hofmeister, Collax GmbH,
  * Copyright (C) 2005 Coreworks GbR, Freiburg i. Br., Germany.
  *
  * This program is free software; you can redistribute it and/or modify

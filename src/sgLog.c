@@ -2,8 +2,10 @@
  * By accepting this notice, you agree to be bound by the following
  * agreements:
  *
- * This software product, squidGuard, is copyrighted (C) 1998-2009
- * by Christine Kronberg, Shalla Secure Services. All rights reserved.
+ * This software product, squidGuard, is copyrighted
+ * (C) 2012, Andreas Hofmeister, Collax GmbH,
+ * (C) 1998-2009 by Christine Kronberg, Shalla Secure Services.
+ * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License (version 2) as
