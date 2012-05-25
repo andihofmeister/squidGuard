@@ -162,10 +162,10 @@ AC_CHECK_HEADER(syslog.h,,[
        ])
 echo "checking syslog for logging... yes"
 AC_DEFINE(USE_SYSLOG, 1, [Defined if SYSLOG support should be compiled])
-AC_DEFINE_UNQUOTED(SYSLOG_FAC, LOG_$syslog_facility, [SYSLOG facilit to use])
 else
 echo "checking syslog for logging... no"
 fi
+AC_DEFINE_UNQUOTED(SYSLOG_FAC, LOG_$syslog_facility, [SYSLOG facilit to use])
 
 dnl
 dnl Checks if squid runtime user is set
