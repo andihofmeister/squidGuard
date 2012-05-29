@@ -126,12 +126,12 @@ static char *sgStripUrl(const char *url)
 }
 
 
-#if DB_VERSION_MAJOR == 4
-#define DBOPEN(dbp, txnid, dbfile, database, dbmode, flag, fmode) \
-	open(dbp, txnid, dbfile, database, dbmode, flag, fmode)
-#else
+#if DB_VERSION_MAJOR < 4
 #define DBOPEN(dbp, txnid, dbfile, database, dbmode, flag, fmode) \
 	open(dbp, dbfile, database, dbmode, flag, fmode)
+#else
+#define DBOPEN(dbp, txnid, dbfile, database, dbmode, flag, fmode) \
+	open(dbp, txnid, dbfile, database, dbmode, flag, fmode)
 #endif
 
 struct sgDb *sgDbInit(int type, char *file)
