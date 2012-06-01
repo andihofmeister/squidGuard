@@ -31,6 +31,7 @@
 #include "sgSourceList.h"
 #include "sgSourceDomain.h"
 #include "sgStaticSource.h"
+#include "sgSourceAuthenticated.h"
 #include "sgGroup.h"
 #include "sgLDAP.h"
 #include "sgNetGroup.h"
@@ -202,6 +203,7 @@ source_match:	  GROUP STRING          { $$ = newGroupMatch($2);        sgFree($2
 		| NETGROUP STRING       { $$ = newNetgroupUserMatch($2); sgFree($2); }
 		| LDAPUSERSEARCH STRING { $$ = newLDAPUserMatch($2);     sgFree($2); }
 		| LDAPIPSEARCH STRING   { $$ = newLDAPIPMatch($2);       sgFree($2); }
+		| USER ANY		{ $$ = newSourceAuthenticatedMatch(); }
 		;
 
 source_static:	  DOMAIN domain
