@@ -8,9 +8,9 @@
 static int doSourceAuthMatch(void *priv, const struct SquidInfo * req)
 {
 	if (req->ident && (req->ident[0] != 0))
-		return 0;
+		return 1;
 
-	return 1;
+	return 0;
 }
 
 struct SourceMatch *newSourceAuthenticatedMatch(void)
