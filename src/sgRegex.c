@@ -114,6 +114,7 @@ static void freeRegexList(void *priv)
 		freeRegex(now);
 		now = next;
 	}
+	list->first = list->last = NULL;
 	sgFree(list->name);
 	sgFree(priv);
 }
@@ -450,7 +451,6 @@ struct DestMatch *newDestExpressionListMatch(char *name, char *exprlist, char *c
 	} else {
 		sgLogError("%s: %s", filename, strerror(errno));
 		sgFree(filename);
-		freeRegexList(list);
 		freeDestMatch(result);
 		return NULL;
 	}
