@@ -427,7 +427,7 @@ int matchSourceList(struct SourceList *list, const struct SquidInfo *info)
 		   ( list->needUserCache > 0) ? "required" : "not required",
 		   list->staticUsers, list->needUserCache - list->staticUsers);
 
-	if (list->needUserCache) {
+	if (list->needUserCache && info->ident[0] != 0) {
 		struct UserInfo *cachedUser = userCacheLookup(list, info->ident);
 
 		if (!validUserInfo(cachedUser)) {
