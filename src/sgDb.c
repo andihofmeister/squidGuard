@@ -126,7 +126,7 @@ static char *sgStripUrl(const char *url)
 }
 
 
-#if DB_VERSION_MAJOR < 4
+#if DB_VERSION_MAJOR <= 4
 #define DBOPEN(dbp, txnid, dbfile, database, dbmode, flag, fmode) \
 	open(dbp, dbfile, database, dbmode, flag, fmode)
 #else
