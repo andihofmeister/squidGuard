@@ -32,6 +32,11 @@
 #include <netdb.h>
 #include <arpa/inet.h>
 
+#if defined(__FreeBSD__)
+	#include <sys/socket.h>
+	#include <netinet/in.h>
+#endif
+
 static int reverselookup = 0;
 static int stripRealm = 0;
 static char * realm = NULL;
